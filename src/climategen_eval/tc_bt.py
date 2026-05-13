@@ -35,6 +35,14 @@ PRIMARY_RAW_AGG_KEYS = (
 )
 
 
+def progress_iter(iterable: Any, *, enabled: bool, **kwargs: Any) -> Any:
+    if not enabled:
+        return iterable
+    from tqdm.auto import tqdm
+
+    return tqdm(iterable, **kwargs)
+
+
 @dataclass
 class TCMetricConfig:
     image_size: int = 256
@@ -445,6 +453,7 @@ def evaluate_model_by_class(
     real_by_class: dict[int, np.ndarray],
     generated_by_class: dict[int, np.ndarray],
     cfg: TCMetricConfig,
+    progress: bool = False,
 ) -> dict[str, Any]:
     real_classes = set(real_by_class)
     generated_classes = set(generated_by_class)
@@ -456,7 +465,12 @@ def evaluate_model_by_class(
     binner, dav_computer, cold_mask = make_metric_context(cfg)
     per_class: dict[int, dict[str, Any]] = {}
     class_summaries: dict[int, dict[str, float]] = {}
-    for class_id in sorted(real_by_class):
+    for class_id in progress_iter(
+        sorted(real_by_class),
+        enabled=progress,
+        desc="Evaluating classes",
+        unit="class",
+    ):
         if class_id not in generated_by_class:
             continue
         cache = build_class_metric_cache(
@@ -480,6 +494,9 @@ def evaluate_model_by_class(
             "gen_exceedance_rate": cache.gen_exceedance_rate,
         }
     return {
+        "aggregation": {
+            "aggregate_primary_raw": "unweighted_macro_average_over_valid_classes",
+        },
         "aggregate_primary_raw": aggregate_class_summaries(class_summaries),
         "per_class": {str(k): v for k, v in sorted(per_class.items())},
         "valid_class_ids": [int(k) for k in sorted(class_summaries)],

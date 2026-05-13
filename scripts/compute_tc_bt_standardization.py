@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from tqdm.auto import tqdm
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT / "src") not in sys.path:
@@ -32,6 +33,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--display-null-widths", type=float, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--no-progress", action="store_true")
     return parser.parse_args()
 
 
@@ -97,9 +99,15 @@ def main() -> None:
     if not real_manifest.is_absolute():
         real_manifest = _REPO_ROOT / real_manifest
     real_dataset = RealDataset.from_manifest(real_manifest)
+    show_progress = not bool(args.no_progress)
     real_by_class = {
         class_id: real_dataset.load_bt_by_class(class_id)
-        for class_id in real_dataset.class_ids
+        for class_id in tqdm(
+            real_dataset.class_ids,
+            desc="Loading real classes",
+            unit="class",
+            disable=not show_progress,
+        )
     }
     report = compute_standardization_report(
         real_by_class=real_by_class,
@@ -111,6 +119,7 @@ def main() -> None:
         validation_reps=args.validation_reps,
         validation_target_power=float(args.validation_target_power),
         display_null_widths=display_null_widths,
+        progress=show_progress,
     )
     report.update(
         {

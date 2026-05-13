@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
 
 import numpy as np
@@ -30,6 +31,14 @@ RANGE_DIRECTIONS = {
 
 
 DEFAULT_DISPLAY_NULL_WIDTHS = 4.0
+
+
+def progress_bar(*, enabled: bool, **kwargs: Any) -> Any:
+    if not enabled:
+        return nullcontext(None)
+    from tqdm.auto import tqdm
+
+    return tqdm(**kwargs)
 
 
 def summarize_distribution(values: np.ndarray) -> dict[str, float]:
@@ -186,22 +195,31 @@ def bootstrap_real_vs_real_samples(
     *,
     reps: int,
     seed: int,
+    progress: bool = False,
 ) -> dict[str, np.ndarray]:
     rng = np.random.default_rng(int(seed))
     samples_by_key: dict[str, list[float]] = {}
-    for _ in range(int(reps)):
-        per_class = {}
-        for class_id, cache in sorted(class_caches.items()):
-            real_n = int(cache.real_hist_counts.shape[0])
-            other_n = int(cache.gen_raw_hist_counts.shape[0])
-            left_idx = rng.integers(real_n, size=real_n)
-            right_idx = rng.integers(real_n, size=other_n)
-            per_class[int(class_id)] = compute_real_vs_real_class_summary(
-                cache,
-                left_idx=left_idx,
-                right_idx=right_idx,
-            )
-        append_macro_samples(samples_by_key, per_class)
+    with progress_bar(
+        enabled=progress,
+        total=int(reps),
+        desc="Real-vs-real null",
+        unit="rep",
+    ) as pbar:
+        for _ in range(int(reps)):
+            per_class = {}
+            for class_id, cache in sorted(class_caches.items()):
+                real_n = int(cache.real_hist_counts.shape[0])
+                other_n = int(cache.gen_raw_hist_counts.shape[0])
+                left_idx = rng.integers(real_n, size=real_n)
+                right_idx = rng.integers(real_n, size=other_n)
+                per_class[int(class_id)] = compute_real_vs_real_class_summary(
+                    cache,
+                    left_idx=left_idx,
+                    right_idx=right_idx,
+                )
+            append_macro_samples(samples_by_key, per_class)
+            if pbar is not None:
+                pbar.update(1)
     return {key: np.asarray(values, dtype=np.float64) for key, values in samples_by_key.items()}
 
 
@@ -210,6 +228,7 @@ def bootstrap_control_samples(
     *,
     reps: int,
     seed: int,
+    progress_update: Any = None,
 ) -> dict[str, np.ndarray]:
     rng = np.random.default_rng(int(seed))
     samples_by_key: dict[str, list[float]] = {}
@@ -224,6 +243,8 @@ def bootstrap_control_samples(
                 gen_idx=rng.integers(gen_n, size=gen_n),
             )
         append_macro_samples(samples_by_key, per_class)
+        if progress_update is not None:
+            progress_update(1)
     return {key: np.asarray(values, dtype=np.float64) for key, values in samples_by_key.items()}
 
 
@@ -232,10 +253,16 @@ def real_vs_real_reference(
     *,
     reps: int,
     seed: int,
+    progress: bool = False,
 ) -> dict[str, Any]:
     if int(reps) <= 0:
         return {"enabled": False, "reason": "reps <= 0"}
-    samples = bootstrap_real_vs_real_samples(class_caches, reps=int(reps), seed=int(seed))
+    samples = bootstrap_real_vs_real_samples(
+        class_caches,
+        reps=int(reps),
+        seed=int(seed),
+        progress=progress,
+    )
     summary = {key: summarize_distribution(values) for key, values in sorted(samples.items())}
     return {
         "enabled": True,
@@ -323,6 +350,7 @@ def compute_corruption_validation(
     seed: int,
     real_vs_real_summary: dict[str, dict[str, float]],
     target_power: float,
+    progress: bool = False,
 ) -> dict[str, Any]:
     if int(reps) <= 0:
         raise ValueError(f"corruption validation reps must be > 0, got {reps}.")
@@ -346,8 +374,18 @@ def compute_corruption_validation(
     binner, dav_computer, cold_mask = make_metric_context(cfg)
     curves_by_control: dict[str, dict[str, list[dict[str, Any]]]] = {name: {} for name in controls}
     transforms_by_control: dict[str, list[dict[str, Any]]] = {name: [] for name in controls}
-    for control_idx, control_name in enumerate(controls):
-        for value_idx, severity in enumerate(grids.get(control_name, [])):
+    jobs = [
+        (control_idx, control_name, value_idx, severity)
+        for control_idx, control_name in enumerate(controls)
+        for value_idx, severity in enumerate(grids.get(control_name, []))
+    ]
+    with progress_bar(
+        enabled=progress,
+        total=len(jobs) * int(reps),
+        desc="Corruption validation",
+        unit="rep",
+    ) as pbar:
+        for control_idx, control_name, value_idx, severity in jobs:
             control_caches = {}
             transforms_for_value = {}
             for class_id, source_k in sorted(pseudo_sources_by_class.items()):
@@ -382,6 +420,7 @@ def compute_corruption_validation(
                 control_caches,
                 reps=int(reps),
                 seed=int(seed + 1723 * (control_idx + 1) + 7919 * (value_idx + 1)),
+                progress_update=None if pbar is None else pbar.update,
             )
             for key, values in sorted(samples_by_metric.items()):
                 if key not in thresholds:
@@ -467,6 +506,7 @@ def compute_standardization_report(
     validation_reps: int | None = None,
     validation_target_power: float = 0.80,
     display_null_widths: float = DEFAULT_DISPLAY_NULL_WIDTHS,
+    progress: bool = False,
 ) -> dict[str, Any]:
     if not real_by_class:
         raise ValueError("real_by_class must contain at least one class.")
@@ -487,28 +527,38 @@ def compute_standardization_report(
     class_caches = {}
     pseudo_sources_by_class = {}
     source_sampling_by_class = {}
-    for class_id, real_k in sorted(real_by_class.items()):
-        rng = np.random.default_rng(int(seed + 104729 * (class_id + 1)))
-        pseudo_k, source_meta = sample_real_images_for_reference_draw(
-            real_k,
-            draw_n=int(generated_n_per_class),
-            rng=rng,
-        )
-        pseudo_sources_by_class[class_id] = pseudo_k
-        source_sampling_by_class[class_id] = source_meta
-        class_caches[class_id] = build_class_metric_cache(
-            real_k=real_k,
-            gen_k_raw=pseudo_k,
-            cfg=cfg,
-            binner=binner,
-            dav_computer=dav_computer,
-            cold_mask=cold_mask,
-        )
+    class_items = sorted(real_by_class.items())
+    with progress_bar(
+        enabled=progress,
+        total=len(class_items),
+        desc="Building reference caches",
+        unit="class",
+    ) as pbar:
+        for class_id, real_k in class_items:
+            rng = np.random.default_rng(int(seed + 104729 * (class_id + 1)))
+            pseudo_k, source_meta = sample_real_images_for_reference_draw(
+                real_k,
+                draw_n=int(generated_n_per_class),
+                rng=rng,
+            )
+            pseudo_sources_by_class[class_id] = pseudo_k
+            source_sampling_by_class[class_id] = source_meta
+            class_caches[class_id] = build_class_metric_cache(
+                real_k=real_k,
+                gen_k_raw=pseudo_k,
+                cfg=cfg,
+                binner=binner,
+                dav_computer=dav_computer,
+                cold_mask=cold_mask,
+            )
+            if pbar is not None:
+                pbar.update(1)
 
     good_reference = real_vs_real_reference(
         class_caches,
         reps=int(real_reference_reps),
         seed=int(seed),
+        progress=progress,
     )
     standardization_ranges = null_standardization_ranges(
         good_reference.get("summary", {}),
@@ -525,10 +575,15 @@ def compute_standardization_report(
         seed=int(seed),
         real_vs_real_summary=good_reference.get("summary", {}),
         target_power=float(validation_target_power),
+        progress=progress,
     )
 
     report = {
         "schema": "climategen_eval.metric_standardization_report.v1",
+        "aggregation": {
+            "class_aggregation": "unweighted_macro_average_over_classes",
+            "rationale": "Each intensity class contributes equally to aggregate metrics.",
+        },
         "metric_standardization": {
             "enabled": True,
             "schema": "climategen_eval.metric_standardization.v1",
@@ -536,6 +591,12 @@ def compute_standardization_report(
             "match_generated_counts": True,
             "seed": int(seed),
             "real_reference_reps": int(real_reference_reps),
+            "real_vs_real_design": {
+                "left_sample_size": "available_real_count_per_class",
+                "right_sample_size": int(generated_n_per_class),
+                "sampling": "bootstrap_with_replacement_within_class",
+                "class_aggregation": "unweighted_macro_average_over_classes",
+            },
             "good_reference": {
                 "values": good_values,
                 "physical_real_vs_real": good_reference,
@@ -548,10 +609,17 @@ def compute_standardization_report(
                 "null_quantile": 0.95,
                 "display_transform": "linear_clipped",
                 "display_null_widths": float(display_null_widths),
+                "zero_score_standardized_gap": float(display_null_widths),
+                "sensitivity_analysis_display_null_widths": [3.0, 4.0, 5.0],
                 "definition": (
                     "standardized_gap = max(0, model_value - q50(null)) / "
                     "(q95(null) - q50(null)) for lower-is-better metrics; "
                     "higher-is-better metrics use the mirrored q50 - q05 width."
+                ),
+                "metric_inclusion_rule": (
+                    "A metric is included in standardized scores only when its "
+                    "real-vs-real null width is finite and positive and "
+                    "corruption validation marks it responsive."
                 ),
                 "ranges": standardization_ranges,
             },

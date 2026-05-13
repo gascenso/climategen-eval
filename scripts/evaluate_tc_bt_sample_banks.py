@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from tqdm.auto import tqdm
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT / "src") not in sys.path:
@@ -44,6 +45,7 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_DISPLAY_NULL_WIDTHS,
         help="Number of real-vs-real null widths mapped to zero in display scores.",
     )
+    parser.add_argument("--no-progress", action="store_true")
     return parser.parse_args()
 
 
@@ -103,6 +105,44 @@ def json_default(obj: Any) -> Any:
     raise TypeError(f"{type(obj).__name__} is not JSON serializable")
 
 
+def validated_standardization_ranges(
+    payload: dict[str, Any],
+    path: Path,
+) -> dict[str, dict[str, Any]]:
+    standardization_node = payload.get("metric_standardization")
+    if not isinstance(standardization_node, dict):
+        raise ValueError(f"{path} does not contain a metric_standardization object.")
+    standardization = standardization_node.get("null_standardization", {})
+    ranges = standardization.get("ranges", {}) if isinstance(standardization, dict) else {}
+    if not isinstance(ranges, dict) or not ranges:
+        raise ValueError(f"{path} does not contain null_standardization ranges.")
+
+    validation = payload.get("metric_validation", {})
+    corruption_validation = (
+        validation.get("corruption_validation", {}) if isinstance(validation, dict) else {}
+    )
+    responsiveness = (
+        corruption_validation.get("responsiveness_by_metric", {})
+        if isinstance(corruption_validation, dict)
+        else {}
+    )
+    if not isinstance(responsiveness, dict) or not responsiveness:
+        raise ValueError(f"{path} does not contain corruption-validation responsiveness results.")
+
+    out = {
+        key: value
+        for key, value in ranges.items()
+        if isinstance(value, dict)
+        and bool(value.get("usable_for_standardized_gap", False))
+        and bool(responsiveness.get(key, {}).get("responsive", False))
+    }
+    if not out:
+        raise ValueError(
+            f"{path} has no metrics passing both null-width and responsiveness checks."
+        )
+    return out
+
+
 def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
@@ -111,10 +151,16 @@ def main() -> None:
         real_manifest = _REPO_ROOT / real_manifest
     real_dataset = RealDataset.from_manifest(real_manifest)
     tc_cfg = metric_config(cfg)
+    show_progress = not bool(args.no_progress)
 
     real_by_class = {
         class_id: real_dataset.load_bt_by_class(class_id)
-        for class_id in real_dataset.class_ids
+        for class_id in tqdm(
+            real_dataset.class_ids,
+            desc="Loading real classes",
+            unit="class",
+            disable=not show_progress,
+        )
     }
 
     output_root = Path(args.output_root)
@@ -132,18 +178,16 @@ def main() -> None:
             payload = json.load(f)
         if not isinstance(payload, dict):
             raise ValueError(f"Expected standardization report object in {norm_path}.")
-        standardization_node = payload.get("metric_standardization")
-        if not isinstance(standardization_node, dict):
-            raise ValueError(f"{norm_path} does not contain a metric_standardization object.")
-        standardization = standardization_node.get("null_standardization", {})
-        standardization_ranges = (
-            standardization.get("ranges", {}) if isinstance(standardization, dict) else {}
-        )
+        standardization_ranges = validated_standardization_ranges(payload, norm_path)
         standardization_report_path = norm_path
-        if not isinstance(standardization_ranges, dict) or not standardization_ranges:
-            raise ValueError(f"{norm_path} does not contain null_standardization ranges.")
 
-    for label, bank_dir in [parse_model(raw) for raw in args.model]:
+    models = [parse_model(raw) for raw in args.model]
+    for label, bank_dir in tqdm(
+        models,
+        desc="Evaluating models",
+        unit="model",
+        disable=not show_progress,
+    ):
         bank = SampleBank.from_dir(bank_dir)
         expected_classes = set(real_dataset.class_ids)
         bank_classes = set(bank.class_ids)
@@ -154,18 +198,26 @@ def main() -> None:
             )
         generated_by_class = {
             class_id: bank.load_bt_k(class_id, limit=int(args.n_per_class), mmap_mode=None)
-            for class_id in bank.class_ids
+            for class_id in tqdm(
+                bank.class_ids,
+                desc=f"Loading {label}",
+                unit="class",
+                disable=not show_progress,
+                leave=False,
+            )
         }
         report = evaluate_model_by_class(
             real_by_class=real_by_class,
             generated_by_class=generated_by_class,
             cfg=tc_cfg,
+            progress=show_progress,
         )
         if standardization_ranges is not None:
             report["aggregate_primary_standardized"] = {
                 "schema": "climategen_eval.null_standardized_scores.v1",
                 "source": str(standardization_report_path),
                 "display_null_widths": float(args.display_null_widths),
+                "metric_filter": "finite_positive_null_width_and_corruption_responsiveness",
                 "values": standardize_metric_values(
                     report["aggregate_primary_raw"],
                     standardization_ranges,

@@ -52,6 +52,7 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument("--no-progress", action="store_true")
     return parser.parse_args()
 
 
@@ -81,7 +82,13 @@ def link_or_copy_tree(src: Path, dst: Path, *, mode: str, overwrite: bool) -> No
     shutil.copytree(src, dst)
 
 
-def export_real_test_data(*, source_repo: Path, output_root: Path, overwrite: bool) -> None:
+def export_real_test_data(
+    *,
+    source_repo: Path,
+    output_root: Path,
+    overwrite: bool,
+    progress: bool,
+) -> None:
     real_root = output_root / "real_test"
     manifest_path = real_root / "manifest.json"
     if manifest_path.exists() and not overwrite:
@@ -127,7 +134,12 @@ def export_real_test_data(*, source_repo: Path, output_root: Path, overwrite: bo
     winds = np.empty((len(selected),), dtype=np.float32)
     with rel_paths_path.open("w") as f:
         for idx, (rel_path, class_id, wind_kt) in enumerate(
-            tqdm(selected, desc="Exporting real test BT", unit="image")
+            tqdm(
+                selected,
+                desc="Exporting real test BT",
+                unit="image",
+                disable=not progress,
+            )
         ):
             bt[idx] = backend.load_bt(rel_path)
             labels[idx] = int(class_id)
@@ -211,6 +223,7 @@ def main() -> None:
         source_repo=source_repo,
         output_root=output_root,
         overwrite=bool(args.overwrite),
+        progress=not bool(args.no_progress),
     )
     port_generated_banks(
         source_repo=source_repo,

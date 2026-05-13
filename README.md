@@ -73,7 +73,9 @@ The standardization report separates two roles:
   A model's standardized gap is `max(0, model - good) / scale`.
 - `metric_validation.corruption_validation`: corruption sweeps used to validate
   that metrics respond to
-  relevant degradations. These diagnostics are not used to set model scores.
+  relevant degradations. A metric is included in null-standardized scores and
+  the spider plot only when it has a finite positive null width and passes this
+  responsiveness check.
 
 Plot null-standardized model scores:
 

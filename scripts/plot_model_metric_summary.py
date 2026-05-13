@@ -163,6 +163,23 @@ def null_standardization_for_spec(
     return out
 
 
+def responsive_validation_for_spec(
+    standardization_payload: dict[str, Any],
+    spec: MetricSpec,
+) -> bool:
+    validation = standardization_payload.get("metric_validation", {})
+    corruption_validation = (
+        validation.get("corruption_validation", {}) if isinstance(validation, dict) else {}
+    )
+    responsiveness = (
+        corruption_validation.get("responsiveness_by_metric", {})
+        if isinstance(corruption_validation, dict)
+        else {}
+    )
+    node = responsiveness.get(spec.report_key) if isinstance(responsiveness, dict) else None
+    return isinstance(node, dict) and bool(node.get("responsive", False))
+
+
 def score_metric(
     *,
     spec: MetricSpec,
@@ -184,6 +201,7 @@ def score_metric(
 
 def build_scores(
     values_by_label: dict[str, dict[str, float]],
+    standardization_payload: dict[str, Any],
     standardization_norm: dict[str, Any],
     *,
     display_null_widths: float,
@@ -193,6 +211,7 @@ def build_scores(
         for spec in METRICS
         if all(spec.key in values for values in values_by_label.values())
         and null_standardization_for_spec(standardization_norm, spec) is not None
+        and responsive_validation_for_spec(standardization_payload, spec)
     ]
     scores = {label: {} for label in values_by_label}
     for spec in available_specs:
@@ -281,12 +300,14 @@ def main() -> None:
     )
     specs, scores = build_scores(
         values_by_label,
+        standardization_payload,
         standardization_norm,
         display_null_widths=display_null_widths,
     )
     if len(specs) < 3:
         raise ValueError(
-            "Fewer than three metrics are available across all inputs; cannot make spider plot."
+            "Fewer than three metrics are available across all inputs after "
+            "null-width and responsiveness checks; cannot make spider plot."
         )
     output_path = Path(args.output)
     if not output_path.is_absolute():
