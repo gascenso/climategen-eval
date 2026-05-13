@@ -81,10 +81,12 @@ The standardization report separates two roles:
   `good = q50(real-vs-real)` and `scale = q95(real-vs-real) - q50(real-vs-real)`.
   A model's standardized gap is `max(0, model - good) / scale`.
 - `metric_validation.corruption_validation`: corruption sweeps used to validate
-  that metrics respond to
-  relevant degradations. A metric is included in null-standardized scores and
-  the spider plot only when it has a finite positive null width and passes this
-  responsiveness check.
+  that metrics respond to relevant degradations. The report records the
+  justifying degradation family, the first severity reaching target power,
+  Spearman response-shape correlations, directional consistency, monotonicity,
+  and the maximum response in real-vs-real null widths. A metric is included in
+  null-standardized scores and the spider plot only when it has a finite
+  positive null width and passes this responsiveness check.
 
 Plot null-standardized model scores:
 

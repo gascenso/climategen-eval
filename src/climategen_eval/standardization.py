@@ -358,6 +358,248 @@ def directionally_worse_than_reference(direction: str, reference: float, value: 
     return float(value) > float(reference)
 
 
+def metric_directional_response(*, direction: str, reference: float, value: float) -> float:
+    if str(direction) == "higher":
+        return float(reference) - float(value)
+    return float(value) - float(reference)
+
+
+def finite_float_or_none(value: float) -> float | None:
+    out = float(value)
+    return out if np.isfinite(out) else None
+
+
+def average_ranks(values: np.ndarray) -> np.ndarray:
+    arr = np.asarray(values, dtype=np.float64).reshape(-1)
+    ranks = np.empty(arr.shape[0], dtype=np.float64)
+    order = np.argsort(arr, kind="mergesort")
+    sorted_arr = arr[order]
+    start = 0
+    while start < sorted_arr.shape[0]:
+        stop = start + 1
+        while stop < sorted_arr.shape[0] and sorted_arr[stop] == sorted_arr[start]:
+            stop += 1
+        ranks[order[start:stop]] = 0.5 * float(start + stop - 1)
+        start = stop
+    return ranks
+
+
+def spearman_correlation(x: np.ndarray, y: np.ndarray) -> float | None:
+    left = np.asarray(x, dtype=np.float64).reshape(-1)
+    right = np.asarray(y, dtype=np.float64).reshape(-1)
+    finite = np.isfinite(left) & np.isfinite(right)
+    left = left[finite]
+    right = right[finite]
+    if left.size < 2:
+        return None
+    left_ranks = average_ranks(left)
+    right_ranks = average_ranks(right)
+    left_std = float(np.std(left_ranks))
+    right_std = float(np.std(right_ranks))
+    if left_std <= 0.0 or right_std <= 0.0:
+        return None
+    rho = float(np.corrcoef(left_ranks, right_ranks)[0, 1])
+    return finite_float_or_none(rho)
+
+
+def response_in_null_widths(*, response: float, null_width: float) -> float | None:
+    width = float(null_width)
+    if width <= 0.0 or not np.isfinite(width):
+        return None
+    return finite_float_or_none(float(response) / width)
+
+
+def compact_response_point(
+    point: dict[str, Any],
+    *,
+    direction: str,
+    good: float,
+    null_width: float,
+) -> dict[str, Any]:
+    value = float(point["value"])
+    response = metric_directional_response(
+        direction=direction,
+        reference=float(good),
+        value=value,
+    )
+    return {
+        "severity": float(point["severity"]),
+        "value": value,
+        "power": float(point["power"]),
+        "directional_response": response,
+        "directional_response_in_null_widths": response_in_null_widths(
+            response=response,
+            null_width=float(null_width),
+        ),
+    }
+
+
+def summarize_control_response_shape(
+    points: list[dict[str, Any]],
+    *,
+    direction: str,
+    good: float,
+    threshold: float,
+    target_power: float,
+    tolerance: float = 1.0e-12,
+) -> dict[str, Any]:
+    """Summarize whether a metric has a coherent response over a degradation sweep."""
+    sorted_points = sorted(points, key=lambda node: float(node["severity"]))
+    null_width = abs(float(threshold) - float(good))
+    positive_points = [
+        point for point in sorted_points if float(point.get("severity", 0.0)) > 0.0
+    ]
+    analysis_points = positive_points if positive_points else sorted_points
+
+    severities = np.asarray([float(point["severity"]) for point in sorted_points])
+    values = np.asarray([float(point["value"]) for point in sorted_points])
+    responses = np.asarray(
+        [
+            metric_directional_response(
+                direction=direction,
+                reference=float(good),
+                value=float(point["value"]),
+            )
+            for point in sorted_points
+        ],
+        dtype=np.float64,
+    )
+
+    positive_responses = np.asarray(
+        [
+            metric_directional_response(
+                direction=direction,
+                reference=float(good),
+                value=float(point["value"]),
+            )
+            for point in positive_points
+        ],
+        dtype=np.float64,
+    )
+    if positive_responses.size:
+        directionally_worse_fraction = float(np.mean(positive_responses > float(tolerance)))
+        non_improving_fraction = float(np.mean(positive_responses >= -float(tolerance)))
+        max_directional_response = float(np.max(positive_responses))
+    else:
+        directionally_worse_fraction = 0.0
+        non_improving_fraction = 0.0
+        max_directional_response = float(np.max(responses)) if responses.size else float("nan")
+
+    monotone_steps = []
+    for left, right in zip(range(len(sorted_points) - 1), range(1, len(sorted_points))):
+        if severities[right] > severities[left]:
+            monotone_steps.append(bool(responses[right] >= responses[left] - float(tolerance)))
+    monotone_worsening_fraction = (
+        float(np.mean(monotone_steps)) if monotone_steps else None
+    )
+
+    target_power_points = [
+        point for point in positive_points if float(point.get("power", 0.0)) >= target_power
+    ]
+    justified_points = [
+        point
+        for point in target_power_points
+        if metric_directional_response(
+            direction=direction,
+            reference=float(good),
+            value=float(point["value"]),
+        )
+        > float(tolerance)
+    ]
+    max_power = max(
+        (float(point.get("power", 0.0)) for point in positive_points),
+        default=0.0,
+    )
+    max_response_point = max(
+        analysis_points,
+        key=lambda point: metric_directional_response(
+            direction=direction,
+            reference=float(good),
+            value=float(point["value"]),
+        ),
+    ) if analysis_points else None
+    first_target_power_point = target_power_points[0] if target_power_points else None
+    first_justified_point = justified_points[0] if justified_points else None
+
+    return {
+        "n_points": int(len(sorted_points)),
+        "n_positive_severity_points": int(len(positive_points)),
+        "expected_raw_correlation_sign": "negative" if direction == "higher" else "positive",
+        "spearman_severity_value": spearman_correlation(severities, values),
+        "spearman_severity_worsening_response": spearman_correlation(
+            severities,
+            responses,
+        ),
+        "directionally_worse_fraction": directionally_worse_fraction,
+        "directionally_non_improving_fraction": non_improving_fraction,
+        "directionally_consistent": bool(
+            positive_responses.size
+            and non_improving_fraction == 1.0
+            and max_directional_response > float(tolerance)
+        ),
+        "monotone_worsening_fraction": monotone_worsening_fraction,
+        "monotone_worsening": (
+            bool(monotone_steps) and bool(all(monotone_steps))
+            if monotone_steps
+            else False
+        ),
+        "first_target_power_severity": (
+            float(first_target_power_point["severity"])
+            if first_target_power_point is not None
+            else None
+        ),
+        "first_target_power_point": (
+            compact_response_point(
+                first_target_power_point,
+                direction=direction,
+                good=float(good),
+                null_width=null_width,
+            )
+            if first_target_power_point is not None
+            else None
+        ),
+        "first_justified_severity": (
+            float(first_justified_point["severity"])
+            if first_justified_point is not None
+            else None
+        ),
+        "first_justified_point": (
+            compact_response_point(
+                first_justified_point,
+                direction=direction,
+                good=float(good),
+                null_width=null_width,
+            )
+            if first_justified_point is not None
+            else None
+        ),
+        "max_power": float(max_power),
+        "max_response": (
+            compact_response_point(
+                max_response_point,
+                direction=direction,
+                good=float(good),
+                null_width=null_width,
+            )
+            if max_response_point is not None
+            else None
+        ),
+        "justifies_inclusion": bool(first_justified_point is not None),
+    }
+
+
+def response_shape_strength(shape: dict[str, Any]) -> tuple[float, float]:
+    max_response = shape.get("max_response", {})
+    if not isinstance(max_response, dict):
+        return -float("inf"), -float("inf")
+    response_widths = max_response.get("directional_response_in_null_widths")
+    response_raw = max_response.get("directional_response")
+    return (
+        float(response_widths) if response_widths is not None else -float("inf"),
+        float(response_raw) if response_raw is not None else -float("inf"),
+    )
+
+
 def null_threshold_from_summary(
     summary: dict[str, float],
     *,
@@ -475,6 +717,13 @@ def compute_corruption_validation(
                     continue
                 direction = RANGE_DIRECTIONS.get(key, "lower")
                 summary = summarize_distribution(values)
+                good = float(good_values[key])
+                null_width = abs(float(thresholds[key]) - good)
+                directional_response = metric_directional_response(
+                    direction=direction,
+                    reference=good,
+                    value=float(summary["q50"]),
+                )
                 point = {
                     "severity": float(severity),
                     "threshold": float(thresholds[key]),
@@ -484,6 +733,11 @@ def compute_corruption_validation(
                         direction=direction,
                     ),
                     "value": float(summary["q50"]),
+                    "directional_response": float(directional_response),
+                    "directional_response_in_null_widths": response_in_null_widths(
+                        response=directional_response,
+                        null_width=null_width,
+                    ),
                     "summary": summary,
                 }
                 curves_by_control.setdefault(control_name, {}).setdefault(key, []).append(point)
@@ -494,11 +748,21 @@ def compute_corruption_validation(
         good = float(good_values[key])
         responsive_controls = {}
         max_power_by_control = {}
+        response_shape_by_control = {}
+        justifying_controls = []
         for control_name in controls:
             points = sorted(
                 curves_by_control.get(control_name, {}).get(key, []),
                 key=lambda node: float(node["severity"]),
             )
+            response_shape = summarize_control_response_shape(
+                points,
+                direction=direction,
+                good=good,
+                threshold=float(thresholds[key]),
+                target_power=float(target_power),
+            )
+            response_shape_by_control[control_name] = response_shape
             max_power_by_control[control_name] = max(
                 (float(point["power"]) for point in points if float(point["severity"]) > 0.0),
                 default=0.0,
@@ -511,21 +775,55 @@ def compute_corruption_validation(
                     and directionally_worse_than_reference(direction, good, value)
                 ):
                     responsive_controls[control_name] = point
+                    justifying_controls.append(control_name)
                     break
+        primary_justifying_control = None
+        if justifying_controls:
+            primary_justifying_control = max(
+                justifying_controls,
+                key=lambda name: response_shape_strength(response_shape_by_control[name]),
+            )
         responsiveness_by_metric[key] = {
             "direction": direction,
             "good_value": good,
             "null_threshold": float(thresholds[key]),
             "target_power": float(target_power),
             "responsive": bool(responsive_controls),
+            "justifying_controls": justifying_controls,
+            "primary_justifying_control": primary_justifying_control,
             "responsive_controls": responsive_controls,
             "max_power_by_control": max_power_by_control,
+            "response_shape_by_control": response_shape_by_control,
         }
 
     return {
         "enabled": True,
         "schema": "climategen_eval.corruption_validation.v1",
         "source": "corrupted_real_reference_images",
+        "responsiveness_decision": (
+            "A metric is responsive when at least one positive-severity degradation "
+            "family reaches target power and moves the metric in the expected worse "
+            "direction. Response-shape fields are reported as audit evidence."
+        ),
+        "response_shape_definition": {
+            "directional_response": (
+                "Metric displacement from the real-vs-real q50 in the expected worse "
+                "direction; positive values mean degradation worsened the metric."
+            ),
+            "directional_response_in_null_widths": (
+                "directional_response divided by the one-sided real-vs-real null width"
+            ),
+            "spearman_severity_worsening_response": (
+                "Spearman correlation between degradation severity and directional_response"
+            ),
+            "directionally_consistent": (
+                "All positive-severity points are non-improving relative to the "
+                "real-vs-real q50, and at least one point is worse."
+            ),
+            "monotone_worsening": (
+                "directional_response is non-decreasing across increasing severities"
+            ),
+        },
         "target_power": float(target_power),
         "reps": int(reps),
         "seed": int(seed),

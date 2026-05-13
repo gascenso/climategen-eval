@@ -7,6 +7,7 @@ from climategen_eval.standardization import (
     standardized_metric_value,
     standardize_metric_sample_distributions,
     standardize_metric_values,
+    summarize_control_response_shape,
 )
 from climategen_eval.tc_bt import (
     TCMetricConfig,
@@ -147,3 +148,53 @@ def test_standardized_bootstrap_report_includes_gap_and_score_intervals() -> Non
     assert node["point"]["score"] == 0.75
     assert node["standardized_gap"]["interval_95"]["low"] <= 1.0
     assert node["score"]["interval_95"]["high"] <= 1.0
+
+
+def test_control_response_shape_reports_monotonicity_and_justification() -> None:
+    points = [
+        {"severity": 0.0, "value": 1.0, "power": 0.0},
+        {"severity": 1.0, "value": 1.5, "power": 0.4},
+        {"severity": 2.0, "value": 3.5, "power": 0.9},
+    ]
+
+    shape = summarize_control_response_shape(
+        points,
+        direction="lower",
+        good=1.0,
+        threshold=3.0,
+        target_power=0.8,
+    )
+
+    assert shape["expected_raw_correlation_sign"] == "positive"
+    assert np.isclose(shape["spearman_severity_value"], 1.0)
+    assert np.isclose(shape["spearman_severity_worsening_response"], 1.0)
+    assert shape["directionally_consistent"]
+    assert shape["monotone_worsening"]
+    assert shape["first_target_power_severity"] == 2.0
+    assert shape["first_justified_severity"] == 2.0
+    assert shape["justifies_inclusion"]
+    assert shape["max_response"]["directional_response"] == 2.5
+    assert shape["max_response"]["directional_response_in_null_widths"] == 1.25
+
+
+def test_control_response_shape_handles_higher_is_better_metrics() -> None:
+    points = [
+        {"severity": 0.0, "value": 10.0, "power": 0.0},
+        {"severity": 1.0, "value": 9.0, "power": 0.5},
+        {"severity": 2.0, "value": 7.0, "power": 0.9},
+    ]
+
+    shape = summarize_control_response_shape(
+        points,
+        direction="higher",
+        good=10.0,
+        threshold=8.0,
+        target_power=0.8,
+    )
+
+    assert shape["expected_raw_correlation_sign"] == "negative"
+    assert np.isclose(shape["spearman_severity_value"], -1.0)
+    assert np.isclose(shape["spearman_severity_worsening_response"], 1.0)
+    assert shape["directionally_consistent"]
+    assert shape["justifies_inclusion"]
+    assert shape["first_justified_point"]["directional_response"] == 3.0
