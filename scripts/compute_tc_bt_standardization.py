@@ -15,24 +15,21 @@ if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from climategen_eval.data import RealDataset
-from climategen_eval.normalization import compute_anchor_report
+from climategen_eval.standardization import (
+    DEFAULT_DISPLAY_NULL_WIDTHS,
+    compute_standardization_report,
+)
 from climategen_eval.tc_bt import TCMetricConfig
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compute TC BT normalization anchors.")
+    parser = argparse.ArgumentParser(description="Compute TC BT metric standardization report.")
     parser.add_argument("--config", default="configs/tc_bt_case_study.yaml")
     parser.add_argument("--generated-n-per-class", type=int, default=1000)
-    parser.add_argument("--anchor-mode", choices=["fixed", "calibrated"], default="fixed")
     parser.add_argument("--real-reference-reps", type=int, default=None)
-    parser.add_argument("--calibration-reps", type=int, default=None)
-    parser.add_argument("--calibration-target-power", type=float, default=0.80)
-    parser.add_argument("--calibration-null-quantile", type=float, default=0.95)
-    parser.add_argument(
-        "--calibration-bad-anchor-aggregation",
-        choices=["median", "mean"],
-        default="median",
-    )
+    parser.add_argument("--validation-reps", type=int, default=None)
+    parser.add_argument("--validation-target-power", type=float, default=0.80)
+    parser.add_argument("--display-null-widths", type=float, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--output", required=True)
     return parser.parse_args()
@@ -84,10 +81,15 @@ def json_default(obj: Any) -> Any:
 def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
-    norm_cfg = dict(cfg.get("metric_normalization", {}))
-    seed = int(norm_cfg.get("seed", 123) if args.seed is None else args.seed)
+    standardization_cfg = dict(cfg.get("metric_standardization", {}))
+    seed = int(standardization_cfg.get("seed", 123) if args.seed is None else args.seed)
+    display_null_widths = float(
+        standardization_cfg.get("display_null_widths", DEFAULT_DISPLAY_NULL_WIDTHS)
+        if args.display_null_widths is None
+        else args.display_null_widths
+    )
     reps = int(
-        norm_cfg.get("real_reference_reps", 200)
+        standardization_cfg.get("real_reference_reps", 200)
         if args.real_reference_reps is None
         else args.real_reference_reps
     )
@@ -99,18 +101,16 @@ def main() -> None:
         class_id: real_dataset.load_bt_by_class(class_id)
         for class_id in real_dataset.class_ids
     }
-    report = compute_anchor_report(
+    report = compute_standardization_report(
         real_by_class=real_by_class,
         cfg=metric_config(cfg),
         generated_n_per_class=int(args.generated_n_per_class),
-        controls=list(norm_cfg.get("controls", [])) or None,
-        anchor_mode=str(args.anchor_mode),
+        controls=list(standardization_cfg.get("controls", [])) or None,
         seed=seed,
         real_reference_reps=reps,
-        calibration_reps=args.calibration_reps,
-        calibration_target_power=float(args.calibration_target_power),
-        calibration_null_quantile=float(args.calibration_null_quantile),
-        calibration_bad_anchor_aggregation=str(args.calibration_bad_anchor_aggregation),
+        validation_reps=args.validation_reps,
+        validation_target_power=float(args.validation_target_power),
+        display_null_widths=display_null_widths,
     )
     report.update(
         {
@@ -135,4 +135,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

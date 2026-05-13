@@ -36,13 +36,20 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Prepare the TC BT case-study data directory from the tc-diffusion workspace."
     )
-    parser.add_argument("--source-repo", default="..", help="Path to the original tc-diffusion repo.")
+    parser.add_argument(
+        "--source-repo",
+        default="../tc-diffusion",
+        help="Path to the original tc-diffusion repo.",
+    )
     parser.add_argument("--output", default="data/tropical_cyclone_bt")
     parser.add_argument(
         "--copy-mode",
         choices=["symlink", "copy", "hardlink"],
         default="symlink",
-        help="How to port generated sample-bank files. Real test data are exported as new NPY arrays.",
+        help=(
+            "How to port generated sample-bank files. "
+            "Real test data are exported as new NPY arrays."
+        ),
     )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
@@ -151,7 +158,13 @@ def export_real_test_data(*, source_repo: Path, output_root: Path, overwrite: bo
     print(f"Wrote {manifest_path}")
 
 
-def port_generated_banks(*, source_repo: Path, output_root: Path, mode: str, overwrite: bool) -> None:
+def port_generated_banks(
+    *,
+    source_repo: Path,
+    output_root: Path,
+    mode: str,
+    overwrite: bool,
+) -> None:
     generated_root = output_root / "generated"
     for label, rel in DEFAULT_BANKS.items():
         src = source_repo / rel
@@ -189,8 +202,16 @@ def main() -> None:
         output_root = _REPO_ROOT / output_root
     output_root.mkdir(parents=True, exist_ok=True)
 
-    copy_source_manifests(source_repo=source_repo, output_root=output_root, overwrite=bool(args.overwrite))
-    export_real_test_data(source_repo=source_repo, output_root=output_root, overwrite=bool(args.overwrite))
+    copy_source_manifests(
+        source_repo=source_repo,
+        output_root=output_root,
+        overwrite=bool(args.overwrite),
+    )
+    export_real_test_data(
+        source_repo=source_repo,
+        output_root=output_root,
+        overwrite=bool(args.overwrite),
+    )
     port_generated_banks(
         source_repo=source_repo,
         output_root=output_root,
@@ -201,4 +222,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

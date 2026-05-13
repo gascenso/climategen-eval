@@ -2,8 +2,8 @@
 
 `climategen-eval` is a standalone evaluator for generative climate-field models.
 The repository is intentionally independent of diffusion training code: it consumes real
-reference data, model-generated sample banks, and emits metric reports, normalization
-anchors, and publication figures.
+reference data, model-generated sample banks, and emits metric reports,
+null-standardization reports, and publication figures.
 
 The initial case study is tropical-cyclone brightness temperature imagery. The current
 port includes:
@@ -12,8 +12,11 @@ port includes:
   helpers, and nearest-neighbor summaries.
 - A lightweight TC brightness-temperature evaluator for real test data and generated NPY
   sample banks.
-- Negative-control and anchor utilities matching the current TC diffusion evaluation logic.
-- A spider-plot script that reads plain `metrics.json` paths.
+- Real-vs-real null utilities that define null-standardized effect sizes for model
+  metrics.
+- Corruption sweeps for metric responsiveness validation.
+- A spider-plot script that reads plain `metrics.json` paths and maps standardized
+  gaps onto `[0, 1]` for display.
 - A case-study data preparation script that exports only held-out test data and links/copies
   the two generated sample banks used in the current comparison.
 
@@ -37,7 +40,7 @@ Prepare a local case-study data directory from the original repo:
 
 ```bash
 python case_studies/tropical_cyclone_bt/prepare_case_study.py \
-  --source-repo .. \
+  --source-repo ../tc-diffusion \
   --output data/tropical_cyclone_bt \
   --copy-mode symlink
 ```
@@ -53,31 +56,42 @@ python scripts/evaluate_tc_bt_sample_banks.py \
   --output-root outputs/tropical_cyclone_bt/eval
 ```
 
-Compute normalization anchors:
+Compute the null-standardization report:
 
 ```bash
-python scripts/compute_tc_bt_anchors.py \
+python scripts/compute_tc_bt_standardization.py \
   --config configs/tc_bt_case_study.yaml \
   --generated-n-per-class 1000 \
-  --anchor-mode calibrated \
   --real-reference-reps 200 \
-  --calibration-reps 200 \
-  --output outputs/tropical_cyclone_bt/anchors/test_n1000_calibrated/metric_normalization.json
+  --output outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json
 ```
 
-Plot normalized model scores:
+The standardization report separates two roles:
+
+- `null_standardization`: the primary score ruler. For lower-is-better metrics,
+  `good = q50(real-vs-real)` and `scale = q95(real-vs-real) - q50(real-vs-real)`.
+  A model's standardized gap is `max(0, model - good) / scale`.
+- `metric_validation.corruption_validation`: corruption sweeps used to validate
+  that metrics respond to
+  relevant degradations. These diagnostics are not used to set model scores.
+
+Plot null-standardized model scores:
 
 ```bash
 python scripts/plot_model_metric_summary.py \
   --input FINAL_BASELINE=outputs/tropical_cyclone_bt/eval/FINAL_BASELINE/metrics.json \
   --input pinn_loss=outputs/tropical_cyclone_bt/eval/pinn_loss/metrics.json \
-  --normalization-anchors outputs/tropical_cyclone_bt/anchors/test_n1000_calibrated/metric_normalization.json \
+  --standardization-report \
+  outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
+  --display-null-widths 4 \
   --output outputs/tropical_cyclone_bt/figures/model_metric_summary.svg
 ```
+
+With the default null-standardized plot mode, a score of zero means the metric is
+at least four one-sided real-vs-real null widths worse than the finite-sample ideal.
 
 ## Notes
 
 The learned evaluator-embedding metrics from the original diffusion repository are not
 ported in this first pass. They should become an optional module with explicit evaluator
 weights and documented training provenance.
-

@@ -77,6 +77,22 @@ class ClassMetricCache:
     gen_exceedance_rate: dict[str, float]
 
 
+def ensure_metric_bt_batch(name: str, value: np.ndarray, cfg: TCMetricConfig) -> np.ndarray:
+    arr = np.asarray(value, dtype=np.float32)
+    expected_shape = (int(cfg.image_size), int(cfg.image_size))
+    if arr.ndim != 3:
+        raise ValueError(f"{name} must have shape (N,H,W), got {arr.shape}.")
+    if arr.shape[0] <= 0:
+        raise ValueError(f"{name} must contain at least one image.")
+    if tuple(arr.shape[1:]) != expected_shape:
+        raise ValueError(
+            f"{name} images must have shape {expected_shape}, got {tuple(arr.shape[1:])}."
+        )
+    if not np.all(np.isfinite(arr)):
+        raise ValueError(f"{name} contains non-finite values.")
+    return arr
+
+
 def make_metric_context(cfg: TCMetricConfig) -> tuple[PolarBinner, DAVComputer, np.ndarray]:
     binner = PolarBinner(cfg.image_size, cfg.image_size, int(cfg.profile_bins), 360)
     dav_computer = DAVComputer(
@@ -158,6 +174,13 @@ def compute_feature_metrics(
     )
 
 
+def mean_profile_l2_gap(left: np.ndarray, right: np.ndarray) -> float:
+    left_mean = np.asarray(left, dtype=np.float64).mean(axis=0)
+    right_mean = np.asarray(right, dtype=np.float64).mean(axis=0)
+    diff = left_mean - right_mean
+    return float(np.sqrt(np.mean(diff * diff)))
+
+
 def build_class_metric_cache(
     *,
     real_k: np.ndarray,
@@ -167,8 +190,8 @@ def build_class_metric_cache(
     dav_computer: DAVComputer | None = None,
     cold_mask: np.ndarray | None = None,
 ) -> ClassMetricCache:
-    real_k = np.asarray(real_k, dtype=np.float32)
-    gen_k_raw = np.asarray(gen_k_raw, dtype=np.float32)
+    real_k = ensure_metric_bt_batch("real_k", real_k, cfg)
+    gen_k_raw = ensure_metric_bt_batch("gen_k_raw", gen_k_raw, cfg)
     if binner is None or dav_computer is None or cold_mask is None:
         binner, dav_computer, cold_mask = make_metric_context(cfg)
 
@@ -196,13 +219,16 @@ def build_class_metric_cache(
     real_eye = eye_contrast_proxy(real_mean_profiles)
     gen_raw_eye = eye_contrast_proxy(gen_raw_mean_profiles)
 
-    real_features, feature_scaler = flatten_features_for_diversity(real_mean_profiles, real_psd_profiles)
+    real_features, feature_scaler = flatten_features_for_diversity(
+        real_mean_profiles,
+        real_psd_profiles,
+    )
     gen_raw_features, _ = flatten_features_for_diversity(
         gen_raw_mean_profiles,
         gen_raw_psd_profiles,
         scaler=feature_scaler,
     )
-    feature_gamma_raw = median_heuristic_gamma(real_features, gen_raw_features)
+    feature_gamma_raw = median_heuristic_gamma(real_features, real_features)
 
     gen_raw_exceed_below = np.mean(gen_k_raw < float(cfg.bt_min_k), axis=(1, 2)).astype(np.float32)
     gen_raw_exceed_above = np.mean(gen_k_raw > float(cfg.bt_max_k), axis=(1, 2)).astype(np.float32)
@@ -250,7 +276,7 @@ def build_class_metric_cache_from_real_cache(
     dav_computer: DAVComputer,
     cold_mask: np.ndarray,
 ) -> ClassMetricCache:
-    gen_k_raw = np.asarray(gen_k_raw, dtype=np.float32)
+    gen_k_raw = ensure_metric_bt_batch("gen_k_raw", gen_k_raw, cfg)
     gen_raw_hist_counts = hist_counts_batch(gen_k_raw, real_cache.bins)
     gen_raw_mean_profiles, _gen_azstd = radial_profile_batch(gen_k_raw, binner)
     gen_raw_psd_profiles = psd_radial_batch(gen_k_raw, int(cfg.psd_bins))
@@ -266,7 +292,7 @@ def build_class_metric_cache_from_real_cache(
         gen_raw_psd_profiles,
         scaler=real_cache.feature_scaler,
     )
-    feature_gamma_raw = median_heuristic_gamma(real_cache.real_features, gen_raw_features)
+    feature_gamma_raw = float(real_cache.feature_gamma_raw)
     gen_raw_exceed_below = np.mean(gen_k_raw < float(cfg.bt_min_k), axis=(1, 2)).astype(np.float32)
     gen_raw_exceed_above = np.mean(gen_k_raw > float(cfg.bt_max_k), axis=(1, 2)).astype(np.float32)
     gen_raw_exceed_total = gen_raw_exceed_below + gen_raw_exceed_above
@@ -351,7 +377,7 @@ def compute_class_scalar_summary(
         "cold_cloud_fraction_abs_gap": float(abs(real_cold.mean() - gen_cold.mean())),
         "dav_abs_gap_deg2": float(abs(real_dav.mean() - gen_dav.mean())),
         "eye_contrast_proxy_abs_gap": float(abs(real_eye.mean() - gen_eye.mean())),
-        "psd_l2": float(((real_psd.mean(axis=0) - gen_psd.mean(axis=0)) ** 2).mean()),
+        "psd_l2": mean_profile_l2_gap(real_psd, gen_psd),
         "feature_mmd2": float(mmd2),
         "diversity_feature_space_abs_gap": float(abs(div_real - div_gen)),
         "gen_exceedance_rate_total": float(select_rows(cache.gen_raw_exceed_total, gen_idx).mean()),
@@ -381,13 +407,22 @@ def compute_real_vs_real_class_summary(
     right_dav = select_rows(cache.real_dav, right_idx)
     left_eye = select_rows(cache.real_eye, left_idx)
     right_eye = select_rows(cache.real_eye, right_idx)
+    left_features = select_rows(cache.real_features, left_idx)
+    right_features = select_rows(cache.real_features, right_idx)
+    mmd2, div_left, div_right = compute_feature_metrics(
+        left_features,
+        right_features,
+        cache.feature_gamma_raw,
+    )
     return {
         "pixel_hist_js": float(js_divergence(left_mass, right_mass)),
         "pixel_hist_w1": float(wasserstein1_from_hist(left_mass, right_mass, bin_edges=cache.bins)),
         "cold_cloud_fraction_abs_gap": float(abs(left_cold.mean() - right_cold.mean())),
         "dav_abs_gap_deg2": float(abs(left_dav.mean() - right_dav.mean())),
         "eye_contrast_proxy_abs_gap": float(abs(left_eye.mean() - right_eye.mean())),
-        "psd_l2": float(((left_psd.mean(axis=0) - right_psd.mean(axis=0)) ** 2).mean()),
+        "psd_l2": mean_profile_l2_gap(left_psd, right_psd),
+        "feature_mmd2": float(mmd2),
+        "diversity_feature_space_abs_gap": float(abs(div_left - div_right)),
         "radial_profile_mae_k": float(
             np.mean(np.abs(left_radial.mean(axis=0) - right_radial.mean(axis=0)))
         ),
@@ -411,6 +446,13 @@ def evaluate_model_by_class(
     generated_by_class: dict[int, np.ndarray],
     cfg: TCMetricConfig,
 ) -> dict[str, Any]:
+    real_classes = set(real_by_class)
+    generated_classes = set(generated_by_class)
+    if real_classes != generated_classes:
+        raise ValueError(
+            f"Generated classes {sorted(generated_classes)} do not match "
+            f"real classes {sorted(real_classes)}."
+        )
     binner, dav_computer, cold_mask = make_metric_context(cfg)
     per_class: dict[int, dict[str, Any]] = {}
     class_summaries: dict[int, dict[str, float]] = {}

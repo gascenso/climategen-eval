@@ -15,6 +15,10 @@ if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from climategen_eval.data import RealDataset, SampleBank
+from climategen_eval.standardization import (
+    DEFAULT_DISPLAY_NULL_WIDTHS,
+    standardize_metric_values,
+)
 from climategen_eval.tc_bt import TCMetricConfig, evaluate_model_by_class
 
 
@@ -29,6 +33,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--n-per-class", type=int, default=1000)
     parser.add_argument("--output-root", default="outputs/tropical_cyclone_bt/eval")
+    parser.add_argument(
+        "--standardization-report",
+        default=None,
+        help="Optional metric standardization JSON used to add null-standardized aggregate scores.",
+    )
+    parser.add_argument(
+        "--display-null-widths",
+        type=float,
+        default=DEFAULT_DISPLAY_NULL_WIDTHS,
+        help="Number of real-vs-real null widths mapped to zero in display scores.",
+    )
     return parser.parse_args()
 
 
@@ -107,8 +122,36 @@ def main() -> None:
         output_root = _REPO_ROOT / output_root
     output_root.mkdir(parents=True, exist_ok=True)
 
+    standardization_ranges = None
+    standardization_report_path = None
+    if args.standardization_report is not None:
+        norm_path = Path(args.standardization_report)
+        if not norm_path.is_absolute():
+            norm_path = _REPO_ROOT / norm_path
+        with norm_path.open("r") as f:
+            payload = json.load(f)
+        if not isinstance(payload, dict):
+            raise ValueError(f"Expected standardization report object in {norm_path}.")
+        standardization_node = payload.get("metric_standardization")
+        if not isinstance(standardization_node, dict):
+            raise ValueError(f"{norm_path} does not contain a metric_standardization object.")
+        standardization = standardization_node.get("null_standardization", {})
+        standardization_ranges = (
+            standardization.get("ranges", {}) if isinstance(standardization, dict) else {}
+        )
+        standardization_report_path = norm_path
+        if not isinstance(standardization_ranges, dict) or not standardization_ranges:
+            raise ValueError(f"{norm_path} does not contain null_standardization ranges.")
+
     for label, bank_dir in [parse_model(raw) for raw in args.model]:
         bank = SampleBank.from_dir(bank_dir)
+        expected_classes = set(real_dataset.class_ids)
+        bank_classes = set(bank.class_ids)
+        if bank_classes != expected_classes:
+            raise ValueError(
+                f"Sample bank {label!r} classes {sorted(bank_classes)} do not match "
+                f"real dataset classes {sorted(expected_classes)}."
+            )
         generated_by_class = {
             class_id: bank.load_bt_k(class_id, limit=int(args.n_per_class), mmap_mode=None)
             for class_id in bank.class_ids
@@ -118,6 +161,17 @@ def main() -> None:
             generated_by_class=generated_by_class,
             cfg=tc_cfg,
         )
+        if standardization_ranges is not None:
+            report["aggregate_primary_standardized"] = {
+                "schema": "climategen_eval.null_standardized_scores.v1",
+                "source": str(standardization_report_path),
+                "display_null_widths": float(args.display_null_widths),
+                "values": standardize_metric_values(
+                    report["aggregate_primary_raw"],
+                    standardization_ranges,
+                    display_null_widths=float(args.display_null_widths),
+                ),
+            }
         report.update(
             {
                 "schema": "climategen_eval.tc_bt_metrics.v1",
@@ -135,7 +189,9 @@ def main() -> None:
                 },
                 "n_per_class": int(args.n_per_class),
                 "sample_counts": {
-                    "real_by_class": {str(c): int(v.shape[0]) for c, v in sorted(real_by_class.items())},
+                    "real_by_class": {
+                        str(c): int(v.shape[0]) for c, v in sorted(real_by_class.items())
+                    },
                     "generated_by_class": {
                         str(c): int(v.shape[0]) for c, v in sorted(generated_by_class.items())
                     },
@@ -152,4 +208,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

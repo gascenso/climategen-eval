@@ -139,11 +139,15 @@ def nearest_neighbor_distances_and_indices(
     query = np.asarray(query, dtype=np.float64)
     reference = np.asarray(reference, dtype=np.float64)
     if query.ndim != 2 or reference.ndim != 2:
-        raise ValueError(f"Expected rank-2 feature matrices, got {query.shape} and {reference.shape}.")
+        raise ValueError(
+            f"Expected rank-2 feature matrices, got {query.shape} and {reference.shape}."
+        )
     if query.shape[0] == 0:
         return np.zeros((0,), dtype=np.float32), np.zeros((0,), dtype=np.int64)
     if reference.shape[0] == 0:
-        raise ValueError("nearest_neighbor_distances_and_indices requires at least one reference row.")
+        raise ValueError(
+            "nearest_neighbor_distances_and_indices requires at least one reference row."
+        )
     if query.shape[1] != reference.shape[1]:
         raise ValueError(f"Feature dimensions differ: {query.shape[1]} vs {reference.shape[1]}.")
 
@@ -283,7 +287,9 @@ def coverage_from_real_radii(
     nn = np.asarray(real_to_gen_nn, dtype=np.float64).reshape(-1)
     radii = np.asarray(real_radii, dtype=np.float64).reshape(-1)
     if nn.shape != radii.shape:
-        raise ValueError(f"real_to_gen_nn and real_radii shape mismatch: {nn.shape} vs {radii.shape}.")
+        raise ValueError(
+            f"real_to_gen_nn and real_radii shape mismatch: {nn.shape} vs {radii.shape}."
+        )
     if nn.size == 0:
         raise ValueError("Cannot compute coverage from an empty reference set.")
 
@@ -419,7 +425,8 @@ class PolarBinner:
         mean_r = sum_r / (cnt_r + 1e-12)
 
         # azimuthal variability:
-        # For each radius bin, bin by theta and compute mean over theta bins, then std over theta means.
+        # For each radius bin, bin by theta and compute mean over theta bins,
+        # then std over theta means.
         # This is robust and interpretable.
         t_idx = self._t_idx
         az_std = np.zeros(self.r_bins, dtype=np.float64)
@@ -467,7 +474,9 @@ class DAVComputer:
 
     def __post_init__(self):
         if self.H <= 0 or self.W <= 0:
-            raise ValueError(f"DAVComputer expects positive image dimensions, got H={self.H}, W={self.W}.")
+            raise ValueError(
+                f"DAVComputer expects positive image dimensions, got H={self.H}, W={self.W}."
+            )
         if self.pixel_size_km <= 0.0:
             raise ValueError(f"DAVComputer.pixel_size_km must be > 0, got {self.pixel_size_km}.")
         if self.radius_km <= 0.0:
@@ -541,7 +550,10 @@ class DAVComputer:
         dev_angle_deg = np.arccos(cos_theta) * (180.0 / np.pi)
 
         mean_angle = np.sum(dev_angle_deg * self.mask, axis=1, keepdims=True) / self.weight_sum
-        dav_by_center = np.sum(np.square(dev_angle_deg - mean_angle) * self.mask, axis=1) / self.weight_sum[:, 0]
+        dav_by_center = (
+            np.sum(np.square(dev_angle_deg - mean_angle) * self.mask, axis=1)
+            / self.weight_sum[:, 0]
+        )
         return float(np.mean(dav_by_center))
 
     def batch(self, imgs: np.ndarray) -> np.ndarray:
@@ -628,13 +640,19 @@ def cold_cloud_fraction(
 
     mask_arr = np.asarray(mask, dtype=bool)
     if mask_arr.shape != arr.shape[1:]:
-        raise ValueError(f"Cold-cloud mask shape {mask_arr.shape} does not match image shape {arr.shape[1:]}.")
+        raise ValueError(
+            f"Cold-cloud mask shape {mask_arr.shape} does not match image shape {arr.shape[1:]}."
+        )
     if not np.any(mask_arr):
         raise ValueError("Cold-cloud mask selects no pixels.")
     return np.mean(cold[:, mask_arr], axis=1).astype(np.float32)
 
 
-def eye_contrast_proxy(mean_profile_k: np.ndarray, inner_frac: float = 0.12, ring_frac: float = 0.20) -> np.ndarray:
+def eye_contrast_proxy(
+    mean_profile_k: np.ndarray,
+    inner_frac: float = 0.12,
+    ring_frac: float = 0.20,
+) -> np.ndarray:
     """
     Uses radial mean profile: higher contrast between warm inner core and cold eyewall ring.
     mean_profile_k: (N, r_bins)
@@ -852,7 +870,8 @@ def frechet_distance_from_stats(
         )
     if cov_real.shape != cov_gen.shape:
         raise ValueError(
-            f"Covariance matrices must have identical shape, got {cov_real.shape} vs {cov_gen.shape}"
+            "Covariance matrices must have identical shape, "
+            f"got {cov_real.shape} vs {cov_gen.shape}"
         )
     if cov_real.shape[0] != cov_real.shape[1]:
         raise ValueError(f"Covariance matrix must be square, got {cov_real.shape}")

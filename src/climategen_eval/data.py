@@ -227,7 +227,9 @@ class SampleBank:
                     count=int(raw_shard["count"]),
                     bt_path=root / str(raw_shard["bt_k"]),
                     wind_path=(
-                        None if raw_shard.get("wind_kt") is None else root / str(raw_shard["wind_kt"])
+                        None
+                        if raw_shard.get("wind_kt") is None
+                        else root / str(raw_shard["wind_kt"])
                     ),
                 )
                 shards.append(shard)
@@ -254,7 +256,13 @@ class SampleBank:
     def available_n_per_class(self) -> int:
         return min(self.generated_counts_by_class.values()) if self.generated_counts_by_class else 0
 
-    def load_bt_k(self, class_id: int, *, limit: int | None = None, mmap_mode: str | None = "r") -> np.ndarray:
+    def load_bt_k(
+        self,
+        class_id: int,
+        *,
+        limit: int | None = None,
+        mmap_mode: str | None = "r",
+    ) -> np.ndarray:
         class_id = int(class_id)
         shards = self.shards_by_class.get(class_id)
         if not shards:
@@ -275,7 +283,9 @@ class SampleBank:
             chunks.append(arr[:take])
             remaining -= take
         if remaining:
-            raise ValueError(f"Sample bank {self.name!r} is missing {remaining} rows for class {class_id}.")
+            raise ValueError(
+                f"Sample bank {self.name!r} is missing {remaining} rows for class {class_id}."
+            )
         if len(chunks) == 1:
             return np.asarray(chunks[0], dtype=np.float32)
         return np.concatenate([np.asarray(chunk, dtype=np.float32) for chunk in chunks], axis=0)
@@ -287,4 +297,3 @@ def counts_by_label(labels: Iterable[int]) -> dict[int, int]:
         key = int(label)
         out[key] = out.get(key, 0) + 1
     return dict(sorted(out.items()))
-

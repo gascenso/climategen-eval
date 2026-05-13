@@ -26,21 +26,6 @@ def apply_gaussian_blur_bt_k(bt_k: np.ndarray, *, sigma_px: float) -> np.ndarray
     return out
 
 
-def build_shared_pixel_shuffle_permutation(*, image_shape: tuple[int, int], seed: int) -> np.ndarray:
-    h, w = int(image_shape[0]), int(image_shape[1])
-    rng = np.random.default_rng(int(seed))
-    return np.asarray(rng.permutation(h * w), dtype=np.int64)
-
-
-def apply_shared_pixel_shuffle_bt_k(bt_k: np.ndarray, *, permutation: np.ndarray) -> np.ndarray:
-    arr = ensure_bt_batch(bt_k)
-    flat = arr.reshape(arr.shape[0], -1)
-    perm = np.asarray(permutation, dtype=np.int64).reshape(-1)
-    if flat.shape[1] != perm.shape[0]:
-        raise ValueError("Pixel-shuffle permutation length does not match image size.")
-    return np.asarray(flat[:, perm].reshape(arr.shape), dtype=np.float32)
-
-
 def apply_partial_pixel_shuffle_bt_k(bt_k: np.ndarray, *, fraction: float, seed: int) -> np.ndarray:
     arr = ensure_bt_batch(bt_k)
     frac = float(np.clip(fraction, 0.0, 1.0))
@@ -83,16 +68,12 @@ def apply_center_jitter_bt_k(bt_k: np.ndarray, *, max_shift_px: int, seed: int) 
     return out
 
 
-def apply_mode_collapse_bt_k(bt_k: np.ndarray, *, seed: int) -> np.ndarray:
-    arr = ensure_bt_batch(bt_k)
-    if arr.shape[0] <= 0:
-        raise ValueError("Cannot mode-collapse an empty image set.")
-    rng = np.random.default_rng(int(seed))
-    idx = int(rng.integers(arr.shape[0]))
-    return np.repeat(arr[idx : idx + 1], arr.shape[0], axis=0).astype(np.float32, copy=False)
-
-
-def apply_mode_collapse_fraction_bt_k(bt_k: np.ndarray, *, fraction: float, seed: int) -> np.ndarray:
+def apply_mode_collapse_fraction_bt_k(
+    bt_k: np.ndarray,
+    *,
+    fraction: float,
+    seed: int,
+) -> np.ndarray:
     arr = ensure_bt_batch(bt_k)
     frac = float(np.clip(fraction, 0.0, 1.0))
     if frac <= 0.0:
@@ -101,7 +82,10 @@ def apply_mode_collapse_fraction_bt_k(bt_k: np.ndarray, *, fraction: float, seed
     out = arr.copy()
     n_replace = min(max(int(round(frac * arr.shape[0])), 1), arr.shape[0])
     source_idx = int(rng.integers(arr.shape[0]))
-    replace_idx = np.asarray(rng.choice(arr.shape[0], size=n_replace, replace=False), dtype=np.int64)
+    replace_idx = np.asarray(
+        rng.choice(arr.shape[0], size=n_replace, replace=False),
+        dtype=np.int64,
+    )
     out[replace_idx] = arr[source_idx]
     return out
 
@@ -115,54 +99,7 @@ def ensure_bt_batch(bt_k: np.ndarray) -> np.ndarray:
     return arr
 
 
-def build_fixed_control_bt_k(
-    control_name: str,
-    source_k: np.ndarray,
-    *,
-    seed: int,
-    gaussian_sigma_px: float = 6.0,
-    bt_warm_shift_k: float = 15.0,
-    center_jitter_max_px: int = 24,
-) -> tuple[np.ndarray, dict[str, Any]]:
-    name = str(control_name)
-    if name == "gaussian_blur":
-        return apply_gaussian_blur_bt_k(source_k, sigma_px=gaussian_sigma_px), {
-            "name": name,
-            "sigma_px": float(gaussian_sigma_px),
-        }
-    if name == "pixel_shuffle":
-        arr = ensure_bt_batch(source_k)
-        permutation = build_shared_pixel_shuffle_permutation(
-            image_shape=(int(arr.shape[1]), int(arr.shape[2])),
-            seed=int(seed),
-        )
-        return apply_shared_pixel_shuffle_bt_k(arr, permutation=permutation), {
-            "name": name,
-            "permutation": "shared_flattened_pixel_permutation",
-            "seed": int(seed),
-        }
-    if name == "bt_warm_shift":
-        return apply_bt_warm_shift_bt_k(source_k, shift_k=bt_warm_shift_k), {
-            "name": name,
-            "shift_k": float(bt_warm_shift_k),
-        }
-    if name == "center_jitter":
-        return apply_center_jitter_bt_k(source_k, max_shift_px=center_jitter_max_px, seed=seed), {
-            "name": name,
-            "max_shift_px": int(center_jitter_max_px),
-            "seed": int(seed),
-            "padding": "edge",
-        }
-    if name == "mode_collapse":
-        return apply_mode_collapse_bt_k(source_k, seed=seed), {
-            "name": name,
-            "selection": "one sampled same-class real image repeated to generated count",
-            "seed": int(seed),
-        }
-    raise ValueError(f"Unsupported control: {control_name!r}")
-
-
-def build_calibrated_control_bt_k(
+def build_validation_control_bt_k(
     control_name: str,
     source_k: np.ndarray,
     *,
@@ -207,5 +144,4 @@ def build_calibrated_control_bt_k(
             "severity": value,
             "seed": int(seed),
         }
-    raise ValueError(f"Unsupported calibrated control: {control_name!r}")
-
+    raise ValueError(f"Unsupported validation control: {control_name!r}")
