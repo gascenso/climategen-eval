@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv/
+*.egg-info/
+
+# Case-study data and generated reports are intentionally reproducible artifacts,
+# not source files.
+data/
+outputs/
+
