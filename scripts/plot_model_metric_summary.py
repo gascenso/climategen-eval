@@ -144,6 +144,33 @@ def extract_values(path: Path) -> dict[str, float]:
     return values
 
 
+def extract_score_intervals(path: Path) -> dict[str, tuple[float, float]]:
+    report = load_json(path)
+    values = nested_get(
+        report,
+        ("aggregate_primary_standardized", "bootstrap", "values"),
+        {},
+    )
+    if not isinstance(values, dict):
+        return {}
+    intervals = {}
+    for spec in METRICS:
+        node = values.get(spec.report_key)
+        score = node.get("score", {}) if isinstance(node, dict) else {}
+        interval = score.get("interval_95", {}) if isinstance(score, dict) else {}
+        if not isinstance(interval, dict):
+            continue
+        low = interval.get("low")
+        high = interval.get("high")
+        if low is None or high is None:
+            continue
+        intervals[spec.key] = (
+            float(np.clip(float(low), 0.0, 1.0)),
+            float(np.clip(float(high), 0.0, 1.0)),
+        )
+    return intervals
+
+
 def null_standardization_for_spec(
     standardization_norm: dict[str, Any],
     spec: MetricSpec,
@@ -229,6 +256,7 @@ def plot_summary(
     *,
     specs: list[MetricSpec],
     scores_by_label: dict[str, dict[str, float]],
+    intervals_by_label: dict[str, dict[str, tuple[float, float]]] | None,
     output_path: Path,
     title: str,
     display_null_widths: float,
@@ -247,6 +275,18 @@ def plot_summary(
         values = np.asarray([scores_by_label[label][spec.key] for spec in specs], dtype=np.float64)
         values_closed = np.concatenate([values, values[:1]])
         color = MODEL_COLORS[idx % len(MODEL_COLORS)]
+        intervals = (intervals_by_label or {}).get(label, {})
+        if all(spec.key in intervals for spec in specs):
+            lows = np.asarray([intervals[spec.key][0] for spec in specs], dtype=np.float64)
+            highs = np.asarray([intervals[spec.key][1] for spec in specs], dtype=np.float64)
+            ax.fill_between(
+                theta_closed,
+                np.concatenate([lows, lows[:1]]),
+                np.concatenate([highs, highs[:1]]),
+                color=color,
+                alpha=0.08,
+                linewidth=0.0,
+            )
         ax.plot(theta_closed, values_closed, color=color, linewidth=2.2, label=label)
         ax.fill(theta_closed, values_closed, color=color, alpha=0.10)
 
@@ -278,6 +318,10 @@ def main() -> None:
     args = parse_args()
     input_specs = [parse_input(raw) for raw in args.input]
     values_by_label = {spec.label: extract_values(spec.metrics_path) for spec in input_specs}
+    intervals_by_label = {
+        spec.label: extract_score_intervals(spec.metrics_path)
+        for spec in input_specs
+    }
     standardization_path = Path(args.standardization_report)
     if not standardization_path.is_absolute():
         standardization_path = _REPO_ROOT / standardization_path
@@ -315,6 +359,7 @@ def main() -> None:
     plot_summary(
         specs=specs,
         scores_by_label=scores,
+        intervals_by_label=intervals_by_label,
         output_path=output_path,
         title=str(args.title),
         display_null_widths=display_null_widths,

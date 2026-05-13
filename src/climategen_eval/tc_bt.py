@@ -34,6 +34,8 @@ PRIMARY_RAW_AGG_KEYS = (
     "radial_profile_mae_k",
 )
 
+BOOTSTRAP_QUANTILES = (0.025, 0.05, 0.50, 0.95, 0.975)
+
 
 def progress_iter(iterable: Any, *, enabled: bool, **kwargs: Any) -> Any:
     if not enabled:
@@ -41,6 +43,46 @@ def progress_iter(iterable: Any, *, enabled: bool, **kwargs: Any) -> Any:
     from tqdm.auto import tqdm
 
     return tqdm(iterable, **kwargs)
+
+
+def quantile_key(q: float) -> str:
+    value = float(q)
+    if abs(value - 0.50) < 1.0e-12:
+        return "q50"
+    if abs(value - 0.05) < 1.0e-12:
+        return "q05"
+    if abs(value - 0.95) < 1.0e-12:
+        return "q95"
+    return f"q{int(round(value * 1000.0)):03d}"
+
+
+def summarize_metric_samples(
+    samples_by_key: dict[str, np.ndarray],
+    *,
+    point_values: dict[str, float],
+) -> dict[str, dict[str, float | dict[str, float]]]:
+    out: dict[str, dict[str, float | dict[str, float]]] = {}
+    for key, samples in sorted(samples_by_key.items()):
+        arr = np.asarray(samples, dtype=np.float64).reshape(-1)
+        if arr.size == 0:
+            continue
+        summary: dict[str, float | dict[str, float]] = {
+            "point": float(point_values[key]) if key in point_values else float(np.nan),
+            "mean": float(np.mean(arr)),
+            "std": float(np.std(arr)),
+            "min": float(np.min(arr)),
+            "max": float(np.max(arr)),
+        }
+        for q in BOOTSTRAP_QUANTILES:
+            summary[quantile_key(q)] = float(np.quantile(arr, q))
+        summary["interval_95"] = {
+            "low_quantile": 0.025,
+            "high_quantile": 0.975,
+            "low": float(np.quantile(arr, 0.025)),
+            "high": float(np.quantile(arr, 0.975)),
+        }
+        out[key] = summary
+    return out
 
 
 @dataclass
@@ -448,11 +490,48 @@ def aggregate_class_summaries(per_class: dict[int, dict[str, float]]) -> dict[st
     return out
 
 
+def bootstrap_model_metric_samples(
+    class_caches: dict[int, ClassMetricCache],
+    *,
+    reps: int,
+    seed: int,
+    progress: bool = False,
+) -> dict[str, np.ndarray]:
+    if int(reps) <= 0:
+        return {}
+    rng = np.random.default_rng(int(seed))
+    samples_by_key: dict[str, list[float]] = {}
+    for _ in progress_iter(
+        range(int(reps)),
+        enabled=progress,
+        desc="Model metric bootstrap",
+        unit="rep",
+    ):
+        per_class = {}
+        for class_id, cache in sorted(class_caches.items()):
+            real_n = int(cache.real_hist_counts.shape[0])
+            gen_n = int(cache.gen_raw_hist_counts.shape[0])
+            per_class[int(class_id)] = compute_class_scalar_summary(
+                cache,
+                real_idx=rng.integers(real_n, size=real_n),
+                gen_idx=rng.integers(gen_n, size=gen_n),
+            )
+        for key, value in aggregate_class_summaries(per_class).items():
+            samples_by_key.setdefault(key, []).append(float(value))
+    return {
+        key: np.asarray(values, dtype=np.float64)
+        for key, values in sorted(samples_by_key.items())
+    }
+
+
 def evaluate_model_by_class(
     *,
     real_by_class: dict[int, np.ndarray],
     generated_by_class: dict[int, np.ndarray],
     cfg: TCMetricConfig,
+    bootstrap_reps: int = 0,
+    bootstrap_seed: int = 12345,
+    include_bootstrap_samples: bool = False,
     progress: bool = False,
 ) -> dict[str, Any]:
     real_classes = set(real_by_class)
@@ -465,6 +544,7 @@ def evaluate_model_by_class(
     binner, dav_computer, cold_mask = make_metric_context(cfg)
     per_class: dict[int, dict[str, Any]] = {}
     class_summaries: dict[int, dict[str, float]] = {}
+    class_caches: dict[int, ClassMetricCache] = {}
     for class_id in progress_iter(
         sorted(real_by_class),
         enabled=progress,
@@ -481,6 +561,7 @@ def evaluate_model_by_class(
             dav_computer=dav_computer,
             cold_mask=cold_mask,
         )
+        class_caches[int(class_id)] = cache
         summary = compute_class_scalar_summary(cache)
         class_summaries[int(class_id)] = summary
         per_class[int(class_id)] = {
@@ -493,11 +574,47 @@ def evaluate_model_by_class(
             },
             "gen_exceedance_rate": cache.gen_exceedance_rate,
         }
-    return {
+    aggregate_primary_raw = aggregate_class_summaries(class_summaries)
+    report: dict[str, Any] = {
         "aggregation": {
             "aggregate_primary_raw": "unweighted_macro_average_over_valid_classes",
         },
-        "aggregate_primary_raw": aggregate_class_summaries(class_summaries),
+        "aggregate_primary_raw": aggregate_primary_raw,
         "per_class": {str(k): v for k, v in sorted(per_class.items())},
         "valid_class_ids": [int(k) for k in sorted(class_summaries)],
     }
+    if int(bootstrap_reps) > 0:
+        samples = bootstrap_model_metric_samples(
+            class_caches,
+            reps=int(bootstrap_reps),
+            seed=int(bootstrap_seed),
+            progress=progress,
+        )
+        bootstrap_report: dict[str, Any] = {
+            "enabled": True,
+            "schema": "climategen_eval.model_metric_bootstrap.v1",
+            "method": "within_class_two_sample_nonparametric_bootstrap",
+            "uncertainty_scope": (
+                "finite_sample_uncertainty_from_real_and_generated_evaluation_sets"
+            ),
+            "reps": int(bootstrap_reps),
+            "seed": int(bootstrap_seed),
+            "class_aggregation": "unweighted_macro_average_over_classes",
+            "resampling": {
+                "real": "sample available real images with replacement within class",
+                "generated": "sample evaluated generated images with replacement within class",
+            },
+            "values": summarize_metric_samples(samples, point_values=aggregate_primary_raw),
+        }
+        if include_bootstrap_samples:
+            bootstrap_report["samples"] = {
+                key: values.astype(float).tolist()
+                for key, values in sorted(samples.items())
+            }
+        report["aggregate_primary_bootstrap"] = bootstrap_report
+    else:
+        report["aggregate_primary_bootstrap"] = {
+            "enabled": False,
+            "reason": "bootstrap_reps <= 0",
+        }
+    return report

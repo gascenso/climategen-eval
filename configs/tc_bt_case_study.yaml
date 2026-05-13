@@ -22,3 +22,7 @@ metric_standardization:
   real_reference_reps: 200
   display_null_widths: 4.0
   controls: ["gaussian_blur", "pixel_shuffle", "bt_warm_shift", "center_jitter", "mode_collapse"]
+
+uncertainty:
+  seed: 456
+  bootstrap_reps: 200

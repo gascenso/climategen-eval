@@ -45,17 +45,6 @@ python case_studies/tropical_cyclone_bt/prepare_case_study.py \
   --copy-mode symlink
 ```
 
-Evaluate the two sample banks:
-
-```bash
-python scripts/evaluate_tc_bt_sample_banks.py \
-  --config configs/tc_bt_case_study.yaml \
-  --model FINAL_BASELINE=data/tropical_cyclone_bt/generated/FINAL_BASELINE/final_bank \
-  --model pinn_loss=data/tropical_cyclone_bt/generated/pinn_loss/final_bank \
-  --n-per-class 1000 \
-  --output-root outputs/tropical_cyclone_bt/eval
-```
-
 Compute the null-standardization report:
 
 ```bash
@@ -65,6 +54,26 @@ python scripts/compute_tc_bt_standardization.py \
   --real-reference-reps 200 \
   --output outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json
 ```
+
+Evaluate the two sample banks:
+
+```bash
+python scripts/evaluate_tc_bt_sample_banks.py \
+  --config configs/tc_bt_case_study.yaml \
+  --model FINAL_BASELINE=data/tropical_cyclone_bt/generated/FINAL_BASELINE/final_bank \
+  --model pinn_loss=data/tropical_cyclone_bt/generated/pinn_loss/final_bank \
+  --n-per-class 1000 \
+  --standardization-report \
+  outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
+  --output-root outputs/tropical_cyclone_bt/eval
+```
+
+By default, evaluation writes two-sample within-class bootstrap intervals for
+aggregate raw metrics. When a standardization report is provided, it also writes
+intervals for standardized gaps and display scores; the spider plot renders
+display-score intervals when they are present in the metrics files. Use
+`--bootstrap-reps 0` only for quick smoke runs where uncertainty intervals are
+not needed.
 
 The standardization report separates two roles:
 

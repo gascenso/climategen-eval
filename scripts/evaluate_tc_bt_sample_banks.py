@@ -18,6 +18,7 @@ if str(_REPO_ROOT / "src") not in sys.path:
 from climategen_eval.data import RealDataset, SampleBank
 from climategen_eval.standardization import (
     DEFAULT_DISPLAY_NULL_WIDTHS,
+    standardize_metric_sample_distributions,
     standardize_metric_values,
 )
 from climategen_eval.tc_bt import TCMetricConfig, evaluate_model_by_class
@@ -44,6 +45,23 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=DEFAULT_DISPLAY_NULL_WIDTHS,
         help="Number of real-vs-real null widths mapped to zero in display scores.",
+    )
+    parser.add_argument(
+        "--bootstrap-reps",
+        type=int,
+        default=None,
+        help="Override uncertainty.bootstrap_reps from the config; use 0 to disable.",
+    )
+    parser.add_argument(
+        "--bootstrap-seed",
+        type=int,
+        default=None,
+        help="Override uncertainty.seed from the config.",
+    )
+    parser.add_argument(
+        "--store-bootstrap-samples",
+        action="store_true",
+        help="Keep per-replicate bootstrap samples in metrics.json.",
     )
     parser.add_argument("--no-progress", action="store_true")
     return parser.parse_args()
@@ -146,6 +164,17 @@ def validated_standardization_ranges(
 def main() -> None:
     args = parse_args()
     cfg = load_config(args.config)
+    uncertainty_cfg = dict(cfg.get("uncertainty", {}))
+    bootstrap_reps = int(
+        uncertainty_cfg.get("bootstrap_reps", 200)
+        if args.bootstrap_reps is None
+        else args.bootstrap_reps
+    )
+    bootstrap_seed = int(
+        uncertainty_cfg.get("seed", 456)
+        if args.bootstrap_seed is None
+        else args.bootstrap_seed
+    )
     real_manifest = Path(cfg["data"]["real_manifest"])
     if not real_manifest.is_absolute():
         real_manifest = _REPO_ROOT / real_manifest
@@ -210,9 +239,15 @@ def main() -> None:
             real_by_class=real_by_class,
             generated_by_class=generated_by_class,
             cfg=tc_cfg,
+            bootstrap_reps=bootstrap_reps,
+            bootstrap_seed=bootstrap_seed,
+            include_bootstrap_samples=(
+                bool(args.store_bootstrap_samples) or standardization_ranges is not None
+            ),
             progress=show_progress,
         )
         if standardization_ranges is not None:
+            bootstrap_samples = report.get("aggregate_primary_bootstrap", {}).get("samples")
             report["aggregate_primary_standardized"] = {
                 "schema": "climategen_eval.null_standardized_scores.v1",
                 "source": str(standardization_report_path),
@@ -224,6 +259,22 @@ def main() -> None:
                     display_null_widths=float(args.display_null_widths),
                 ),
             }
+            if bootstrap_samples:
+                report["aggregate_primary_standardized"]["bootstrap"] = {
+                    "schema": "climategen_eval.null_standardized_bootstrap.v1",
+                    "source": "aggregate_primary_bootstrap.samples",
+                    "uncertainty_scope": (
+                        "model_evaluation_bootstrap_conditional_on_fixed_standardization_report"
+                    ),
+                    "values": standardize_metric_sample_distributions(
+                        bootstrap_samples,
+                        standardization_ranges,
+                        point_values=report["aggregate_primary_raw"],
+                        display_null_widths=float(args.display_null_widths),
+                    ),
+                }
+        if not bool(args.store_bootstrap_samples):
+            report.get("aggregate_primary_bootstrap", {}).pop("samples", None)
         report.update(
             {
                 "schema": "climategen_eval.tc_bt_metrics.v1",

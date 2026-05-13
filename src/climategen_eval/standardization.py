@@ -41,7 +41,7 @@ def progress_bar(*, enabled: bool, **kwargs: Any) -> Any:
     return tqdm(**kwargs)
 
 
-def summarize_distribution(values: np.ndarray) -> dict[str, float]:
+def summarize_distribution(values: np.ndarray) -> dict[str, Any]:
     arr = np.asarray(values, dtype=np.float64).reshape(-1)
     if arr.size == 0:
         raise ValueError("Cannot summarize an empty distribution.")
@@ -49,10 +49,18 @@ def summarize_distribution(values: np.ndarray) -> dict[str, float]:
         "mean": float(np.mean(arr)),
         "std": float(np.std(arr)),
         "min": float(np.min(arr)),
+        "q025": float(np.quantile(arr, 0.025)),
         "q05": float(np.quantile(arr, 0.05)),
         "q50": float(np.quantile(arr, 0.50)),
         "q95": float(np.quantile(arr, 0.95)),
+        "q975": float(np.quantile(arr, 0.975)),
         "max": float(np.max(arr)),
+        "interval_95": {
+            "low_quantile": 0.025,
+            "high_quantile": 0.975,
+            "low": float(np.quantile(arr, 0.025)),
+            "high": float(np.quantile(arr, 0.975)),
+        },
     }
 
 
@@ -155,6 +163,46 @@ def standardize_metric_values(
             standardization=standardization,
             display_null_widths=display_null_widths,
         )
+    return out
+
+
+def standardize_metric_sample_distributions(
+    samples_by_key: dict[str, Any],
+    ranges: dict[str, dict[str, Any]],
+    *,
+    point_values: dict[str, float],
+    display_null_widths: float = DEFAULT_DISPLAY_NULL_WIDTHS,
+) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for key, raw_samples in sorted(samples_by_key.items()):
+        standardization = ranges.get(key)
+        if not standardization or not standardization.get("usable_for_standardized_gap", False):
+            continue
+        values = np.asarray(raw_samples, dtype=np.float64).reshape(-1)
+        if values.size == 0:
+            continue
+        transformed = [
+            standardized_metric_value(
+                value=float(value),
+                standardization=standardization,
+                display_null_widths=display_null_widths,
+            )
+            for value in values
+        ]
+        point = None
+        if key in point_values:
+            point = standardized_metric_value(
+                value=float(point_values[key]),
+                standardization=standardization,
+                display_null_widths=display_null_widths,
+            )
+        gaps = np.asarray([node["standardized_gap"] for node in transformed], dtype=np.float64)
+        scores = np.asarray([node["score"] for node in transformed], dtype=np.float64)
+        out[key] = {
+            "point": point,
+            "standardized_gap": summarize_distribution(gaps),
+            "score": summarize_distribution(scores),
+        }
     return out
 
 
