@@ -14,10 +14,11 @@ from climategen_eval.tc_bt import (
     build_class_metric_cache,
     compute_real_vs_real_class_summary,
     evaluate_model_by_class,
+    mean_profile_mse_gap,
 )
 
 
-def test_lower_metric_null_standardized_score() -> None:
+def test_lower_metric_null_standardized_gap() -> None:
     ranges = null_standardization_ranges(
         {
             "pixel_hist_w1": {
@@ -33,9 +34,8 @@ def test_lower_metric_null_standardized_score() -> None:
     assert node["good"] == 1.0
     assert node["scale"] == 2.0
 
-    score = standardized_metric_value(value=5.0, standardization=node, display_null_widths=4.0)
-    assert score["standardized_gap"] == 2.0
-    assert score["score"] == 0.5
+    standardized = standardized_metric_value(value=5.0, standardization=node)
+    assert standardized["standardized_gap"] == 2.0
 
 
 def test_lower_metric_better_than_null_median_has_zero_gap() -> None:
@@ -49,13 +49,11 @@ def test_lower_metric_better_than_null_median_has_zero_gap() -> None:
         }
     )
 
-    score = standardized_metric_value(
+    standardized = standardized_metric_value(
         value=0.75,
         standardization=ranges["pixel_hist_w1"],
-        display_null_widths=4.0,
     )
-    assert score["standardized_gap"] == 0.0
-    assert score["score"] == 1.0
+    assert standardized["standardized_gap"] == 0.0
 
 
 def test_zero_null_width_is_marked_unusable() -> None:
@@ -94,6 +92,13 @@ def test_real_vs_real_summary_includes_feature_metrics() -> None:
     assert np.isfinite(summary["psd_l2"])
 
 
+def test_psd_gap_uses_mean_squared_profile_difference() -> None:
+    left = np.asarray([[0.0, 2.0], [2.0, 4.0]], dtype=np.float32)
+    right = np.asarray([[1.0, 4.0], [3.0, 6.0]], dtype=np.float32)
+
+    assert mean_profile_mse_gap(left, right) == 2.5
+
+
 def test_model_metric_bootstrap_report_includes_intervals_and_samples() -> None:
     rng = np.random.default_rng(7)
     cfg = TCMetricConfig(image_size=16, profile_bins=8, psd_bins=8)
@@ -126,7 +131,7 @@ def test_model_metric_bootstrap_report_includes_intervals_and_samples() -> None:
     assert summary["min"] <= summary["q50"] <= summary["max"]
 
 
-def test_standardized_bootstrap_report_includes_gap_and_score_intervals() -> None:
+def test_standardized_bootstrap_report_includes_gap_intervals() -> None:
     ranges = {
         "pixel_hist_w1": {
             "direction": "lower",
@@ -140,14 +145,13 @@ def test_standardized_bootstrap_report_includes_gap_and_score_intervals() -> Non
         {"pixel_hist_w1": [1.0, 3.0, 5.0]},
         ranges,
         point_values={"pixel_hist_w1": 3.0},
-        display_null_widths=4.0,
     )
 
     node = report["pixel_hist_w1"]
     assert node["point"]["standardized_gap"] == 1.0
-    assert node["point"]["score"] == 0.75
+    assert "score" not in node["point"]
     assert node["standardized_gap"]["interval_95"]["low"] <= 1.0
-    assert node["score"]["interval_95"]["high"] <= 1.0
+    assert "score" not in node
 
 
 def test_control_response_shape_reports_monotonicity_and_justification() -> None:

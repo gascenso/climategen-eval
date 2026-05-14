@@ -15,8 +15,8 @@ port includes:
 - Real-vs-real null utilities that define null-standardized effect sizes for model
   metrics.
 - Corruption sweeps for metric responsiveness validation.
-- A spider-plot script that reads plain `metrics.json` paths and maps standardized
-  gaps onto `[0, 1]` for display.
+- A plotting script that reads plain `metrics.json` paths and visualizes standardized
+  gaps directly in real-vs-real null-width units.
 - A case-study data preparation script that exports only held-out test data and links/copies
   the two generated sample banks used in the current comparison.
 
@@ -70,14 +70,13 @@ python scripts/evaluate_tc_bt_sample_banks.py \
 
 By default, evaluation writes two-sample within-class bootstrap intervals for
 aggregate raw metrics. When a standardization report is provided, it also writes
-intervals for standardized gaps and display scores; the spider plot renders
-display-score intervals when they are present in the metrics files. Use
-`--bootstrap-reps 0` only for quick smoke runs where uncertainty intervals are
-not needed.
+intervals for standardized gaps; the gap-profile plot renders those intervals
+when they are present in the metrics files. Use `--bootstrap-reps 0` only for
+quick smoke runs where uncertainty intervals are not needed.
 
 The standardization report separates two roles:
 
-- `null_standardization`: the primary score ruler. For lower-is-better metrics,
+- `null_standardization`: the primary effect-size ruler. For lower-is-better metrics,
   `good = q50(real-vs-real)` and `scale = q95(real-vs-real) - q50(real-vs-real)`.
   A model's standardized gap is `max(0, model - good) / scale`.
 - `metric_validation.corruption_validation`: corruption sweeps used to validate
@@ -85,10 +84,10 @@ The standardization report separates two roles:
   justifying degradation family, the first severity reaching target power,
   Spearman response-shape correlations, directional consistency, monotonicity,
   and the maximum response in real-vs-real null widths. A metric is included in
-  null-standardized scores and the spider plot only when it has a finite
+  null-standardized gap summaries and the gap-profile plot only when it has a finite
   positive null width and passes this responsiveness check.
 
-Plot null-standardized model scores:
+Plot null-standardized model gaps:
 
 ```bash
 python scripts/plot_model_metric_summary.py \
@@ -96,12 +95,12 @@ python scripts/plot_model_metric_summary.py \
   --input pinn_loss=outputs/tropical_cyclone_bt/eval/pinn_loss/metrics.json \
   --standardization-report \
   outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
-  --display-null-widths 4 \
-  --output outputs/tropical_cyclone_bt/figures/model_metric_summary.svg
+  --output outputs/tropical_cyclone_bt/figures/model_metric_gap_profile.svg
 ```
 
-With the default null-standardized plot mode, a score of zero means the metric is
-at least four one-sided real-vs-real null widths worse than the finite-sample ideal.
+The plot shows standardized gaps directly: `0` is the finite-sample real-vs-real
+median, `1` is one one-sided real-vs-real null width beyond that median, and
+larger values indicate larger practical deviations. Lower is better.
 
 ## Notes
 

@@ -30,9 +30,6 @@ RANGE_DIRECTIONS = {
 }
 
 
-DEFAULT_DISPLAY_NULL_WIDTHS = 4.0
-
-
 def progress_bar(*, enabled: bool, **kwargs: Any) -> Any:
     if not enabled:
         return nullcontext(None)
@@ -116,7 +113,6 @@ def standardized_metric_value(
     *,
     value: float,
     standardization: dict[str, Any],
-    display_null_widths: float = DEFAULT_DISPLAY_NULL_WIDTHS,
 ) -> dict[str, Any]:
     direction = str(standardization.get("direction", "lower"))
     if direction not in {"lower", "higher"}:
@@ -132,26 +128,18 @@ def standardized_metric_value(
         gap = max(0.0, good - raw_value) / scale
     else:
         gap = max(0.0, raw_value - good) / scale
-    k = float(display_null_widths)
-    if k <= 0.0 or not np.isfinite(k):
-        raise ValueError(f"display_null_widths must be > 0, got {display_null_widths}.")
-    score = float(np.clip(1.0 - gap / k, 0.0, 1.0))
     return {
         "value": raw_value,
         "direction": direction,
         "good": good,
         "scale": scale,
         "standardized_gap": float(gap),
-        "display_null_widths": k,
-        "score": score,
     }
 
 
 def standardize_metric_values(
     values: dict[str, float],
     ranges: dict[str, dict[str, Any]],
-    *,
-    display_null_widths: float = DEFAULT_DISPLAY_NULL_WIDTHS,
 ) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     for key, value in sorted(values.items()):
@@ -161,7 +149,6 @@ def standardize_metric_values(
         out[key] = standardized_metric_value(
             value=float(value),
             standardization=standardization,
-            display_null_widths=display_null_widths,
         )
     return out
 
@@ -171,7 +158,6 @@ def standardize_metric_sample_distributions(
     ranges: dict[str, dict[str, Any]],
     *,
     point_values: dict[str, float],
-    display_null_widths: float = DEFAULT_DISPLAY_NULL_WIDTHS,
 ) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
     for key, raw_samples in sorted(samples_by_key.items()):
@@ -185,7 +171,6 @@ def standardize_metric_sample_distributions(
             standardized_metric_value(
                 value=float(value),
                 standardization=standardization,
-                display_null_widths=display_null_widths,
             )
             for value in values
         ]
@@ -194,14 +179,11 @@ def standardize_metric_sample_distributions(
             point = standardized_metric_value(
                 value=float(point_values[key]),
                 standardization=standardization,
-                display_null_widths=display_null_widths,
             )
         gaps = np.asarray([node["standardized_gap"] for node in transformed], dtype=np.float64)
-        scores = np.asarray([node["score"] for node in transformed], dtype=np.float64)
         out[key] = {
             "point": point,
             "standardized_gap": summarize_distribution(gaps),
-            "score": summarize_distribution(scores),
         }
     return out
 
@@ -851,7 +833,6 @@ def compute_standardization_report(
     real_reference_reps: int = 200,
     validation_reps: int | None = None,
     validation_target_power: float = 0.80,
-    display_null_widths: float = DEFAULT_DISPLAY_NULL_WIDTHS,
     progress: bool = False,
 ) -> dict[str, Any]:
     if not real_by_class:
@@ -862,8 +843,6 @@ def compute_standardization_report(
         raise ValueError(f"real_reference_reps must be > 0, got {real_reference_reps}.")
     if validation_reps is not None and int(validation_reps) <= 0:
         raise ValueError(f"validation_reps must be > 0 when provided, got {validation_reps}.")
-    if float(display_null_widths) <= 0.0 or not np.isfinite(float(display_null_widths)):
-        raise ValueError(f"display_null_widths must be > 0, got {display_null_widths}.")
     if not (0.0 <= float(validation_target_power) <= 1.0):
         raise ValueError(
             f"validation_target_power must be in [0, 1], got {validation_target_power}."
@@ -925,14 +904,14 @@ def compute_standardization_report(
     )
 
     report = {
-        "schema": "climategen_eval.metric_standardization_report.v1",
+        "schema": "climategen_eval.metric_standardization_report.v2",
         "aggregation": {
             "class_aggregation": "unweighted_macro_average_over_classes",
             "rationale": "Each intensity class contributes equally to aggregate metrics.",
         },
         "metric_standardization": {
             "enabled": True,
-            "schema": "climategen_eval.metric_standardization.v1",
+            "schema": "climategen_eval.metric_standardization.v2",
             "source": "real_vs_real_null_standardization",
             "match_generated_counts": True,
             "seed": int(seed),
@@ -949,21 +928,17 @@ def compute_standardization_report(
             },
             "null_standardization": {
                 "enabled": True,
-                "schema": "climategen_eval.null_standardization.v1",
+                "schema": "climategen_eval.null_standardization.v2",
                 "source": "real_vs_real_bootstrap",
                 "good_statistic": "q50",
                 "null_quantile": 0.95,
-                "display_transform": "linear_clipped",
-                "display_null_widths": float(display_null_widths),
-                "zero_score_standardized_gap": float(display_null_widths),
-                "sensitivity_analysis_display_null_widths": [3.0, 4.0, 5.0],
                 "definition": (
                     "standardized_gap = max(0, model_value - q50(null)) / "
                     "(q95(null) - q50(null)) for lower-is-better metrics; "
                     "higher-is-better metrics use the mirrored q50 - q05 width."
                 ),
                 "metric_inclusion_rule": (
-                    "A metric is included in standardized scores only when its "
+                    "A metric is included in standardized gaps only when its "
                     "real-vs-real null width is finite and positive and "
                     "corruption validation marks it responsive."
                 ),

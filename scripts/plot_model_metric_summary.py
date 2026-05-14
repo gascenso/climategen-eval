@@ -20,7 +20,6 @@ if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from climategen_eval.standardization import (  # noqa: E402
-    DEFAULT_DISPLAY_NULL_WIDTHS,
     standardized_metric_value,
 )
 
@@ -50,7 +49,7 @@ METRICS = [
         "Cold-cloud gap",
         scale=100.0,
     ),
-    MetricSpec("psd_l2", "psd_l2", "Radial PSD L2"),
+    MetricSpec("psd_l2", "psd_l2", "Radial PSD MSE"),
     MetricSpec("eye_gap_k", "eye_contrast_proxy_abs_gap", "Eye contrast gap"),
     MetricSpec("feature_mmd2", "feature_mmd2", "Feature MMD"),
     MetricSpec(
@@ -80,7 +79,7 @@ MODEL_COLORS = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot null-standardized model metric spider summary."
+        description="Plot null-standardized model metric gap profile."
     )
     parser.add_argument(
         "--input",
@@ -89,16 +88,7 @@ def parse_args() -> argparse.Namespace:
         help="Repeatable LABEL=PATH_TO_METRICS_JSON.",
     )
     parser.add_argument("--standardization-report", required=True)
-    parser.add_argument(
-        "--display-null-widths",
-        type=float,
-        default=None,
-        help=(
-            "Number of one-sided real-vs-real null widths mapped to zero "
-            "for null-standardized scores."
-        ),
-    )
-    parser.add_argument("--output", default="outputs/model_metric_summary.svg")
+    parser.add_argument("--output", default="outputs/model_metric_gap_profile.svg")
     parser.add_argument("--title", default="Climate Generative Model Metric Summary")
     return parser.parse_args()
 
@@ -144,7 +134,7 @@ def extract_values(path: Path) -> dict[str, float]:
     return values
 
 
-def extract_score_intervals(path: Path) -> dict[str, tuple[float, float]]:
+def extract_gap_intervals(path: Path) -> dict[str, tuple[float, float]]:
     report = load_json(path)
     values = nested_get(
         report,
@@ -156,8 +146,8 @@ def extract_score_intervals(path: Path) -> dict[str, tuple[float, float]]:
     intervals = {}
     for spec in METRICS:
         node = values.get(spec.report_key)
-        score = node.get("score", {}) if isinstance(node, dict) else {}
-        interval = score.get("interval_95", {}) if isinstance(score, dict) else {}
+        gap = node.get("standardized_gap", {}) if isinstance(node, dict) else {}
+        interval = gap.get("interval_95", {}) if isinstance(gap, dict) else {}
         if not isinstance(interval, dict):
             continue
         low = interval.get("low")
@@ -165,8 +155,8 @@ def extract_score_intervals(path: Path) -> dict[str, tuple[float, float]]:
         if low is None or high is None:
             continue
         intervals[spec.key] = (
-            float(np.clip(float(low), 0.0, 1.0)),
-            float(np.clip(float(high), 0.0, 1.0)),
+            max(0.0, float(low)),
+            max(0.0, float(high)),
         )
     return intervals
 
@@ -207,12 +197,11 @@ def responsive_validation_for_spec(
     return isinstance(node, dict) and bool(node.get("responsive", False))
 
 
-def score_metric(
+def gap_metric(
     *,
     spec: MetricSpec,
     value: float,
     standardization_norm: dict[str, Any],
-    display_null_widths: float,
 ) -> float:
     standardization = null_standardization_for_spec(standardization_norm, spec)
     if standardization is None:
@@ -221,17 +210,14 @@ def score_metric(
         standardized_metric_value(
             value=float(value),
             standardization=standardization,
-            display_null_widths=float(display_null_widths),
-        )["score"]
+        )["standardized_gap"]
     )
 
 
-def build_scores(
+def build_gaps(
     values_by_label: dict[str, dict[str, float]],
     standardization_payload: dict[str, Any],
     standardization_norm: dict[str, Any],
-    *,
-    display_null_widths: float,
 ) -> tuple[list[MetricSpec], dict[str, dict[str, float]]]:
     available_specs = [
         spec
@@ -240,75 +226,105 @@ def build_scores(
         and null_standardization_for_spec(standardization_norm, spec) is not None
         and responsive_validation_for_spec(standardization_payload, spec)
     ]
-    scores = {label: {} for label in values_by_label}
+    gaps = {label: {} for label in values_by_label}
     for spec in available_specs:
         for label in values_by_label:
-            scores[label][spec.key] = score_metric(
+            gaps[label][spec.key] = gap_metric(
                 spec=spec,
                 value=values_by_label[label][spec.key],
                 standardization_norm=standardization_norm,
-                display_null_widths=display_null_widths,
             )
-    return available_specs, scores
+    return available_specs, gaps
 
 
 def plot_summary(
     *,
     specs: list[MetricSpec],
-    scores_by_label: dict[str, dict[str, float]],
+    gaps_by_label: dict[str, dict[str, float]],
     intervals_by_label: dict[str, dict[str, tuple[float, float]]] | None,
     output_path: Path,
     title: str,
-    display_null_widths: float,
 ) -> None:
-    labels = list(scores_by_label)
-    theta = np.linspace(0.0, 2.0 * np.pi, len(specs), endpoint=False)
-    theta_closed = np.concatenate([theta, theta[:1]])
+    labels = list(gaps_by_label)
+    y_base = np.arange(len(specs), dtype=np.float64)
+    offset_step = min(0.18, 0.72 / max(len(labels), 1))
+    offsets = {
+        label: (idx - 0.5 * (len(labels) - 1)) * offset_step
+        for idx, label in enumerate(labels)
+    }
+    observed_highs: list[float] = []
+    for idx, label in enumerate(labels):
+        values = np.asarray([gaps_by_label[label][spec.key] for spec in specs], dtype=np.float64)
+        observed_highs.extend(float(v) for v in values if np.isfinite(v))
+        intervals = (intervals_by_label or {}).get(label, {})
+        observed_highs.extend(
+            float(intervals[spec.key][1])
+            for spec in specs
+            if spec.key in intervals and np.isfinite(intervals[spec.key][1])
+        )
 
-    fig = plt.figure(figsize=(9.0, 7.6), facecolor="#ffffff")
-    ax = fig.add_subplot(111, projection="polar")
-    ax.set_theta_offset(np.pi / 2.0)
-    ax.set_theta_direction(-1)
+    max_observed = max(observed_highs, default=1.0)
+    x_max = max(1.0, float(np.ceil(max_observed * 1.08)))
+
+    fig_height = max(5.8, 0.48 * len(specs) + 2.0)
+    fig, ax = plt.subplots(figsize=(9.6, fig_height), facecolor="#ffffff")
     ax.set_facecolor("#F7FBFC")
 
     for idx, label in enumerate(labels):
-        values = np.asarray([scores_by_label[label][spec.key] for spec in specs], dtype=np.float64)
-        values_closed = np.concatenate([values, values[:1]])
         color = MODEL_COLORS[idx % len(MODEL_COLORS)]
+        y = y_base + offsets[label]
         intervals = (intervals_by_label or {}).get(label, {})
-        if all(spec.key in intervals for spec in specs):
-            lows = np.asarray([intervals[spec.key][0] for spec in specs], dtype=np.float64)
-            highs = np.asarray([intervals[spec.key][1] for spec in specs], dtype=np.float64)
-            ax.fill_between(
-                theta_closed,
-                np.concatenate([lows, lows[:1]]),
-                np.concatenate([highs, highs[:1]]),
+        for pos, spec in enumerate(specs):
+            point = float(gaps_by_label[label][spec.key])
+            interval = intervals.get(spec.key)
+            xerr = None
+            if interval is not None:
+                low = min(float(interval[0]), point)
+                high = max(float(interval[1]), point)
+                xerr = np.asarray([[point - low], [high - point]], dtype=np.float64)
+            ax.errorbar(
+                point,
+                y[pos],
+                xerr=xerr,
+                fmt="o",
                 color=color,
-                alpha=0.08,
-                linewidth=0.0,
+                ecolor=color,
+                elinewidth=1.6,
+                capsize=2.5,
+                markersize=5.5,
+                label=label if pos == 0 else None,
             )
-        ax.plot(theta_closed, values_closed, color=color, linewidth=2.2, label=label)
-        ax.fill(theta_closed, values_closed, color=color, alpha=0.10)
 
-    ax.set_xticks(theta)
-    ax.set_xticklabels([spec.label.replace(" ", "\n") for spec in specs], fontsize=8.5)
-    ax.set_ylim(0.0, 1.0)
-    ax.set_yticks([0.25, 0.50, 0.75, 1.00])
-    ax.set_yticklabels(["0.25", "0.50", "0.75", "1.00"], fontsize=7.5, color="#587082")
-    ax.grid(color="#D6E7ED", linewidth=0.9)
-    ax.spines["polar"].set_color("#A3CEDD")
-    ax.set_title(
-        f"Null-standardized score profile (0 = {display_null_widths:g} null widths)",
-        pad=28,
+    for ref, alpha in ((0.0, 0.85), (1.0, 0.55), (2.0, 0.35), (4.0, 0.28), (8.0, 0.22)):
+        if ref <= x_max:
+            ax.axvline(ref, color="#8DBDCA", linewidth=1.0, alpha=alpha, zorder=0)
+
+    ax.set_yticks(y_base)
+    ax.set_yticklabels([spec.label for spec in specs], fontsize=9.0)
+    ax.invert_yaxis()
+    ax.set_xlim(0.0, x_max)
+    ax.set_xlabel(
+        "Null-standardized gap beyond real-vs-real median "
+        "(one-sided null widths; lower is better)"
     )
-    fig.suptitle(title, fontsize=15, y=0.97)
-    fig.legend(
-        loc="lower center",
-        bbox_to_anchor=(0.5, 0.06),
-        frameon=False,
-        ncols=min(4, len(labels)),
+    ax.set_title("Null-standardized metric gap profile", pad=14)
+    ax.grid(axis="x", color="#D6E7ED", linewidth=0.9)
+    ax.grid(axis="y", color="#E7F1F4", linewidth=0.7)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_color("#BFD8E0")
+    ax.spines["bottom"].set_color("#BFD8E0")
+    fig.suptitle(title, fontsize=15, y=0.98)
+    ax.legend(loc="upper right", frameon=False)
+    fig.text(
+        0.01,
+        0.01,
+        "Error bars show bootstrap 95% intervals when present; standardized gaps are "
+        "conditional on the fixed standardization report.",
+        fontsize=8.0,
+        color="#587082",
     )
-    fig.subplots_adjust(top=0.81, bottom=0.16, left=0.08, right=0.92)
+    fig.tight_layout(rect=(0.0, 0.035, 1.0, 0.95))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -319,7 +335,7 @@ def main() -> None:
     input_specs = [parse_input(raw) for raw in args.input]
     values_by_label = {spec.label: extract_values(spec.metrics_path) for spec in input_specs}
     intervals_by_label = {
-        spec.label: extract_score_intervals(spec.metrics_path)
+        spec.label: extract_gap_intervals(spec.metrics_path)
         for spec in input_specs
     }
     standardization_path = Path(args.standardization_report)
@@ -331,38 +347,25 @@ def main() -> None:
         raise ValueError(
             f"{standardization_path} does not contain a metric_standardization object."
         )
-    display_null_widths = (
-        float(args.display_null_widths)
-        if args.display_null_widths is not None
-        else float(
-            nested_get(
-                standardization_norm,
-                ("null_standardization", "display_null_widths"),
-                DEFAULT_DISPLAY_NULL_WIDTHS,
-            )
-        )
-    )
-    specs, scores = build_scores(
+    specs, gaps = build_gaps(
         values_by_label,
         standardization_payload,
         standardization_norm,
-        display_null_widths=display_null_widths,
     )
     if len(specs) < 3:
         raise ValueError(
             "Fewer than three metrics are available across all inputs after "
-            "null-width and responsiveness checks; cannot make spider plot."
+            "null-width and responsiveness checks; cannot make gap profile."
         )
     output_path = Path(args.output)
     if not output_path.is_absolute():
         output_path = _REPO_ROOT / output_path
     plot_summary(
         specs=specs,
-        scores_by_label=scores,
+        gaps_by_label=gaps,
         intervals_by_label=intervals_by_label,
         output_path=output_path,
         title=str(args.title),
-        display_null_widths=display_null_widths,
     )
     print(f"Wrote {output_path}")
 

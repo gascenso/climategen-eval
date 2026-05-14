@@ -17,7 +17,6 @@ if str(_REPO_ROOT / "src") not in sys.path:
 
 from climategen_eval.data import RealDataset
 from climategen_eval.standardization import (
-    DEFAULT_DISPLAY_NULL_WIDTHS,
     compute_standardization_report,
 )
 from climategen_eval.tc_bt import TCMetricConfig
@@ -30,7 +29,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--real-reference-reps", type=int, default=None)
     parser.add_argument("--validation-reps", type=int, default=None)
     parser.add_argument("--validation-target-power", type=float, default=0.80)
-    parser.add_argument("--display-null-widths", type=float, default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--output", required=True)
     parser.add_argument("--no-progress", action="store_true")
@@ -85,11 +83,6 @@ def main() -> None:
     cfg = load_config(args.config)
     standardization_cfg = dict(cfg.get("metric_standardization", {}))
     seed = int(standardization_cfg.get("seed", 123) if args.seed is None else args.seed)
-    display_null_widths = float(
-        standardization_cfg.get("display_null_widths", DEFAULT_DISPLAY_NULL_WIDTHS)
-        if args.display_null_widths is None
-        else args.display_null_widths
-    )
     reps = int(
         standardization_cfg.get("real_reference_reps", 200)
         if args.real_reference_reps is None
@@ -118,7 +111,6 @@ def main() -> None:
         real_reference_reps=reps,
         validation_reps=args.validation_reps,
         validation_target_power=float(args.validation_target_power),
-        display_null_widths=display_null_widths,
         progress=show_progress,
     )
     report.update(

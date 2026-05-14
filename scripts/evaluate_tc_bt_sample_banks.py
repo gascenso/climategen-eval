@@ -17,7 +17,6 @@ if str(_REPO_ROOT / "src") not in sys.path:
 
 from climategen_eval.data import RealDataset, SampleBank
 from climategen_eval.standardization import (
-    DEFAULT_DISPLAY_NULL_WIDTHS,
     standardize_metric_sample_distributions,
     standardize_metric_values,
 )
@@ -38,13 +37,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--standardization-report",
         default=None,
-        help="Optional metric standardization JSON used to add null-standardized aggregate scores.",
-    )
-    parser.add_argument(
-        "--display-null-widths",
-        type=float,
-        default=DEFAULT_DISPLAY_NULL_WIDTHS,
-        help="Number of real-vs-real null widths mapped to zero in display scores.",
+        help="Optional metric standardization JSON used to add null-standardized gaps.",
     )
     parser.add_argument(
         "--bootstrap-reps",
@@ -249,19 +242,17 @@ def main() -> None:
         if standardization_ranges is not None:
             bootstrap_samples = report.get("aggregate_primary_bootstrap", {}).get("samples")
             report["aggregate_primary_standardized"] = {
-                "schema": "climategen_eval.null_standardized_scores.v1",
+                "schema": "climategen_eval.null_standardized_gaps.v1",
                 "source": str(standardization_report_path),
-                "display_null_widths": float(args.display_null_widths),
                 "metric_filter": "finite_positive_null_width_and_corruption_responsiveness",
                 "values": standardize_metric_values(
                     report["aggregate_primary_raw"],
                     standardization_ranges,
-                    display_null_widths=float(args.display_null_widths),
                 ),
             }
             if bootstrap_samples:
                 report["aggregate_primary_standardized"]["bootstrap"] = {
-                    "schema": "climategen_eval.null_standardized_bootstrap.v1",
+                    "schema": "climategen_eval.null_standardized_gap_bootstrap.v1",
                     "source": "aggregate_primary_bootstrap.samples",
                     "uncertainty_scope": (
                         "model_evaluation_bootstrap_conditional_on_fixed_standardization_report"
@@ -270,7 +261,6 @@ def main() -> None:
                         bootstrap_samples,
                         standardization_ranges,
                         point_values=report["aggregate_primary_raw"],
-                        display_null_widths=float(args.display_null_widths),
                     ),
                 }
         if not bool(args.store_bootstrap_samples):
