@@ -40,6 +40,16 @@ def parse_args() -> argparse.Namespace:
         help="Optional metric standardization JSON used to add null-standardized gaps.",
     )
     parser.add_argument(
+        "--baseline-responsiveness",
+        default=None,
+        help=(
+            "Optional baseline_panel.json (from evaluate_tc_bt_baselines.py). When "
+            "supplied, metric inclusion on the gap profile is gated by baseline-panel "
+            "responsiveness (preferred). When omitted, falls back to the legacy "
+            "corruption-validation gate from the standardization report."
+        ),
+    )
+    parser.add_argument(
         "--bootstrap-reps",
         type=int,
         default=None,
@@ -116,9 +126,29 @@ def json_default(obj: Any) -> Any:
     raise TypeError(f"{type(obj).__name__} is not JSON serializable")
 
 
+def _load_baseline_responsiveness(
+    path: Path | None,
+) -> tuple[dict[str, dict[str, Any]] | None, Path | None]:
+    if path is None:
+        return None, None
+    with path.open("r") as f:
+        payload = json.load(f)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected JSON object in {path}.")
+    node = payload.get("responsiveness")
+    if not isinstance(node, dict):
+        raise ValueError(f"{path} does not contain a responsiveness block.")
+    by_metric = node.get("by_metric")
+    if not isinstance(by_metric, dict) or not by_metric:
+        raise ValueError(f"{path} responsiveness.by_metric is missing or empty.")
+    return by_metric, path
+
+
 def validated_standardization_ranges(
     payload: dict[str, Any],
     path: Path,
+    *,
+    baseline_responsiveness: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, dict[str, Any]]:
     standardization_node = payload.get("metric_standardization")
     if not isinstance(standardization_node, dict):
@@ -128,6 +158,24 @@ def validated_standardization_ranges(
     if not isinstance(ranges, dict) or not ranges:
         raise ValueError(f"{path} does not contain null_standardization ranges.")
 
+    if baseline_responsiveness is not None:
+        # Preferred gate: a metric is shown iff at least one baseline pushed
+        # its standardized gap above 1, and the metric's null width is usable.
+        out = {
+            key: value
+            for key, value in ranges.items()
+            if isinstance(value, dict)
+            and bool(value.get("usable_for_standardized_gap", False))
+            and bool(baseline_responsiveness.get(key, {}).get("active", False))
+        }
+        if not out:
+            raise ValueError(
+                "No metrics pass both the null-width gate and baseline-panel "
+                "responsiveness; the baseline panel may be too weak."
+            )
+        return out
+
+    # Fallback: legacy corruption-based gate (audit-only by design).
     validation = payload.get("metric_validation", {})
     corruption_validation = (
         validation.get("corruption_validation", {}) if isinstance(validation, dict) else {}
@@ -138,8 +186,10 @@ def validated_standardization_ranges(
         else {}
     )
     if not isinstance(responsiveness, dict) or not responsiveness:
-        raise ValueError(f"{path} does not contain corruption-validation responsiveness results.")
-
+        raise ValueError(
+            f"{path} does not contain corruption-validation responsiveness results "
+            "and no --baseline-responsiveness was provided."
+        )
     out = {
         key: value
         for key, value in ranges.items()
@@ -149,7 +199,7 @@ def validated_standardization_ranges(
     }
     if not out:
         raise ValueError(
-            f"{path} has no metrics passing both null-width and responsiveness checks."
+            f"{path} has no metrics passing both null-width and corruption-responsiveness checks."
         )
     return out
 
@@ -191,6 +241,16 @@ def main() -> None:
         output_root = _REPO_ROOT / output_root
     output_root.mkdir(parents=True, exist_ok=True)
 
+    baseline_responsiveness_path = None
+    baseline_responsiveness: dict[str, dict[str, Any]] | None = None
+    if args.baseline_responsiveness is not None:
+        raw_path = Path(args.baseline_responsiveness)
+        if not raw_path.is_absolute():
+            raw_path = _REPO_ROOT / raw_path
+        baseline_responsiveness, baseline_responsiveness_path = (
+            _load_baseline_responsiveness(raw_path)
+        )
+
     standardization_ranges = None
     standardization_report_path = None
     if args.standardization_report is not None:
@@ -201,7 +261,11 @@ def main() -> None:
             payload = json.load(f)
         if not isinstance(payload, dict):
             raise ValueError(f"Expected standardization report object in {norm_path}.")
-        standardization_ranges = validated_standardization_ranges(payload, norm_path)
+        standardization_ranges = validated_standardization_ranges(
+            payload,
+            norm_path,
+            baseline_responsiveness=baseline_responsiveness,
+        )
         standardization_report_path = norm_path
 
     models = [parse_model(raw) for raw in args.model]
@@ -243,10 +307,20 @@ def main() -> None:
         )
         if standardization_ranges is not None:
             bootstrap_samples = report.get("aggregate_primary_bootstrap", {}).get("samples")
+            metric_filter = (
+                "finite_positive_null_width_and_baseline_panel_responsiveness"
+                if baseline_responsiveness is not None
+                else "finite_positive_null_width_and_corruption_responsiveness"
+            )
             report["aggregate_primary_standardized"] = {
                 "schema": "climategen_eval.null_standardized_gaps.v1",
                 "source": str(standardization_report_path),
-                "metric_filter": "finite_positive_null_width_and_corruption_responsiveness",
+                "metric_filter": metric_filter,
+                "baseline_responsiveness_source": (
+                    str(baseline_responsiveness_path)
+                    if baseline_responsiveness_path is not None
+                    else None
+                ),
                 "values": standardize_metric_values(
                     report["aggregate_primary_raw"],
                     standardization_ranges,

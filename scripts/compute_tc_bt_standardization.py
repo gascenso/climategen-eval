@@ -29,6 +29,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--real-reference-reps", type=int, default=None)
     parser.add_argument("--validation-reps", type=int, default=None)
     parser.add_argument("--validation-target-power", type=float, default=0.80)
+    parser.add_argument(
+        "--calibration-reps",
+        type=int,
+        default=None,
+        help=(
+            "Independent bootstrap reps for the calibration audit (FPR check). "
+            "Defaults to --real-reference-reps."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--output", required=True)
     parser.add_argument("--no-progress", action="store_true")
@@ -112,6 +121,7 @@ def main() -> None:
         real_reference_reps=reps,
         validation_reps=args.validation_reps,
         validation_target_power=float(args.validation_target_power),
+        calibration_reps=args.calibration_reps,
         progress=show_progress,
         real_storm_ids_by_class=real_storm_ids_by_class,
     )

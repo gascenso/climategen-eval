@@ -20,11 +20,11 @@ from .tc_bt import (
 RANGE_DIRECTIONS = {
     "pixel_hist_js": "lower",
     "pixel_hist_w1": "lower",
-    "dav_abs_gap_deg2": "lower",
+    "dav_w1_deg2": "lower",
     "radial_profile_mae_k": "lower",
-    "cold_cloud_fraction_abs_gap": "lower",
+    "cold_cloud_fraction_w1": "lower",
     "psd_l2": "lower",
-    "eye_contrast_proxy_abs_gap": "lower",
+    "eye_contrast_proxy_w1_k": "lower",
     "feature_mmd2": "lower",
     "diversity_feature_space_abs_gap": "lower",
     "gen_exceedance_rate_total": "lower",
@@ -125,6 +125,25 @@ def standardized_metric_value(
     value: float,
     standardization: dict[str, Any],
 ) -> dict[str, Any]:
+    """Standardize a raw metric value against a real-vs-real noise floor.
+
+    The returned ``standardized_gap`` is a one-sided skill-score-like quantity:
+    it measures how far the model's metric value lies beyond the real-vs-real
+    finite-sample median, in units of the upper (or lower) half-width of the
+    real-vs-real null. This mirrors the structure of skill scores in
+    operational weather verification (Murphy 1988; Jolliffe & Stephenson,
+    *Forecast Verification* 2e), where a score is normalized by the gap
+    between a reference and a worst-case anchor. Here the reference is the
+    real-vs-real median (the best a model can achieve at finite sample size),
+    and the half-width q95-q50 is the unit of "detectable difference under
+    sampling noise" rather than a worst-case anchor.
+
+    With this scale, ``gap = 0`` matches the real-vs-real median, ``gap = 1``
+    sits exactly at the upper boundary of the central 90% null, and larger
+    values indicate progressively stronger departures from real-vs-real
+    sampling variation. The companion baseline panel (CLIM, GAUSS-PIX,
+    CROSS-CLASS, PHASE-SHUFFLE) anchors the bad end of the same axis.
+    """
     direction = str(standardization.get("direction", "lower"))
     if direction not in {"lower", "higher"}:
         raise ValueError(f"Unsupported metric direction: {direction!r}")
@@ -320,6 +339,83 @@ def bootstrap_control_samples(
         if progress_update is not None:
             progress_update(1)
     return {key: np.asarray(values, dtype=np.float64) for key, values in samples_by_key.items()}
+
+
+def compute_bootstrap_calibration(
+    class_caches: dict[int, Any],
+    *,
+    standardization_ranges: dict[str, dict[str, Any]],
+    reps: int,
+    seed: int,
+    progress: bool = False,
+) -> dict[str, Any]:
+    """Empirical false-positive-rate check for the standardized-gap procedure.
+
+    Generates an *independent* set of real-vs-real bootstrap replicates (with
+    a different seed from the primary noise-floor bootstrap) and counts how
+    often each one would cross ``gap = 1`` when standardized against the
+    noise floor. Under correct calibration the rate should be approximately
+    the theoretical ``1 - null_quantile`` (5% for a 0.95 quantile), since
+    ``q95`` cuts off 5% of the null distribution by construction.
+
+    A large empirical excess over 5% means the primary bootstrap
+    underestimates real-vs-real fluctuation (the q95 it produces is too
+    tight); a large deficit means it overestimates. Both are diagnostic of
+    a methodological issue in the bootstrap — e.g. the wrong cluster unit,
+    or an estimator whose finite-sample bias is interacting with the
+    standardization.
+    """
+    if int(reps) <= 0:
+        return {"enabled": False, "reason": "reps <= 0"}
+    samples = bootstrap_real_vs_real_samples(
+        class_caches,
+        reps=int(reps),
+        seed=int(seed),
+        progress=progress,
+    )
+    n = int(reps)
+    theoretical_fpr = 0.05
+    # 2-sigma tolerance band on a binomial proportion at p=0.05, n replicates.
+    se = float(np.sqrt(theoretical_fpr * (1.0 - theoretical_fpr) / max(n, 1)))
+    tolerance_band = [
+        float(max(0.0, theoretical_fpr - 2.0 * se)),
+        float(min(1.0, theoretical_fpr + 2.0 * se)),
+    ]
+    by_metric: dict[str, Any] = {}
+    for key, values in sorted(samples.items()):
+        standardization = standardization_ranges.get(key)
+        if not standardization or not standardization.get("usable_for_standardized_gap", False):
+            continue
+        gaps = np.asarray(
+            [
+                standardized_metric_value(value=float(v), standardization=standardization)[
+                    "standardized_gap"
+                ]
+                for v in np.asarray(values, dtype=np.float64)
+            ],
+            dtype=np.float64,
+        )
+        n_exceed = int(np.sum(gaps > 1.0))
+        emp_fpr = float(n_exceed / max(gaps.size, 1))
+        within = bool(tolerance_band[0] <= emp_fpr <= tolerance_band[1])
+        by_metric[key] = {
+            "n_replicates": int(gaps.size),
+            "n_exceeding_gap_one": n_exceed,
+            "empirical_fpr": emp_fpr,
+            "within_2sigma_tolerance": within,
+        }
+    return {
+        "enabled": True,
+        "schema": "climategen_eval.bootstrap_calibration.v1",
+        "method": (
+            "independent_real_vs_real_cluster_bootstrap_standardized_against_primary_noise_floor"
+        ),
+        "reps": int(reps),
+        "seed": int(seed),
+        "theoretical_fpr": theoretical_fpr,
+        "tolerance_band_2sigma": tolerance_band,
+        "by_metric": by_metric,
+    }
 
 
 def real_vs_real_reference(
@@ -830,6 +926,14 @@ def compute_corruption_validation(
     return {
         "enabled": True,
         "schema": "climategen_eval.corruption_validation.v1",
+        "role": "audit_only",
+        "role_note": (
+            "Since v4 of the framework, the corruption sweep is retained as a "
+            "supplementary metric-validation audit (response shape, monotonicity, "
+            "Spearman correlations under known degradations). It is no longer the "
+            "preferred metric-inclusion gate; that role belongs to the baseline "
+            "panel. The fields below remain a defensible legacy fallback gate."
+        ),
         "source": "corrupted_real_reference_images",
         "responsiveness_decision": (
             "A metric is responsive when at least one positive-severity degradation "
@@ -882,6 +986,7 @@ def compute_standardization_report(
     real_reference_reps: int = 200,
     validation_reps: int | None = None,
     validation_target_power: float = 0.80,
+    calibration_reps: int | None = None,
     progress: bool = False,
     real_storm_ids_by_class: dict[int, np.ndarray] | None = None,
 ) -> dict[str, Any]:
@@ -948,6 +1053,18 @@ def compute_standardization_report(
         null_quantile=0.95,
     )
     good_values = dict(good_reference.get("values", {}))
+    # Independent calibration bootstrap. Uses a disjoint seed so the
+    # replicates do not share Monte Carlo state with the noise-floor draw,
+    # which is what makes the FPR meaningful.
+    bootstrap_calibration = compute_bootstrap_calibration(
+        class_caches,
+        standardization_ranges=standardization_ranges,
+        reps=int(
+            real_reference_reps if calibration_reps is None else calibration_reps
+        ),
+        seed=int(seed) + 1_000_003,
+        progress=progress,
+    )
     corruption_validation = compute_corruption_validation(
         class_caches=class_caches,
         pseudo_sources_by_class=pseudo_sources_by_class,
@@ -991,6 +1108,23 @@ def compute_standardization_report(
                 "source": "real_vs_real_bootstrap",
                 "good_statistic": "q50",
                 "null_quantile": 0.95,
+                "interpretation": {
+                    "family": "skill_score_like",
+                    "reference_anchor": "real_vs_real_finite_sample_median_q50",
+                    "scale_unit": "upper_one_sided_null_half_width_q95_minus_q50",
+                    "convention_references": [
+                        "Murphy 1988, Mon. Wea. Rev. 116: skill score formalism",
+                        "Jolliffe and Stephenson, Forecast Verification 2e (2012)",
+                        "WMO No.485 Manual on the GDPFS, Vol. I (verification guidance)",
+                    ],
+                    "reading_guide": (
+                        "gap = 0 matches the real-vs-real median; gap = 1 sits at the "
+                        "upper edge of the central 90% real-vs-real null; gap > 1 means "
+                        "the model is detectably worse than sampling noise can explain. "
+                        "The bad-but-sensible baseline panel (CLIM, GAUSS-PIX, "
+                        "CROSS-CLASS, PHASE-SHUFFLE) anchors the bad end of the same axis."
+                    ),
+                },
                 "definition": (
                     "standardized_gap = max(0, model_value - q50(null)) / "
                     "(q95(null) - q50(null)) for lower-is-better metrics; "
@@ -1000,14 +1134,20 @@ def compute_standardization_report(
                     "the central 90% real-vs-real null."
                 ),
                 "metric_inclusion_rule": (
-                    "A metric is included in standardized gaps only when its "
-                    "real-vs-real null width is finite and positive and "
-                    "corruption validation marks it responsive."
+                    "A metric is included in the standardized-gap profile when its "
+                    "real-vs-real null width is finite and positive. Downstream "
+                    "consumers should further gate by baseline-panel responsiveness "
+                    "(preferred: --baseline-responsiveness from "
+                    "evaluate_tc_bt_baselines.py). The corruption-validation "
+                    "responsiveness block under metric_validation is kept as audit "
+                    "evidence only; it is still wired as a legacy fallback gate when "
+                    "no baseline-panel file is supplied."
                 ),
                 "ranges": standardization_ranges,
             },
         },
         "metric_validation": {
+            "bootstrap_calibration": bootstrap_calibration,
             "corruption_validation": corruption_validation,
             "source_sampling_by_class": {
                 str(c): dict(meta) for c, meta in sorted(source_sampling_by_class.items())

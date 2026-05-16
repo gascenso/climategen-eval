@@ -42,16 +42,16 @@ class MetricSpec:
 METRICS = [
     MetricSpec("hist_w1_k", "pixel_hist_w1", "BT histogram W1"),
     MetricSpec("hist_js", "pixel_hist_js", "BT histogram JS"),
-    MetricSpec("dav_gap_deg2", "dav_abs_gap_deg2", "DAV gap"),
+    MetricSpec("dav_w1_deg2", "dav_w1_deg2", "DAV W1"),
     MetricSpec("radial_mae_k", "radial_profile_mae_k", "Radial profile MAE"),
     MetricSpec(
-        "cold_gap_pct",
-        "cold_cloud_fraction_abs_gap",
-        "Cold-cloud gap",
+        "cold_w1_pct",
+        "cold_cloud_fraction_w1",
+        "Cold-cloud W1",
         scale=100.0,
     ),
     MetricSpec("psd_l2", "psd_l2", "Radial PSD MSE"),
-    MetricSpec("eye_gap_k", "eye_contrast_proxy_abs_gap", "Eye contrast gap"),
+    MetricSpec("eye_w1_k", "eye_contrast_proxy_w1_k", "Eye contrast W1"),
     MetricSpec("feature_mmd2", "feature_mmd2", "Feature MMD"),
     MetricSpec(
         "feature_diversity_gap",
@@ -108,6 +108,15 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--standardization-report", required=True)
+    parser.add_argument(
+        "--baseline-responsiveness",
+        default=None,
+        help=(
+            "Optional baseline_panel.json. When supplied, metric inclusion is "
+            "gated by baseline-panel responsiveness instead of corruption "
+            "validation."
+        ),
+    )
     parser.add_argument("--output", default="outputs/model_metric_gap_profile.svg")
     parser.add_argument("--title", default="Climate Generative Model Metric Summary")
     parser.add_argument(
@@ -228,7 +237,12 @@ def null_standardization_for_spec(
 def responsive_validation_for_spec(
     standardization_payload: dict[str, Any],
     spec: MetricSpec,
+    *,
+    baseline_responsiveness: dict[str, dict[str, Any]] | None = None,
 ) -> bool:
+    if baseline_responsiveness is not None:
+        node = baseline_responsiveness.get(spec.report_key)
+        return isinstance(node, dict) and bool(node.get("active", False))
     validation = standardization_payload.get("metric_validation", {})
     corruption_validation = (
         validation.get("corruption_validation", {}) if isinstance(validation, dict) else {}
@@ -263,13 +277,19 @@ def build_gaps(
     values_by_label: dict[str, dict[str, float]],
     standardization_payload: dict[str, Any],
     standardization_norm: dict[str, Any],
+    *,
+    baseline_responsiveness: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[MetricSpec], dict[str, dict[str, float]]]:
     available_specs = [
         spec
         for spec in METRICS
         if all(spec.key in values for values in values_by_label.values())
         and null_standardization_for_spec(standardization_norm, spec) is not None
-        and responsive_validation_for_spec(standardization_payload, spec)
+        and responsive_validation_for_spec(
+            standardization_payload,
+            spec,
+            baseline_responsiveness=baseline_responsiveness,
+        )
     ]
     gaps = {label: {} for label in values_by_label}
     for spec in available_specs:
@@ -548,10 +568,25 @@ def main() -> None:
         raise ValueError(
             f"{standardization_path} does not contain a metric_standardization object."
         )
+    baseline_responsiveness: dict[str, dict[str, Any]] | None = None
+    if args.baseline_responsiveness is not None:
+        br_path = Path(args.baseline_responsiveness)
+        if not br_path.is_absolute():
+            br_path = _REPO_ROOT / br_path
+        br_payload = load_json(br_path)
+        node = br_payload.get("responsiveness", {}) if isinstance(br_payload, dict) else {}
+        baseline_responsiveness = (
+            node.get("by_metric") if isinstance(node, dict) else None
+        )
+        if not isinstance(baseline_responsiveness, dict) or not baseline_responsiveness:
+            raise ValueError(
+                f"{br_path} responsiveness.by_metric is missing or empty."
+            )
     specs, gaps = build_gaps(
         values_by_label,
         standardization_payload,
         standardization_norm,
+        baseline_responsiveness=baseline_responsiveness,
     )
     if len(specs) < 3:
         raise ValueError(

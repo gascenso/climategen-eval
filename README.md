@@ -54,6 +54,30 @@ axis. The x-axis defaults to a symmetric-log scale with `linthresh = 1` so the
 noise-floor band stays in linear resolution while baselines that are dozens or
 hundreds of widths out do not squash the model region.
 
+### Connection to operational verification
+
+The standardized gap is structurally a **skill-score-like quantity** in the
+sense of operational weather forecasting: it normalizes a model error by the
+distance between a *reference* anchor (here the real-vs-real finite-sample
+median, the best a generative model can achieve at this evaluation set size)
+and a unit of *detectable difference* (here the upper half-width of the
+central 90% real-vs-real null). The bad end of the same axis is anchored by
+the baseline panel rather than by a single climatology reference. The
+methodology follows the spirit of Murphy (1988, *Mon. Wea. Rev.* 116), the
+WMO verification guidelines (WMO No. 485), and Jolliffe & Stephenson,
+*Forecast Verification* (2nd ed., Wiley 2012). A `null_standardization
+.interpretation` block in every standardization report makes this framing
+machine-readable.
+
+### Per-image diagnostic distributions
+
+The per-image diagnostics (cold-cloud fraction, DAV, eye-contrast proxy) are
+compared between the real and generated sets via the 1-D Wasserstein-1
+distance between their empirical per-image distributions, not by the absolute
+difference of their means. This captures variance, skewness, and tail
+mismatches that mean-comparisons miss: a model with the right mean DAV but
+wrong DAV variance does not pass.
+
 ## Case-study sources
 
 From the original `tc-diffusion` workspace:
@@ -90,7 +114,22 @@ python scripts/compute_tc_bt_standardization.py \
   --output outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json
 ```
 
-Evaluate the diffusion sample banks against that report:
+Evaluate the bad-but-sensible baseline panel against the standardization
+report. This also emits a `baseline_panel.json` summarizing which metrics
+each baseline activates (gap > 1) — the file the model evaluator and plotter
+use as the metric-inclusion gate:
+
+```bash
+python scripts/evaluate_tc_bt_baselines.py \
+  --config configs/tc_bt_case_study.yaml \
+  --n-per-class 1000 \
+  --standardization-report \
+    outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
+  --output-root outputs/tropical_cyclone_bt/baselines
+```
+
+Evaluate the diffusion sample banks, gating metric inclusion on the baseline
+panel just produced:
 
 ```bash
 python scripts/evaluate_tc_bt_sample_banks.py \
@@ -100,18 +139,9 @@ python scripts/evaluate_tc_bt_sample_banks.py \
   --n-per-class 1000 \
   --standardization-report \
     outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
+  --baseline-responsiveness \
+    outputs/tropical_cyclone_bt/baselines/baseline_panel.json \
   --output-root outputs/tropical_cyclone_bt/eval
-```
-
-Evaluate the bad-but-sensible baseline panel on the same data:
-
-```bash
-python scripts/evaluate_tc_bt_baselines.py \
-  --config configs/tc_bt_case_study.yaml \
-  --n-per-class 1000 \
-  --standardization-report \
-    outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
-  --output-root outputs/tropical_cyclone_bt/baselines
 ```
 
 Render the final standardized-gap figure with models and baselines on the same
@@ -127,6 +157,8 @@ python scripts/plot_model_metric_summary.py \
   --baseline PHASE-SHUFFLE=outputs/tropical_cyclone_bt/baselines/phase_shuffle/metrics.json \
   --standardization-report \
     outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
+  --baseline-responsiveness \
+    outputs/tropical_cyclone_bt/baselines/baseline_panel.json \
   --output outputs/tropical_cyclone_bt/figures/model_metric_gap_profile.svg
 ```
 
@@ -145,11 +177,22 @@ rendered as filled circles in color; baselines as open diamonds in grayscale.
   diffusion-generated samples).
 - **Class aggregation.** Per-class metric values are macro-averaged with
   equal weight per intensity class. Per-class details are kept in the report.
-- **Metric inclusion gate.** A metric is shown on the standardized-gap profile
-  only when (a) its real-vs-real null has a finite positive width and (b) at
-  least one corruption family drives it past the null boundary at the
-  configured power threshold (default 0.80). Other metrics are kept in the
-  raw report but not on the gap axis.
+- **Metric inclusion gate.** A metric is shown on the standardized-gap
+  profile when (a) its real-vs-real null has a finite positive width and
+  (b) it is responsive: at least one *bad-but-sensible baseline* pushes its
+  class-aggregate standardized gap above 1 (the preferred, baseline-panel
+  gate). Pass the `baseline_panel.json` produced by
+  `evaluate_tc_bt_baselines.py` to the model evaluator and plotter via
+  `--baseline-responsiveness` to enable this gate. The legacy
+  corruption-validation gate is still available as a fallback when no
+  baseline-panel file is provided; corruption-sweep results are otherwise
+  retained as audit evidence in the standardization report.
+- **Bootstrap calibration audit.** The standardization report includes a
+  `bootstrap_calibration` block that runs an independent real-vs-real
+  cluster bootstrap and reports, per metric, the empirical fraction of
+  replicates that exceed `gap = 1` under H₀. Under correct calibration this
+  fraction should sit within a 2σ binomial band around 5%; sustained
+  excursions diagnose an under- or over-estimated noise floor.
 - **Standardized-gap bootstrap.** Bootstrap intervals on the standardized
   gaps are conditional on a fixed standardization report — i.e. they describe
   finite-sample uncertainty of the model evaluation given the noise floor,

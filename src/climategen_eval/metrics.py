@@ -36,6 +36,36 @@ def js_divergence(p: np.ndarray, q: np.ndarray, eps: float = 1e-12) -> float:
     return float(0.5 * (kl_pm + kl_qm))
 
 
+def wasserstein1_1d_from_samples(x: np.ndarray, y: np.ndarray) -> float:
+    """Empirical 1-D Wasserstein-1 distance between two sample arrays.
+
+    Equivalent to ``int |F_x(t) - F_y(t)| dt`` over the real line, evaluated
+    on the union of sample atoms. Returned in the same units as the inputs.
+    Empty samples raise ``ValueError`` because the W1 distance is undefined.
+
+    This is the per-image-scalar generalization of histogram-based W1: it
+    captures the full marginal-distribution mismatch (mean, variance,
+    skewness, tails) instead of collapsing each set to its mean.
+    """
+    a = np.asarray(x, dtype=np.float64).reshape(-1)
+    b = np.asarray(y, dtype=np.float64).reshape(-1)
+    if a.size == 0 or b.size == 0:
+        raise ValueError("wasserstein1_1d_from_samples requires non-empty samples.")
+    a_sorted = np.sort(a)
+    b_sorted = np.sort(b)
+    # Evaluate |F_a - F_b| on the union of atoms, then integrate by trapezoid.
+    pivots = np.unique(np.concatenate([a_sorted, b_sorted]))
+    if pivots.size < 2:
+        return 0.0
+    cdf_a = np.searchsorted(a_sorted, pivots, side="right") / float(a_sorted.size)
+    cdf_b = np.searchsorted(b_sorted, pivots, side="right") / float(b_sorted.size)
+    # CDFs are step functions, constant on each interval (pivots[i], pivots[i+1]).
+    # The L1 distance reduces to sum_i |F_a - F_b|(pivots[i]) * (pivots[i+1] - pivots[i]).
+    widths = np.diff(pivots)
+    gap = np.abs(cdf_a[:-1] - cdf_b[:-1])
+    return float(np.sum(gap * widths))
+
+
 def wasserstein1_from_hist(
     p: np.ndarray,
     q: np.ndarray,

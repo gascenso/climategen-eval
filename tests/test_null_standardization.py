@@ -320,6 +320,100 @@ def test_baseline_names_match_public_enum() -> None:
     assert set(BASELINE_NAMES) == {"CLIM", "GAUSS-PIX", "CROSS-CLASS", "PHASE-SHUFFLE"}
 
 
+def test_wasserstein_1d_detects_variance_mismatch_under_zero_mean_gap() -> None:
+    from climategen_eval.metrics import wasserstein1_1d_from_samples
+
+    # Two distributions with identical means but very different spreads.
+    a = np.array([0.0, 10.0])
+    b = np.array([4.0, 6.0])
+    assert a.mean() == b.mean()
+    w = wasserstein1_1d_from_samples(a, b)
+    assert w > 0.0  # mean-gap is 0, but W1 still flags the distributional mismatch
+
+
+def test_wasserstein_1d_matches_translation_distance() -> None:
+    from climategen_eval.metrics import wasserstein1_1d_from_samples
+
+    x = np.linspace(0.0, 1.0, 50)
+    y = x + 0.37  # pure translation; W1 = 0.37 exactly
+    assert abs(wasserstein1_1d_from_samples(x, y) - 0.37) < 1e-12
+
+
+def test_bootstrap_calibration_reports_per_metric_fpr() -> None:
+    from climategen_eval.standardization import (
+        compute_bootstrap_calibration,
+        null_standardization_ranges,
+        real_vs_real_reference,
+    )
+
+    rng = np.random.default_rng(0)
+    cfg = TCMetricConfig(image_size=16, profile_bins=8, psd_bins=8)
+    real_by_class = {
+        0: rng.normal(240.0, 10.0, size=(20, 16, 16)).astype(np.float32),
+        1: rng.normal(230.0, 12.0, size=(20, 16, 16)).astype(np.float32),
+    }
+    caches = {}
+    for cid, real in real_by_class.items():
+        caches[cid] = build_class_metric_cache(
+            real_k=real,
+            gen_k_raw=real[:15],
+            cfg=cfg,
+        )
+    ref = real_vs_real_reference(caches, reps=80, seed=0)
+    ranges = null_standardization_ranges(ref["summary"], null_quantile=0.95)
+    calibration = compute_bootstrap_calibration(
+        caches,
+        standardization_ranges=ranges,
+        reps=80,
+        seed=1_000_003,
+    )
+    assert calibration["enabled"]
+    assert calibration["theoretical_fpr"] == 0.05
+    lo, hi = calibration["tolerance_band_2sigma"]
+    assert 0.0 <= lo < 0.05 < hi <= 1.0
+    assert calibration["by_metric"], "expected at least one calibrated metric"
+    for node in calibration["by_metric"].values():
+        assert 0 <= node["n_exceeding_gap_one"] <= node["n_replicates"]
+        assert 0.0 <= node["empirical_fpr"] <= 1.0
+
+
+def test_baseline_responsiveness_gate_excludes_inactive_metrics() -> None:
+    from scripts.evaluate_tc_bt_sample_banks import validated_standardization_ranges
+
+    payload = {
+        "metric_standardization": {
+            "null_standardization": {
+                "ranges": {
+                    "alive_metric": {
+                        "direction": "lower",
+                        "good": 1.0,
+                        "scale": 2.0,
+                        "usable_for_standardized_gap": True,
+                    },
+                    "dead_metric": {
+                        "direction": "lower",
+                        "good": 1.0,
+                        "scale": 2.0,
+                        "usable_for_standardized_gap": True,
+                    },
+                }
+            }
+        }
+    }
+    baseline_responsiveness = {
+        "alive_metric": {"active": True, "max_baseline_gap": 5.0},
+        "dead_metric": {"active": False, "max_baseline_gap": 0.3},
+    }
+    from pathlib import Path
+
+    gated = validated_standardization_ranges(
+        payload,
+        Path("dummy.json"),
+        baseline_responsiveness=baseline_responsiveness,
+    )
+    assert set(gated) == {"alive_metric"}
+
+
 def test_control_response_shape_handles_higher_is_better_metrics() -> None:
     points = [
         {"severity": 0.0, "value": 10.0, "power": 0.0},

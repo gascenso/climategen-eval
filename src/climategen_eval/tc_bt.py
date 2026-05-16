@@ -17,6 +17,7 @@ from .metrics import (
     radial_profile_batch,
     rbf_mmd2,
     summary_stats,
+    wasserstein1_1d_from_samples,
     wasserstein1_from_hist,
 )
 
@@ -79,9 +80,9 @@ def cluster_bootstrap_indices(
 PRIMARY_RAW_AGG_KEYS = (
     "pixel_hist_js",
     "pixel_hist_w1",
-    "cold_cloud_fraction_abs_gap",
-    "dav_abs_gap_deg2",
-    "eye_contrast_proxy_abs_gap",
+    "cold_cloud_fraction_w1",
+    "dav_w1_deg2",
+    "eye_contrast_proxy_w1_k",
     "psd_l2",
     "feature_mmd2",
     "diversity_feature_space_abs_gap",
@@ -533,9 +534,9 @@ def compute_class_scalar_summary(
     return {
         "pixel_hist_js": float(js_divergence(rh, gh)),
         "pixel_hist_w1": float(wasserstein1_from_hist(rh, gh, bin_edges=cache.bins)),
-        "cold_cloud_fraction_abs_gap": float(abs(real_cold.mean() - gen_cold.mean())),
-        "dav_abs_gap_deg2": float(abs(real_dav.mean() - gen_dav.mean())),
-        "eye_contrast_proxy_abs_gap": float(abs(real_eye.mean() - gen_eye.mean())),
+        "cold_cloud_fraction_w1": float(wasserstein1_1d_from_samples(real_cold, gen_cold)),
+        "dav_w1_deg2": float(wasserstein1_1d_from_samples(real_dav, gen_dav)),
+        "eye_contrast_proxy_w1_k": float(wasserstein1_1d_from_samples(real_eye, gen_eye)),
         "psd_l2": mean_profile_mse_gap(real_psd, gen_psd),
         "feature_mmd2": float(mmd2),
         "diversity_feature_space_abs_gap": float(abs(div_real - div_gen)),
@@ -576,9 +577,9 @@ def compute_real_vs_real_class_summary(
     return {
         "pixel_hist_js": float(js_divergence(left_mass, right_mass)),
         "pixel_hist_w1": float(wasserstein1_from_hist(left_mass, right_mass, bin_edges=cache.bins)),
-        "cold_cloud_fraction_abs_gap": float(abs(left_cold.mean() - right_cold.mean())),
-        "dav_abs_gap_deg2": float(abs(left_dav.mean() - right_dav.mean())),
-        "eye_contrast_proxy_abs_gap": float(abs(left_eye.mean() - right_eye.mean())),
+        "cold_cloud_fraction_w1": float(wasserstein1_1d_from_samples(left_cold, right_cold)),
+        "dav_w1_deg2": float(wasserstein1_1d_from_samples(left_dav, right_dav)),
+        "eye_contrast_proxy_w1_k": float(wasserstein1_1d_from_samples(left_eye, right_eye)),
         "psd_l2": mean_profile_mse_gap(left_psd, right_psd),
         "feature_mmd2": float(mmd2),
         "diversity_feature_space_abs_gap": float(abs(div_left - div_right)),

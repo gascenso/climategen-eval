@@ -210,6 +210,10 @@ def main() -> None:
         standardization_ranges = ranges
         standardization_report_path = norm_path
 
+    # Per-metric standardized gaps collected across baselines, used at the
+    # end to emit a baseline-responsiveness summary that downstream consumers
+    # (model evaluator, plotter) treat as the metric inclusion gate.
+    standardized_gap_by_metric_by_baseline: dict[str, dict[str, float]] = {}
     for name in tqdm(
         baselines,
         desc="Evaluating baselines",
@@ -238,15 +242,21 @@ def main() -> None:
         )
         if standardization_ranges is not None:
             bootstrap_samples = report.get("aggregate_primary_bootstrap", {}).get("samples")
+            standardized_values = standardize_metric_values(
+                report["aggregate_primary_raw"],
+                standardization_ranges,
+            )
             report["aggregate_primary_standardized"] = {
                 "schema": "climategen_eval.null_standardized_gaps.v1",
                 "source": str(standardization_report_path),
-                "metric_filter": "finite_positive_null_width_and_corruption_responsiveness",
-                "values": standardize_metric_values(
-                    report["aggregate_primary_raw"],
-                    standardization_ranges,
-                ),
+                "metric_filter": "finite_positive_null_width",
+                "values": standardized_values,
             }
+            for metric_key, node in standardized_values.items():
+                gap = float(node.get("standardized_gap", 0.0))
+                standardized_gap_by_metric_by_baseline.setdefault(metric_key, {})[
+                    result.name
+                ] = gap
             if bootstrap_samples:
                 report["aggregate_primary_standardized"]["bootstrap"] = {
                     "schema": "climategen_eval.null_standardized_gap_bootstrap.v1",
@@ -294,11 +304,27 @@ def main() -> None:
             json.dump(report, f, indent=2, default=json_default)
         print(f"Wrote {out_path}")
 
+    responsiveness_by_metric: dict[str, Any] = {}
+    for metric_key, by_baseline in sorted(standardized_gap_by_metric_by_baseline.items()):
+        gaps = {label: float(gap) for label, gap in by_baseline.items()}
+        activating = sorted(
+            label for label, gap in gaps.items() if gap > 1.0
+        )
+        max_label = max(gaps, key=lambda label: gaps[label]) if gaps else None
+        max_gap = float(gaps[max_label]) if max_label is not None else float("nan")
+        responsiveness_by_metric[metric_key] = {
+            "active": bool(activating),
+            "max_baseline_gap": max_gap,
+            "max_baseline_gap_label": max_label,
+            "activating_baselines": activating,
+            "by_baseline": gaps,
+        }
+
     summary_path = output_root / "baseline_panel.json"
     with summary_path.open("w") as f:
         json.dump(
             {
-                "schema": "climategen_eval.baseline_panel.v1",
+                "schema": "climategen_eval.baseline_panel.v2",
                 "created_at_utc": datetime.now(timezone.utc).isoformat(),
                 "baselines": [
                     {
@@ -307,9 +333,23 @@ def main() -> None:
                     }
                     for name in baselines
                 ],
+                "responsiveness": {
+                    "schema": "climategen_eval.baseline_responsiveness.v1",
+                    "standardization_report": (
+                        None
+                        if standardization_report_path is None
+                        else str(standardization_report_path)
+                    ),
+                    "decision_rule": (
+                        "metric is active iff at least one baseline's class-aggregate "
+                        "standardized gap exceeds 1 (one upper noise-floor half-width)."
+                    ),
+                    "by_metric": responsiveness_by_metric,
+                },
             },
             f,
             indent=2,
+            default=json_default,
         )
     print(f"Wrote {summary_path}")
 
