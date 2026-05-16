@@ -28,6 +28,7 @@ from climategen_eval.standardization import (  # noqa: E402
 class InputSpec:
     label: str
     metrics_path: Path
+    is_baseline: bool = False
 
 
 @dataclass(frozen=True)
@@ -77,6 +78,16 @@ MODEL_COLORS = [
 ]
 
 
+# Baselines are rendered in grayscale with a distinct marker so they never
+# compete visually with the evaluated models.
+BASELINE_COLORS = [
+    "#3F4A55",
+    "#6B7480",
+    "#8E96A1",
+    "#B0B7BF",
+]
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Plot null-standardized model metric gap profile."
@@ -84,12 +95,46 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--input",
         action="append",
-        required=True,
-        help="Repeatable LABEL=PATH_TO_METRICS_JSON.",
+        default=[],
+        help="Repeatable LABEL=PATH_TO_METRICS_JSON for evaluated models.",
+    )
+    parser.add_argument(
+        "--baseline",
+        action="append",
+        default=[],
+        help=(
+            "Repeatable LABEL=PATH_TO_METRICS_JSON for bad-but-sensible "
+            "reference baselines. Rendered in grayscale with diamond markers."
+        ),
     )
     parser.add_argument("--standardization-report", required=True)
     parser.add_argument("--output", default="outputs/model_metric_gap_profile.svg")
     parser.add_argument("--title", default="Climate Generative Model Metric Summary")
+    parser.add_argument(
+        "--x-scale",
+        choices=["symlog", "linear"],
+        default="symlog",
+        help=(
+            "x-axis scale. 'symlog' (default) renders [0, linthresh] linearly "
+            "and log-compresses larger gaps, so a baseline at gap ~ 200 does "
+            "not squash models at gap ~ 2. 'linear' is the original layout."
+        ),
+    )
+    parser.add_argument(
+        "--x-linthresh",
+        type=float,
+        default=1.0,
+        help="symlog linear-region threshold; defaults to 1 noise-floor width.",
+    )
+    parser.add_argument(
+        "--x-max",
+        type=float,
+        default=None,
+        help=(
+            "Optional manual cap on the x-axis upper bound. Only honored in "
+            "linear mode; symlog auto-fits to observed values."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -101,15 +146,15 @@ def load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def parse_input(raw: str) -> InputSpec:
+def parse_input(raw: str, *, is_baseline: bool = False) -> InputSpec:
     if "=" not in str(raw):
-        raise ValueError(f"Invalid --input {raw!r}; expected LABEL=PATH.")
+        raise ValueError(f"Invalid input {raw!r}; expected LABEL=PATH.")
     label, path = str(raw).split("=", 1)
     label = label.strip()
     metrics_path = Path(path.strip())
     if not metrics_path.is_absolute():
         metrics_path = _REPO_ROOT / metrics_path
-    return InputSpec(label=label, metrics_path=metrics_path)
+    return InputSpec(label=label, metrics_path=metrics_path, is_baseline=is_baseline)
 
 
 def nested_get(node: dict[str, Any], path: tuple[str, ...], default: Any = None) -> Any:
@@ -237,23 +282,78 @@ def build_gaps(
     return available_specs, gaps
 
 
+def _symlog_major_ticks(max_observed: float, linthresh: float) -> list[float]:
+    """Major tick locations for a symlog axis covering [0, max_observed]."""
+    ticks: list[float] = [0.0]
+    if linthresh > 0.0:
+        ticks.append(float(linthresh))
+    candidates = [
+        2.0, 5.0, 10.0, 20.0, 50.0, 100.0, 200.0, 500.0,
+        1000.0, 2000.0, 5000.0, 10000.0,
+    ]
+    upper = max(float(max_observed), float(linthresh))
+    for value in candidates:
+        if value <= upper * 1.05:
+            ticks.append(value)
+    return ticks
+
+
+def _format_tick(value: float) -> str:
+    if value == 0.0:
+        return "0"
+    if abs(value - round(value)) < 1e-9 and abs(value) < 1e4:
+        return f"{int(round(value))}"
+    return f"{value:g}"
+
+
 def plot_summary(
     *,
     specs: list[MetricSpec],
     gaps_by_label: dict[str, dict[str, float]],
     intervals_by_label: dict[str, dict[str, tuple[float, float]]] | None,
+    is_baseline_by_label: dict[str, bool],
     output_path: Path,
     title: str,
+    x_scale: str = "symlog",
+    x_linthresh: float = 1.0,
+    x_max_override: float | None = None,
 ) -> None:
-    labels = list(gaps_by_label)
-    y_base = np.arange(len(specs), dtype=np.float64)
-    offset_step = min(0.18, 0.72 / max(len(labels), 1))
-    offsets = {
-        label: (idx - 0.5 * (len(labels) - 1)) * offset_step
-        for idx, label in enumerate(labels)
+    model_labels = [lab for lab in gaps_by_label if not is_baseline_by_label.get(lab, False)]
+    baseline_labels = [lab for lab in gaps_by_label if is_baseline_by_label.get(lab, False)]
+    labels = model_labels + baseline_labels
+    has_baselines = bool(baseline_labels)
+
+    # Each metric gets a "model lane" (top) and an optional "baseline lane"
+    # (bottom). Lanes within the same metric are visually grouped by a light
+    # background band; the gap between metrics is wider than the gap between
+    # lanes so the eye reads the two-lane block as a single unit.
+    lane_gap_within_metric = 0.40
+    metric_gap = 1.20
+    rows_per_metric = 2 if has_baselines else 1
+    metric_height = (
+        (rows_per_metric - 1) * lane_gap_within_metric + metric_gap
+    )
+    y_centers = np.asarray(
+        [i * metric_height for i in range(len(specs))],
+        dtype=np.float64,
+    )
+    model_y = y_centers - (lane_gap_within_metric / 2.0 if has_baselines else 0.0)
+    baseline_y = y_centers + (lane_gap_within_metric / 2.0 if has_baselines else 0.0)
+
+    # Compress jitter on each lane: at most a small vertical spread within a
+    # lane so coincident points stay disambiguated, but no horizontal
+    # offsets at all. Color and shape carry the series identity instead.
+    model_offsets = {
+        label: ((i - 0.5 * (len(model_labels) - 1)) * 0.10) if len(model_labels) > 1 else 0.0
+        for i, label in enumerate(model_labels)
     }
+    baseline_offsets = {
+        label: ((i - 0.5 * (len(baseline_labels) - 1)) * 0.10) if len(baseline_labels) > 1 else 0.0
+        for i, label in enumerate(baseline_labels)
+    }
+
     observed_highs: list[float] = []
-    for idx, label in enumerate(labels):
+    for label in labels:
         values = np.asarray([gaps_by_label[label][spec.key] for spec in specs], dtype=np.float64)
         observed_highs.extend(float(v) for v in values if np.isfinite(v))
         intervals = (intervals_by_label or {}).get(label, {})
@@ -264,19 +364,35 @@ def plot_summary(
         )
 
     max_observed = max(observed_highs, default=1.0)
-    x_max = max(1.0, float(np.ceil(max_observed * 1.08)))
+    if x_max_override is not None:
+        x_max = float(x_max_override)
+    elif x_scale == "symlog":
+        x_max = float(max(max_observed * 1.25, x_linthresh * 1.2))
+    else:
+        x_max = max(1.0, float(np.ceil(max_observed * 1.08)))
 
-    fig_height = max(5.8, 0.48 * len(specs) + 2.0)
-    fig, ax = plt.subplots(figsize=(9.6, fig_height), facecolor="#ffffff")
-    ax.set_facecolor("#F7FBFC")
+    fig_height = max(6.0, metric_height * len(specs) * 0.55 + 1.8)
+    fig, ax = plt.subplots(figsize=(10.2, fig_height), facecolor="#ffffff")
+    ax.set_facecolor("#FBFCFD")
 
-    for idx, label in enumerate(labels):
-        color = MODEL_COLORS[idx % len(MODEL_COLORS)]
-        y = y_base + offsets[label]
-        intervals = (intervals_by_label or {}).get(label, {})
+    # Alternating band shading groups each metric's two lanes visually.
+    band_color = "#EEF3F6"
+    for i, y in enumerate(y_centers):
+        if i % 2 == 0:
+            ax.axhspan(
+                y - 0.5 * metric_height,
+                y + 0.5 * metric_height,
+                color=band_color,
+                zorder=0,
+            )
+
+    # Models — top lane per metric.
+    for i, label in enumerate(model_labels):
+        color = MODEL_COLORS[i % len(MODEL_COLORS)]
+        offset = model_offsets[label]
         for pos, spec in enumerate(specs):
             point = float(gaps_by_label[label][spec.key])
-            interval = intervals.get(spec.key)
+            interval = ((intervals_by_label or {}).get(label, {})).get(spec.key)
             xerr = None
             if interval is not None:
                 low = min(float(interval[0]), point)
@@ -284,43 +400,121 @@ def plot_summary(
                 xerr = np.asarray([[point - low], [high - point]], dtype=np.float64)
             ax.errorbar(
                 point,
-                y[pos],
+                model_y[pos] + offset,
                 xerr=xerr,
                 fmt="o",
                 color=color,
                 ecolor=color,
-                elinewidth=1.6,
-                capsize=2.5,
-                markersize=5.5,
+                elinewidth=1.7,
+                capsize=2.0,
+                markersize=7.0,
+                markerfacecolor=color,
+                markeredgecolor=color,
                 label=label if pos == 0 else None,
+                zorder=3,
             )
 
-    for ref, alpha in ((0.0, 0.85), (1.0, 0.55), (2.0, 0.35), (4.0, 0.28), (8.0, 0.22)):
-        if ref <= x_max:
-            ax.axvline(ref, color="#8DBDCA", linewidth=1.0, alpha=alpha, zorder=0)
+    # Baselines — bottom lane per metric, drawn underneath the model lane.
+    for i, label in enumerate(baseline_labels):
+        color = BASELINE_COLORS[i % len(BASELINE_COLORS)]
+        offset = baseline_offsets[label]
+        for pos, spec in enumerate(specs):
+            point = float(gaps_by_label[label][spec.key])
+            interval = ((intervals_by_label or {}).get(label, {})).get(spec.key)
+            xerr = None
+            if interval is not None:
+                low = min(float(interval[0]), point)
+                high = max(float(interval[1]), point)
+                xerr = np.asarray([[point - low], [high - point]], dtype=np.float64)
+            ax.errorbar(
+                point,
+                baseline_y[pos] + offset,
+                xerr=xerr,
+                fmt="D",
+                color=color,
+                ecolor=color,
+                elinewidth=1.0,
+                capsize=1.6,
+                markersize=5.6,
+                markerfacecolor="#FFFFFF",
+                markeredgecolor=color,
+                alpha=0.95,
+                label=label if pos == 0 else None,
+                zorder=2,
+            )
 
-    ax.set_yticks(y_base)
-    ax.set_yticklabels([spec.label for spec in specs], fontsize=9.0)
+    # Reference lines: only the two that carry framework meaning. Anything
+    # beyond gap=1 is "detectably worse than the noise can explain" — extra
+    # tick lines past that point were arbitrary and added visual noise.
+    ax.axvline(0.0, color="#5C8997", linewidth=1.1, alpha=0.85, zorder=1)
+    if 1.0 <= x_max:
+        ax.axvline(
+            1.0,
+            color="#5C8997",
+            linewidth=1.1,
+            alpha=0.65,
+            linestyle="--",
+            zorder=1,
+        )
+
+    ax.set_yticks(y_centers)
+    ax.set_yticklabels([spec.label for spec in specs], fontsize=9.5)
     ax.invert_yaxis()
-    ax.set_xlim(0.0, x_max)
+    y_lo = float(y_centers[0]) - 0.5 * metric_height
+    y_hi = float(y_centers[-1]) + 0.5 * metric_height
+    # invert_yaxis flips bounds; matplotlib accepts either ordering.
+    ax.set_ylim(y_hi, y_lo)
+    if x_scale == "symlog":
+        ax.set_xscale("symlog", linthresh=float(x_linthresh), linscale=1.0)
+        ax.set_xlim(0.0, x_max)
+        ticks = _symlog_major_ticks(max_observed, float(x_linthresh))
+        ticks = [t for t in ticks if t <= x_max * 1.001]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels([_format_tick(t) for t in ticks])
+        ax.xaxis.set_minor_locator(plt.NullLocator())
+    else:
+        ax.set_xlim(0.0, x_max)
     ax.set_xlabel(
         "Null-standardized gap beyond real-vs-real median "
-        "(one-sided null widths; lower is better)"
+        "(upper one-sided null half-widths q95 - q50; "
+        "gap = 1 sits at the noise-floor boundary; lower is better)"
     )
     ax.set_title("Null-standardized metric gap profile", pad=14)
     ax.grid(axis="x", color="#D6E7ED", linewidth=0.9)
-    ax.grid(axis="y", color="#E7F1F4", linewidth=0.7)
+    # Suppress horizontal gridlines — the alternating bands already separate metrics.
+    ax.grid(axis="y", visible=False)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_color("#BFD8E0")
     ax.spines["bottom"].set_color("#BFD8E0")
     fig.suptitle(title, fontsize=15, y=0.98)
-    ax.legend(loc="upper right", frameon=False)
+
+    # Group the legend: models first (filled circles), baselines second
+    # (open diamonds), with a divider label between them.
+    handles, labels_in_legend = ax.get_legend_handles_labels()
+    model_handles = [(h, l) for h, l in zip(handles, labels_in_legend) if l in model_labels]
+    baseline_handles = [
+        (h, l) for h, l in zip(handles, labels_in_legend) if l in baseline_labels
+    ]
+    ordered = model_handles + baseline_handles
+    if ordered:
+        ax.legend(
+            [h for h, _ in ordered],
+            [l for _, l in ordered],
+            loc="lower right",
+            frameon=False,
+            fontsize=8.5,
+            ncol=1 if len(ordered) <= 5 else 2,
+        )
+    note = (
+        "Error bars: bootstrap 95% intervals (conditional on the fixed standardization "
+        "report). Solid circles = evaluated models; open diamonds = bad-but-sensible "
+        "reference baselines (separate lane below each metric)."
+    )
     fig.text(
         0.01,
         0.01,
-        "Error bars show bootstrap 95% intervals when present; standardized gaps are "
-        "conditional on the fixed standardization report.",
+        note,
         fontsize=8.0,
         color="#587082",
     )
@@ -332,12 +526,19 @@ def plot_summary(
 
 def main() -> None:
     args = parse_args()
-    input_specs = [parse_input(raw) for raw in args.input]
-    values_by_label = {spec.label: extract_values(spec.metrics_path) for spec in input_specs}
+    if not args.input and not args.baseline:
+        raise ValueError("Must provide at least one --input or --baseline.")
+    input_specs: list[InputSpec] = [parse_input(raw) for raw in args.input]
+    baseline_specs: list[InputSpec] = [
+        parse_input(raw, is_baseline=True) for raw in args.baseline
+    ]
+    all_specs = input_specs + baseline_specs
+    values_by_label = {spec.label: extract_values(spec.metrics_path) for spec in all_specs}
     intervals_by_label = {
         spec.label: extract_gap_intervals(spec.metrics_path)
-        for spec in input_specs
+        for spec in all_specs
     }
+    is_baseline_by_label = {spec.label: spec.is_baseline for spec in all_specs}
     standardization_path = Path(args.standardization_report)
     if not standardization_path.is_absolute():
         standardization_path = _REPO_ROOT / standardization_path
@@ -364,8 +565,12 @@ def main() -> None:
         specs=specs,
         gaps_by_label=gaps,
         intervals_by_label=intervals_by_label,
+        is_baseline_by_label=is_baseline_by_label,
         output_path=output_path,
         title=str(args.title),
+        x_scale=str(args.x_scale),
+        x_linthresh=float(args.x_linthresh),
+        x_max_override=args.x_max,
     )
     print(f"Wrote {output_path}")
 
