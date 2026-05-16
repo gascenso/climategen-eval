@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 
+from climategen_eval.baselines import (
+    BASELINE_NAMES,
+    build_baseline,
+    _phase_randomize_2d,
+)
 from climategen_eval.data import storm_id_from_rel_path
 from climategen_eval.standardization import (
     null_standardization_ranges,
@@ -247,6 +252,72 @@ def test_evaluate_model_by_class_uses_storm_cluster_bootstrap() -> None:
     bootstrap = report["aggregate_primary_bootstrap"]
     assert bootstrap["schema"] == "climategen_eval.model_metric_bootstrap.v2"
     assert "storm-cluster bootstrap" in bootstrap["resampling"]["real"]
+
+
+def test_climatology_baseline_has_zero_pixel_variance() -> None:
+    rng = np.random.default_rng(0)
+    real_by_class = {
+        0: rng.normal(240.0, 10.0, size=(6, 16, 16)).astype(np.float32),
+        1: rng.normal(230.0, 12.0, size=(6, 16, 16)).astype(np.float32),
+    }
+    result = build_baseline("CLIM", real_by_class, n_per_class=20, seed=0)
+    # All replicates within a class are identical (constant per-class image).
+    assert np.allclose(result.images_by_class[0], result.images_by_class[0][0:1])
+    # Per-pixel mean matches the per-class real pixel mean.
+    target_mean = real_by_class[0].mean(axis=0)
+    assert np.allclose(result.images_by_class[0].mean(axis=0), target_mean)
+
+
+def test_gauss_pix_baseline_matches_per_pixel_moments() -> None:
+    rng = np.random.default_rng(1)
+    real = rng.normal(240.0, 10.0, size=(64, 8, 8)).astype(np.float32)
+    real_by_class = {0: real}
+    result = build_baseline("GAUSS-PIX", real_by_class, n_per_class=20000, seed=2)
+    target_mean = real.mean(axis=0)
+    target_std = real.std(axis=0, ddof=1)
+    emp = result.images_by_class[0]
+    se_mean = target_std / np.sqrt(emp.shape[0])
+    assert np.all(np.abs(emp.mean(axis=0) - target_mean) < 6.0 * (se_mean + 1e-3))
+
+
+def test_cross_class_baseline_only_samples_from_other_classes() -> None:
+    rng = np.random.default_rng(2)
+    real_by_class = {
+        0: rng.normal(240.0, 10.0, size=(4, 8, 8)).astype(np.float32),
+        1: rng.normal(230.0, 12.0, size=(4, 8, 8)).astype(np.float32),
+    }
+    storm_ids = {
+        0: np.asarray([f"A{i}" for i in range(4)], dtype=object),
+        1: np.asarray([f"B{i}" for i in range(4)], dtype=object),
+    }
+    result = build_baseline(
+        "CROSS-CLASS",
+        real_by_class,
+        n_per_class=16,
+        seed=3,
+        storm_ids_by_class=storm_ids,
+    )
+    assert result.storm_ids_by_class is not None
+    assert all(sid.startswith("B") for sid in result.storm_ids_by_class[0])
+    assert all(sid.startswith("A") for sid in result.storm_ids_by_class[1])
+
+
+def test_phase_shuffle_preserves_amplitude_spectrum_and_mean() -> None:
+    rng = np.random.default_rng(0)
+    img = rng.normal(240.0, 10.0, size=(16, 16)).astype(np.float32)
+    shuffled = _phase_randomize_2d(img, np.random.default_rng(7))
+    # Image mean preserved exactly (DC phase forced to zero by antisymmetric
+    # construction) — up to float32 round-trip noise.
+    assert abs(float(shuffled.mean()) - float(img.mean())) < 1e-3
+    # Amplitudes preserved up to float32 round-trip noise.
+    amp = np.abs(np.fft.fft2(img.astype(np.float64)))
+    amp_sr = np.abs(np.fft.fft2(shuffled.astype(np.float64)))
+    rel_err = np.max(np.abs(amp_sr - amp) / (amp + 1e-12))
+    assert rel_err < 1e-4
+
+
+def test_baseline_names_match_public_enum() -> None:
+    assert set(BASELINE_NAMES) == {"CLIM", "GAUSS-PIX", "CROSS-CLASS", "PHASE-SHUFFLE"}
 
 
 def test_control_response_shape_handles_higher_is_better_metrics() -> None:
