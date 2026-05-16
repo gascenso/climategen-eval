@@ -1,12 +1,35 @@
 from __future__ import annotations
 
 import json
+import re
 from bisect import bisect_right
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 import numpy as np
+
+
+# IBTrACS-style SID embedded in patch filenames of the form
+# "<seq>-<SID>_<YYYYMMDD>T<HHMM>_ml.nc". The SID itself is the canonical
+# IBTrACS storm identifier (e.g. "1994348N04175") and is shared by every
+# image extracted from the same storm track. Two images from the same SID
+# are not exchangeable observations for bootstrap purposes.
+_STORM_SID_RE = re.compile(r"^[0-9]+-(?P<sid>[0-9A-Z]+)_[0-9]{8}T[0-9]{4}")
+
+
+def storm_id_from_rel_path(rel_path: str) -> str:
+    """Extract the IBTrACS storm SID from a packed patch rel_path.
+
+    Falls back to the basename stem so that out-of-format paths still yield a
+    deterministic cluster identifier (each path becomes its own singleton
+    cluster, which is the most conservative behavior for the bootstrap).
+    """
+    name = Path(str(rel_path)).name
+    match = _STORM_SID_RE.match(name)
+    if match is not None:
+        return match.group("sid")
+    return Path(str(rel_path)).stem
 
 
 def repo_root() -> Path:
@@ -184,6 +207,16 @@ class RealDataset:
     def load_bt_by_class(self, class_id: int, *, mmap_mode: str | None = "r") -> np.ndarray:
         bt = self.bt(mmap_mode=mmap_mode)
         return np.asarray(bt[self.class_indices(int(class_id))], dtype=np.float32)
+
+    def storm_ids_by_class(self, class_id: int) -> np.ndarray:
+        """IBTrACS-style storm SID aligned with `load_bt_by_class(class_id)`.
+
+        Returned as a string array so the bootstrap can group images by track.
+        """
+        rel_paths = self.rel_paths()
+        indices = self.class_indices(int(class_id))
+        sids = [storm_id_from_rel_path(rel_paths[int(i)]) for i in indices]
+        return np.asarray(sids, dtype=object)
 
 
 @dataclass(frozen=True)

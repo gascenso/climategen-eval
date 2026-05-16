@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from climategen_eval.data import storm_id_from_rel_path
 from climategen_eval.standardization import (
     null_standardization_ranges,
     standardized_metric_value,
@@ -12,6 +13,8 @@ from climategen_eval.standardization import (
 from climategen_eval.tc_bt import (
     TCMetricConfig,
     build_class_metric_cache,
+    build_cluster_index,
+    cluster_bootstrap_indices,
     compute_real_vs_real_class_summary,
     evaluate_model_by_class,
     mean_profile_mse_gap,
@@ -33,9 +36,15 @@ def test_lower_metric_null_standardized_gap() -> None:
     assert node["usable_for_standardized_gap"]
     assert node["good"] == 1.0
     assert node["scale"] == 2.0
+    assert node["scale_definition"] == "q95_minus_q50"
+    assert node["null_lower_boundary"] == 0.5
+    assert node["null_upper_boundary"] == 3.0
+    assert node["null_boundary"] == 3.0
 
     standardized = standardized_metric_value(value=5.0, standardization=node)
     assert standardized["standardized_gap"] == 2.0
+    at_upper_boundary = standardized_metric_value(value=3.0, standardization=node)
+    assert at_upper_boundary["standardized_gap"] == 1.0
 
 
 def test_lower_metric_better_than_null_median_has_zero_gap() -> None:
@@ -179,6 +188,65 @@ def test_control_response_shape_reports_monotonicity_and_justification() -> None
     assert shape["justifies_inclusion"]
     assert shape["max_response"]["directional_response"] == 2.5
     assert shape["max_response"]["directional_response_in_null_widths"] == 1.25
+
+
+def test_storm_id_from_rel_path_extracts_ibtracs_sid() -> None:
+    assert (
+        storm_id_from_rel_path("100159-1994348N04175_19941219T1800_ml.nc")
+        == "1994348N04175"
+    )
+    assert (
+        storm_id_from_rel_path("subdir/100043-1994345N06165_19941224T0600_ml.nc")
+        == "1994345N06165"
+    )
+    # Falls back to the basename stem for out-of-format paths.
+    assert storm_id_from_rel_path("out_of_format.nc") == "out_of_format"
+
+
+def test_cluster_bootstrap_indices_respect_cluster_membership() -> None:
+    ids = np.asarray(["A", "A", "A", "B", "B", "C", "C", "C", "C"])
+    _, groups = build_cluster_index(ids)
+    rng = np.random.default_rng(0)
+    # Natural draw size equals the sum of the drawn clusters.
+    indices = cluster_bootstrap_indices(groups, rng=rng, target_size=ids.shape[0])
+    assert indices.shape[0] == ids.shape[0]
+    # Every drawn row must belong to one of the cluster groups, never split a cluster
+    # across non-cluster indices.
+    drawn_clusters = ids[indices]
+    for sid in np.unique(drawn_clusters):
+        within = np.flatnonzero(drawn_clusters == sid)
+        # The drawn indices for this SID must all live in that cluster's row set.
+        cluster_rows = set(int(i) for i in np.flatnonzero(ids == sid))
+        assert set(int(i) for i in indices[within]).issubset(cluster_rows)
+
+
+def test_evaluate_model_by_class_uses_storm_cluster_bootstrap() -> None:
+    rng = np.random.default_rng(0)
+    cfg = TCMetricConfig(image_size=16, profile_bins=8, psd_bins=8)
+    real_by_class = {
+        0: rng.normal(240.0, 10.0, size=(12, 16, 16)).astype(np.float32),
+        1: rng.normal(230.0, 12.0, size=(12, 16, 16)).astype(np.float32),
+    }
+    generated_by_class = {
+        0: rng.normal(241.0, 10.0, size=(8, 16, 16)).astype(np.float32),
+        1: rng.normal(231.0, 12.0, size=(8, 16, 16)).astype(np.float32),
+    }
+    real_storm_ids = {
+        0: np.asarray(["S1"] * 4 + ["S2"] * 4 + ["S3"] * 4, dtype=object),
+        1: np.asarray(["T1"] * 6 + ["T2"] * 6, dtype=object),
+    }
+    report = evaluate_model_by_class(
+        real_by_class=real_by_class,
+        generated_by_class=generated_by_class,
+        cfg=cfg,
+        bootstrap_reps=4,
+        bootstrap_seed=11,
+        include_bootstrap_samples=True,
+        real_storm_ids_by_class=real_storm_ids,
+    )
+    bootstrap = report["aggregate_primary_bootstrap"]
+    assert bootstrap["schema"] == "climategen_eval.model_metric_bootstrap.v2"
+    assert "storm-cluster bootstrap" in bootstrap["resampling"]["real"]
 
 
 def test_control_response_shape_handles_higher_is_better_metrics() -> None:

@@ -70,11 +70,25 @@ def wasserstein1_from_hist(
 
 def summary_stats(x: np.ndarray) -> Dict[str, float]:
     x = np.asarray(x, dtype=np.float64)
+    n = int(x.size)
+    mean = float(np.mean(x))
+    std = float(np.std(x, ddof=1)) if n > 1 else 0.0
+    # Population-moment skew/kurtosis (excess kurtosis); standardized by the
+    # population standard deviation so the values match common geophysical
+    # conventions. Falls back to zero when the sample is constant.
+    pop_std = float(np.std(x))
+    if pop_std > 0.0:
+        z = (x - mean) / pop_std
+        skew = float(np.mean(z ** 3))
+        kurtosis = float(np.mean(z ** 4) - 3.0)
+    else:
+        skew = 0.0
+        kurtosis = 0.0
     return {
-        "mean": float(np.mean(x)),
-        "std": float(np.std(x)),
-        "skew": float(np.mean(((x - np.mean(x)) / (np.std(x) + 1e-12)) ** 3)),
-        "kurtosis": float(np.mean(((x - np.mean(x)) / (np.std(x) + 1e-12)) ** 4) - 3.0),
+        "mean": mean,
+        "std": std,
+        "skew": skew,
+        "kurtosis": kurtosis,
         "q01": float(np.quantile(x, 0.01)),
         "q05": float(np.quantile(x, 0.05)),
         "q50": float(np.quantile(x, 0.50)),

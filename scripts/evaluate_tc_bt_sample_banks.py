@@ -175,15 +175,16 @@ def main() -> None:
     tc_cfg = metric_config(cfg)
     show_progress = not bool(args.no_progress)
 
-    real_by_class = {
-        class_id: real_dataset.load_bt_by_class(class_id)
-        for class_id in tqdm(
-            real_dataset.class_ids,
-            desc="Loading real classes",
-            unit="class",
-            disable=not show_progress,
-        )
-    }
+    real_by_class = {}
+    real_storm_ids_by_class = {}
+    for class_id in tqdm(
+        real_dataset.class_ids,
+        desc="Loading real classes",
+        unit="class",
+        disable=not show_progress,
+    ):
+        real_by_class[class_id] = real_dataset.load_bt_by_class(class_id)
+        real_storm_ids_by_class[class_id] = real_dataset.storm_ids_by_class(class_id)
 
     output_root = Path(args.output_root)
     if not output_root.is_absolute():
@@ -238,6 +239,7 @@ def main() -> None:
                 bool(args.store_bootstrap_samples) or standardization_ranges is not None
             ),
             progress=show_progress,
+            real_storm_ids_by_class=real_storm_ids_by_class,
         )
         if standardization_ranges is not None:
             bootstrap_samples = report.get("aggregate_primary_bootstrap", {}).get("samples")

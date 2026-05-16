@@ -93,15 +93,16 @@ def main() -> None:
         real_manifest = _REPO_ROOT / real_manifest
     real_dataset = RealDataset.from_manifest(real_manifest)
     show_progress = not bool(args.no_progress)
-    real_by_class = {
-        class_id: real_dataset.load_bt_by_class(class_id)
-        for class_id in tqdm(
-            real_dataset.class_ids,
-            desc="Loading real classes",
-            unit="class",
-            disable=not show_progress,
-        )
-    }
+    real_by_class = {}
+    real_storm_ids_by_class = {}
+    for class_id in tqdm(
+        real_dataset.class_ids,
+        desc="Loading real classes",
+        unit="class",
+        disable=not show_progress,
+    ):
+        real_by_class[class_id] = real_dataset.load_bt_by_class(class_id)
+        real_storm_ids_by_class[class_id] = real_dataset.storm_ids_by_class(class_id)
     report = compute_standardization_report(
         real_by_class=real_by_class,
         cfg=metric_config(cfg),
@@ -112,6 +113,7 @@ def main() -> None:
         validation_reps=args.validation_reps,
         validation_target_power=float(args.validation_target_power),
         progress=show_progress,
+        real_storm_ids_by_class=real_storm_ids_by_class,
     )
     report.update(
         {

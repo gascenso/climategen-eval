@@ -8,6 +8,7 @@ import numpy as np
 from .corruptions import CONTROL_NAMES, build_validation_control_bt_k
 from .tc_bt import (
     TCMetricConfig,
+    _resample_side,
     build_class_metric_cache,
     build_class_metric_cache_from_real_cache,
     compute_class_scalar_summary,
@@ -42,9 +43,10 @@ def summarize_distribution(values: np.ndarray) -> dict[str, Any]:
     arr = np.asarray(values, dtype=np.float64).reshape(-1)
     if arr.size == 0:
         raise ValueError("Cannot summarize an empty distribution.")
+    std = float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0
     return {
         "mean": float(np.mean(arr)),
-        "std": float(np.std(arr)),
+        "std": std,
         "min": float(np.min(arr)),
         "q025": float(np.quantile(arr, 0.025)),
         "q05": float(np.quantile(arr, 0.05)),
@@ -69,10 +71,13 @@ def null_standardization_ranges(
 ) -> dict[str, dict[str, Any]]:
     """Build metric standardization ranges from real-vs-real bootstrap summaries.
 
-    The scale is a one-sided null width around the finite-sample ideal:
-    q95 - q50 for lower-is-better metrics, and q50 - q05 for higher-is-better
-    metrics. Corruptions are intentionally not used here; they are validation
-    diagnostics, not the display ruler.
+    The scale is the one-sided upper null half-width q95 - q50 for
+    lower-is-better metrics, and the mirrored q50 - q05 half-width for
+    higher-is-better metrics. With this definition, standardized_gap = 1
+    corresponds to the model sitting exactly at the upper (or lower) noise
+    floor: anything inside [0, 1] is within the central 90% real-vs-real null
+    along the direction of badness. Corruptions are intentionally not used
+    here; they are validation diagnostics, not the display ruler.
     """
     if abs(float(null_quantile) - 0.95) > 1.0e-12:
         raise ValueError("null_standardization_ranges currently expects null_quantile=0.95.")
@@ -83,17 +88,21 @@ def null_standardization_ranges(
             continue
         direction = RANGE_DIRECTIONS[key]
         good = float(node.get("q50", np.nan))
+        lower_boundary = float(node.get("q05", np.nan))
+        upper_boundary = float(node.get("q95", np.nan))
         if direction == "higher":
-            boundary = float(node.get("q05", np.nan))
-            scale = good - boundary
+            boundary = lower_boundary
+            scale = good - lower_boundary
             scale_definition = "q50_minus_q05"
         else:
-            boundary = float(node.get("q95", np.nan))
-            scale = boundary - good
+            boundary = upper_boundary
+            scale = upper_boundary - good
             scale_definition = "q95_minus_q50"
         usable = bool(
             np.isfinite(good)
             and np.isfinite(boundary)
+            and np.isfinite(lower_boundary)
+            and np.isfinite(upper_boundary)
             and np.isfinite(scale)
             and scale > float(min_scale)
         )
@@ -101,6 +110,8 @@ def null_standardization_ranges(
             "direction": direction,
             "good": good,
             "null_boundary": boundary,
+            "null_lower_boundary": lower_boundary,
+            "null_upper_boundary": upper_boundary,
             "scale": scale,
             "scale_definition": scale_definition,
             "null_quantile": float(null_quantile),
@@ -193,7 +204,8 @@ def sample_real_images_for_reference_draw(
     *,
     draw_n: int,
     rng: np.random.Generator,
-) -> tuple[np.ndarray, dict[str, Any]]:
+    storm_ids: np.ndarray | None = None,
+) -> tuple[np.ndarray, dict[str, Any], np.ndarray | None]:
     arr = np.asarray(real_k, dtype=np.float32)
     source_n = int(arr.shape[0])
     draw_n = int(draw_n)
@@ -203,11 +215,20 @@ def sample_real_images_for_reference_draw(
         raise ValueError(f"draw_n must be > 0, got {draw_n}")
     replace = source_n < draw_n
     idx = rng.choice(source_n, size=draw_n, replace=replace)
+    drawn_ids: np.ndarray | None = None
+    if storm_ids is not None:
+        ids = np.asarray(storm_ids).reshape(-1)
+        if ids.shape[0] != source_n:
+            raise ValueError(
+                f"storm_ids must align with real_k rows, got {ids.shape[0]} "
+                f"ids for {source_n} images."
+            )
+        drawn_ids = ids[idx]
     return np.asarray(arr[idx], dtype=np.float32), {
         "draw_n": draw_n,
         "source_n": source_n,
         "draw_mode": "with_replacement" if replace else "without_replacement",
-    }
+    }, drawn_ids
 
 
 def append_macro_samples(
@@ -240,8 +261,21 @@ def bootstrap_real_vs_real_samples(
             for class_id, cache in sorted(class_caches.items()):
                 real_n = int(cache.real_hist_counts.shape[0])
                 other_n = int(cache.gen_raw_hist_counts.shape[0])
-                left_idx = rng.integers(real_n, size=real_n)
-                right_idx = rng.integers(real_n, size=other_n)
+                # The "right" side mirrors the model evaluation set size; the
+                # "left" side mirrors the available real count. Both draws are
+                # cluster-bootstrapped by storm when storm groups are present.
+                left_idx = _resample_side(
+                    cluster_groups=cache.real_cluster_groups,
+                    n=real_n,
+                    target_size=real_n,
+                    rng=rng,
+                )
+                right_idx = _resample_side(
+                    cluster_groups=cache.real_cluster_groups,
+                    n=real_n,
+                    target_size=other_n,
+                    rng=rng,
+                )
                 per_class[int(class_id)] = compute_real_vs_real_class_summary(
                     cache,
                     left_idx=left_idx,
@@ -269,8 +303,18 @@ def bootstrap_control_samples(
             gen_n = int(cache.gen_raw_hist_counts.shape[0])
             per_class[int(class_id)] = compute_class_scalar_summary(
                 cache,
-                real_idx=rng.integers(real_n, size=real_n),
-                gen_idx=rng.integers(gen_n, size=gen_n),
+                real_idx=_resample_side(
+                    cluster_groups=cache.real_cluster_groups,
+                    n=real_n,
+                    target_size=real_n,
+                    rng=rng,
+                ),
+                gen_idx=_resample_side(
+                    cluster_groups=cache.gen_cluster_groups,
+                    n=gen_n,
+                    target_size=gen_n,
+                    rng=rng,
+                ),
             )
         append_macro_samples(samples_by_key, per_class)
         if progress_update is not None:
@@ -623,6 +667,7 @@ def compute_corruption_validation(
     real_vs_real_summary: dict[str, dict[str, float]],
     target_power: float,
     progress: bool = False,
+    pseudo_source_ids_by_class: dict[int, np.ndarray] | None = None,
 ) -> dict[str, Any]:
     if int(reps) <= 0:
         raise ValueError(f"corruption validation reps must be > 0, got {reps}.")
@@ -674,6 +719,9 @@ def compute_corruption_validation(
                     seed=control_seed,
                 )
                 transforms_for_value[str(class_id)] = dict(transform)
+                gen_ids = None
+                if pseudo_source_ids_by_class is not None:
+                    gen_ids = pseudo_source_ids_by_class.get(class_id)
                 control_caches[class_id] = build_class_metric_cache_from_real_cache(
                     real_cache=class_caches[class_id],
                     gen_k_raw=control_k,
@@ -681,6 +729,7 @@ def compute_corruption_validation(
                     binner=binner,
                     dav_computer=dav_computer,
                     cold_mask=cold_mask,
+                    gen_storm_ids=gen_ids,
                 )
             transforms_by_control[control_name].append(
                 {
@@ -834,6 +883,7 @@ def compute_standardization_report(
     validation_reps: int | None = None,
     validation_target_power: float = 0.80,
     progress: bool = False,
+    real_storm_ids_by_class: dict[int, np.ndarray] | None = None,
 ) -> dict[str, Any]:
     if not real_by_class:
         raise ValueError("real_by_class must contain at least one class.")
@@ -849,8 +899,10 @@ def compute_standardization_report(
         )
     controls = validate_control_names(controls)
     binner, dav_computer, cold_mask = make_metric_context(cfg)
+    storm_ids_by_class = real_storm_ids_by_class or {}
     class_caches = {}
     pseudo_sources_by_class = {}
+    pseudo_source_ids_by_class: dict[int, np.ndarray] = {}
     source_sampling_by_class = {}
     class_items = sorted(real_by_class.items())
     with progress_bar(
@@ -861,13 +913,17 @@ def compute_standardization_report(
     ) as pbar:
         for class_id, real_k in class_items:
             rng = np.random.default_rng(int(seed + 104729 * (class_id + 1)))
-            pseudo_k, source_meta = sample_real_images_for_reference_draw(
+            real_ids = storm_ids_by_class.get(class_id)
+            pseudo_k, source_meta, pseudo_ids = sample_real_images_for_reference_draw(
                 real_k,
                 draw_n=int(generated_n_per_class),
                 rng=rng,
+                storm_ids=real_ids,
             )
             pseudo_sources_by_class[class_id] = pseudo_k
             source_sampling_by_class[class_id] = source_meta
+            if pseudo_ids is not None:
+                pseudo_source_ids_by_class[class_id] = pseudo_ids
             class_caches[class_id] = build_class_metric_cache(
                 real_k=real_k,
                 gen_k_raw=pseudo_k,
@@ -875,6 +931,8 @@ def compute_standardization_report(
                 binner=binner,
                 dav_computer=dav_computer,
                 cold_mask=cold_mask,
+                real_storm_ids=real_ids,
+                gen_storm_ids=pseudo_ids,
             )
             if pbar is not None:
                 pbar.update(1)
@@ -893,6 +951,7 @@ def compute_standardization_report(
     corruption_validation = compute_corruption_validation(
         class_caches=class_caches,
         pseudo_sources_by_class=pseudo_sources_by_class,
+        pseudo_source_ids_by_class=pseudo_source_ids_by_class,
         controls=controls,
         grids=default_validation_grids(cfg),
         cfg=cfg,
@@ -904,14 +963,14 @@ def compute_standardization_report(
     )
 
     report = {
-        "schema": "climategen_eval.metric_standardization_report.v2",
+        "schema": "climategen_eval.metric_standardization_report.v4",
         "aggregation": {
             "class_aggregation": "unweighted_macro_average_over_classes",
             "rationale": "Each intensity class contributes equally to aggregate metrics.",
         },
         "metric_standardization": {
             "enabled": True,
-            "schema": "climategen_eval.metric_standardization.v2",
+            "schema": "climategen_eval.metric_standardization.v4",
             "source": "real_vs_real_null_standardization",
             "match_generated_counts": True,
             "seed": int(seed),
@@ -928,14 +987,17 @@ def compute_standardization_report(
             },
             "null_standardization": {
                 "enabled": True,
-                "schema": "climategen_eval.null_standardization.v2",
+                "schema": "climategen_eval.null_standardization.v4",
                 "source": "real_vs_real_bootstrap",
                 "good_statistic": "q50",
                 "null_quantile": 0.95,
                 "definition": (
                     "standardized_gap = max(0, model_value - q50(null)) / "
                     "(q95(null) - q50(null)) for lower-is-better metrics; "
-                    "higher-is-better metrics use the mirrored q50 - q05 width."
+                    "higher-is-better metrics use max(0, q50(null) - model_value) / "
+                    "(q50(null) - q05(null)). With this scale, gap = 1 places the "
+                    "model exactly at the upper (or lower) noise-floor boundary of "
+                    "the central 90% real-vs-real null."
                 ),
                 "metric_inclusion_rule": (
                     "A metric is included in standardized gaps only when its "

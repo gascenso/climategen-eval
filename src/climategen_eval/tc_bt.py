@@ -21,6 +21,61 @@ from .metrics import (
 )
 
 
+def build_cluster_index(cluster_ids: np.ndarray) -> tuple[np.ndarray, list[np.ndarray]]:
+    """Group row indices by cluster id.
+
+    Returns the unique cluster labels (in insertion-stable order) and, for
+    each label, the sorted array of row indices that belong to it.
+    """
+    arr = np.asarray(cluster_ids).reshape(-1)
+    if arr.size == 0:
+        return np.zeros((0,), dtype=object), []
+    unique, inverse = np.unique(arr, return_inverse=True)
+    groups: list[np.ndarray] = [
+        np.flatnonzero(inverse == k).astype(np.int64) for k in range(len(unique))
+    ]
+    return unique, groups
+
+
+def cluster_bootstrap_indices(
+    cluster_groups: list[np.ndarray],
+    *,
+    rng: np.random.Generator,
+    target_size: int | None = None,
+) -> np.ndarray:
+    """One cluster-bootstrap draw of row indices.
+
+    Clusters are sampled with replacement; each drawn cluster contributes all
+    of its row indices. When `target_size` is set, clusters are drawn until
+    the cumulative row count reaches the target, and the result is then
+    truncated to exactly `target_size`. With `target_size=None`, the natural
+    bootstrap size equals the total number of rows summed across as many
+    cluster draws as there are clusters.
+    """
+    n_clusters = len(cluster_groups)
+    if n_clusters == 0:
+        return np.zeros((0,), dtype=np.int64)
+    if target_size is None:
+        order = rng.integers(n_clusters, size=n_clusters)
+        return np.concatenate([cluster_groups[int(k)] for k in order])
+    target = int(target_size)
+    if target <= 0:
+        return np.zeros((0,), dtype=np.int64)
+    drawn: list[np.ndarray] = []
+    total = 0
+    while total < target:
+        k = int(rng.integers(n_clusters))
+        drawn.append(cluster_groups[k])
+        total += int(cluster_groups[k].shape[0])
+    flat = np.concatenate(drawn)
+    if flat.shape[0] > target:
+        # Truncate uniformly within the last cluster batch to hit target_size
+        # without biasing toward early-drawn clusters.
+        keep = rng.choice(flat.shape[0], size=target, replace=False)
+        flat = np.sort(flat[keep])
+    return flat
+
+
 PRIMARY_RAW_AGG_KEYS = (
     "pixel_hist_js",
     "pixel_hist_w1",
@@ -125,6 +180,8 @@ class ClassMetricCache:
     pixel_stats_real: dict[str, float]
     pixel_stats_gen_raw: dict[str, float]
     gen_exceedance_rate: dict[str, float]
+    real_cluster_groups: list[np.ndarray] | None = None
+    gen_cluster_groups: list[np.ndarray] | None = None
 
 
 def ensure_metric_bt_batch(name: str, value: np.ndarray, cfg: TCMetricConfig) -> np.ndarray:
@@ -239,6 +296,8 @@ def build_class_metric_cache(
     binner: PolarBinner | None = None,
     dav_computer: DAVComputer | None = None,
     cold_mask: np.ndarray | None = None,
+    real_storm_ids: np.ndarray | None = None,
+    gen_storm_ids: np.ndarray | None = None,
 ) -> ClassMetricCache:
     real_k = ensure_metric_bt_batch("real_k", real_k, cfg)
     gen_k_raw = ensure_metric_bt_batch("gen_k_raw", gen_k_raw, cfg)
@@ -284,6 +343,25 @@ def build_class_metric_cache(
     gen_raw_exceed_above = np.mean(gen_k_raw > float(cfg.bt_max_k), axis=(1, 2)).astype(np.float32)
     gen_raw_exceed_total = gen_raw_exceed_below + gen_raw_exceed_above
 
+    real_groups: list[np.ndarray] | None = None
+    if real_storm_ids is not None:
+        ids = np.asarray(real_storm_ids).reshape(-1)
+        if ids.shape[0] != real_k.shape[0]:
+            raise ValueError(
+                f"real_storm_ids must align with real_k rows, got "
+                f"{ids.shape[0]} ids for {real_k.shape[0]} images."
+            )
+        _, real_groups = build_cluster_index(ids)
+    gen_groups: list[np.ndarray] | None = None
+    if gen_storm_ids is not None:
+        ids = np.asarray(gen_storm_ids).reshape(-1)
+        if ids.shape[0] != gen_k_raw.shape[0]:
+            raise ValueError(
+                f"gen_storm_ids must align with gen_k_raw rows, got "
+                f"{ids.shape[0]} ids for {gen_k_raw.shape[0]} images."
+            )
+        _, gen_groups = build_cluster_index(ids)
+
     return ClassMetricCache(
         bins=bins,
         real_hist_counts=real_hist_counts,
@@ -314,6 +392,8 @@ def build_class_metric_cache(
             "raw_min": float(np.min(gen_k_raw)),
             "raw_max": float(np.max(gen_k_raw)),
         },
+        real_cluster_groups=real_groups,
+        gen_cluster_groups=gen_groups,
     )
 
 
@@ -325,6 +405,7 @@ def build_class_metric_cache_from_real_cache(
     binner: PolarBinner,
     dav_computer: DAVComputer,
     cold_mask: np.ndarray,
+    gen_storm_ids: np.ndarray | None = None,
 ) -> ClassMetricCache:
     gen_k_raw = ensure_metric_bt_batch("gen_k_raw", gen_k_raw, cfg)
     gen_raw_hist_counts = hist_counts_batch(gen_k_raw, real_cache.bins)
@@ -346,6 +427,15 @@ def build_class_metric_cache_from_real_cache(
     gen_raw_exceed_below = np.mean(gen_k_raw < float(cfg.bt_min_k), axis=(1, 2)).astype(np.float32)
     gen_raw_exceed_above = np.mean(gen_k_raw > float(cfg.bt_max_k), axis=(1, 2)).astype(np.float32)
     gen_raw_exceed_total = gen_raw_exceed_below + gen_raw_exceed_above
+    gen_groups: list[np.ndarray] | None = None
+    if gen_storm_ids is not None:
+        ids = np.asarray(gen_storm_ids).reshape(-1)
+        if ids.shape[0] != gen_k_raw.shape[0]:
+            raise ValueError(
+                f"gen_storm_ids must align with gen_k_raw rows, got "
+                f"{ids.shape[0]} ids for {gen_k_raw.shape[0]} images."
+            )
+        _, gen_groups = build_cluster_index(ids)
 
     return ClassMetricCache(
         bins=real_cache.bins,
@@ -377,11 +467,30 @@ def build_class_metric_cache_from_real_cache(
             "raw_min": float(np.min(gen_k_raw)),
             "raw_max": float(np.max(gen_k_raw)),
         },
+        real_cluster_groups=real_cache.real_cluster_groups,
+        gen_cluster_groups=gen_groups,
     )
 
 
 def select_rows(arr: np.ndarray, idx: np.ndarray | None) -> np.ndarray:
     return arr if idx is None else arr[idx]
+
+
+def _resample_side(
+    *,
+    cluster_groups: list[np.ndarray] | None,
+    n: int,
+    target_size: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Cluster-bootstrap when groups are present, iid bootstrap otherwise."""
+    if cluster_groups is not None:
+        return cluster_bootstrap_indices(
+            cluster_groups,
+            rng=rng,
+            target_size=int(target_size),
+        )
+    return rng.integers(int(n), size=int(target_size))
 
 
 def class_radial_profile_mae(
@@ -513,8 +622,18 @@ def bootstrap_model_metric_samples(
             gen_n = int(cache.gen_raw_hist_counts.shape[0])
             per_class[int(class_id)] = compute_class_scalar_summary(
                 cache,
-                real_idx=rng.integers(real_n, size=real_n),
-                gen_idx=rng.integers(gen_n, size=gen_n),
+                real_idx=_resample_side(
+                    cluster_groups=cache.real_cluster_groups,
+                    n=real_n,
+                    target_size=real_n,
+                    rng=rng,
+                ),
+                gen_idx=_resample_side(
+                    cluster_groups=cache.gen_cluster_groups,
+                    n=gen_n,
+                    target_size=gen_n,
+                    rng=rng,
+                ),
             )
         for key, value in aggregate_class_summaries(per_class).items():
             samples_by_key.setdefault(key, []).append(float(value))
@@ -533,6 +652,8 @@ def evaluate_model_by_class(
     bootstrap_seed: int = 12345,
     include_bootstrap_samples: bool = False,
     progress: bool = False,
+    real_storm_ids_by_class: dict[int, np.ndarray] | None = None,
+    generated_storm_ids_by_class: dict[int, np.ndarray] | None = None,
 ) -> dict[str, Any]:
     real_classes = set(real_by_class)
     generated_classes = set(generated_by_class)
@@ -545,6 +666,8 @@ def evaluate_model_by_class(
     per_class: dict[int, dict[str, Any]] = {}
     class_summaries: dict[int, dict[str, float]] = {}
     class_caches: dict[int, ClassMetricCache] = {}
+    real_storm_ids_by_class = real_storm_ids_by_class or {}
+    generated_storm_ids_by_class = generated_storm_ids_by_class or {}
     for class_id in progress_iter(
         sorted(real_by_class),
         enabled=progress,
@@ -560,6 +683,8 @@ def evaluate_model_by_class(
             binner=binner,
             dav_computer=dav_computer,
             cold_mask=cold_mask,
+            real_storm_ids=real_storm_ids_by_class.get(class_id),
+            gen_storm_ids=generated_storm_ids_by_class.get(class_id),
         )
         class_caches[int(class_id)] = cache
         summary = compute_class_scalar_summary(cache)
@@ -592,7 +717,7 @@ def evaluate_model_by_class(
         )
         bootstrap_report: dict[str, Any] = {
             "enabled": True,
-            "schema": "climategen_eval.model_metric_bootstrap.v1",
+            "schema": "climategen_eval.model_metric_bootstrap.v2",
             "method": "within_class_two_sample_nonparametric_bootstrap",
             "uncertainty_scope": (
                 "finite_sample_uncertainty_from_real_and_generated_evaluation_sets"
@@ -601,8 +726,18 @@ def evaluate_model_by_class(
             "seed": int(bootstrap_seed),
             "class_aggregation": "unweighted_macro_average_over_classes",
             "resampling": {
-                "real": "sample available real images with replacement within class",
-                "generated": "sample evaluated generated images with replacement within class",
+                "real": (
+                    "storm-cluster bootstrap by IBTrACS SID when storm ids are "
+                    "supplied; otherwise iid bootstrap on individual images. "
+                    "Each cluster bootstrap draws storms with replacement and "
+                    "takes all images from each drawn storm, then truncates to "
+                    "the per-class real count."
+                ),
+                "generated": (
+                    "iid bootstrap on individual generated images by default; "
+                    "storm-cluster bootstrap when the generated bank inherits "
+                    "storm membership (e.g. real-image baselines)."
+                ),
             },
             "values": summarize_metric_samples(samples, point_values=aggregate_primary_raw),
         }
