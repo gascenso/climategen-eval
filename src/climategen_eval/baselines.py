@@ -1,34 +1,46 @@
-"""Bad-but-sensible reference baselines.
+"""Targeted-null reference baselines.
 
 Each baseline produces a per-class array of synthetic "generated" BT images
 that can be fed through the same metric pipeline as a diffusion model. The
-goal is to anchor the standardized-gap scale on the "decidedly not good
-enough" side using procedures with textbook interpretations and no tuneable
-hyperparameters:
+panel is a *spanning set of targeted nulls*: each preserves a specific
+sufficient statistic of the class-conditional distribution and nothing
+beyond it, so the gap of a given baseline on a given metric is informative
+about *what that metric measures*. The panel is intentionally constructed
+to have no tuneable knobs aligned with the metrics being validated.
 
 * CLIM (climatological mean): per-class pixel-wise mean replicated to fill
-  the bank. The textbook no-skill forecast. Correct marginal mean, zero
-  variance, no spatial structure beyond the class average. Saturates
-  diversity- and variance-sensitive metrics.
+  the bank. Preserves the first pixel moment only. Degenerate case of
+  GAUSS-FULL with covariance set to zero.
 * GAUSS-PIX (per-pixel Gaussian climatology): per-class pixel-wise mean plus
-  iid Gaussian noise at the per-pixel sample standard deviation. The MLE
-  under the assumption that pixels are independent Gaussians with
-  matching first and second moments. Correct marginal moments by
-  construction, wrong spatial dependence structure.
+  iid Gaussian noise at the per-pixel sample standard deviation. Preserves
+  the first moment and the diagonal of the spatial covariance. Degenerate
+  case of GAUSS-FULL with off-diagonal covariance set to zero.
+* GAUSS-FULL (maximum-entropy Gaussian): per-class draws from N(mu, Sigma)
+  with Sigma the empirical sample covariance of the class. Preserves first
+  and second moments exactly, including the full spatial covariance and
+  hence the average radial PSD. Fails on higher-than-Gaussian structure:
+  the pixel histogram is Gaussian (real BT marginals are not), gradient-
+  angle statistics like DAV degrade, and per-image nonlinear features
+  (eye, eyewall) are absent. This is the textbook information-theoretic
+  null for "everything learnable from the first two moments." Sampled via
+  the linear-combination identity x = mu + R^T z / sqrt(N - 1), z ~ N(0, I),
+  so the (H*W)^2 covariance is never materialized.
 * CROSS-CLASS (wrong-class real images): for class k, sample real images
   uniformly from the OTHER classes. A model that ignored the intensity
   conditioning would look like this. Tests label fidelity at the metric
-  level.
+  level — orthogonal to any unconditional null.
 * PHASE-SHUFFLE (Theiler-style surrogate): real images of the right class
   with their 2-D Fourier phases randomized under a strict Hermitian
   symmetry constraint. Preserves the per-image radial PSD and pixel
   histogram almost exactly while destroying coherent spatial structure
   (eye, eyewall, asymmetry). The standard surrogate-data null from
-  nonlinear-dynamics analysis (Theiler et al. 1992).
+  nonlinear-dynamics analysis (Theiler et al. 1992). Per-image, not
+  ensemble: orthogonal to GAUSS-FULL, which preserves ensemble covariance
+  but loses per-image identity.
 
-The baselines are intentionally complementary: each saturates a different
-subset of metrics. Reviewers cannot dismiss the panel by attacking any one
-choice — there is no tuneable knob to over- or under-strengthen them.
+GAUSS-FULL strictly dominates CLIM and GAUSS-PIX (both are degenerate cases
+of it); the latter two are retained as ablations that strip progressively
+more covariance information out of the Gaussian null.
 """
 
 from __future__ import annotations
@@ -42,6 +54,7 @@ import numpy as np
 BASELINE_NAMES: tuple[str, ...] = (
     "CLIM",
     "GAUSS-PIX",
+    "GAUSS-FULL",
     "CROSS-CLASS",
     "PHASE-SHUFFLE",
 )
@@ -57,6 +70,14 @@ BASELINE_DESCRIPTIONS: dict[str, str] = {
         "Per-class pixel-wise mean plus iid Gaussian noise at the per-pixel "
         "sample standard deviation. Correct first and second per-pixel moments, "
         "wrong spatial dependence structure."
+    ),
+    "GAUSS-FULL": (
+        "Per-class maximum-entropy Gaussian with empirical mean and full "
+        "spatial covariance. Preserves first and second moments exactly, "
+        "including the average radial PSD; fails on higher-than-Gaussian "
+        "structure (DAV, eye, non-Gaussian pixel tails). Sampled via the "
+        "linear-combination identity x = mu + R^T z / sqrt(N - 1), so the "
+        "(H*W)^2 covariance is never materialized."
     ),
     "CROSS-CLASS": (
         "For each target class, sample real images uniformly from the OTHER "
@@ -149,6 +170,75 @@ def build_gauss_pix_baseline(
         provenance={
             "construction": "per_class_pixelwise_mean_plus_pixelwise_std_iid_gaussian",
             "moments_matched": ["per_pixel_mean", "per_pixel_std"],
+            "deterministic": False,
+            "seed": int(seed),
+        },
+    )
+
+
+def build_gauss_full_baseline(
+    real_by_class: dict[int, np.ndarray],
+    *,
+    n_per_class: int,
+    seed: int,
+) -> BaselineResult:
+    """Class-conditional maximum-entropy Gaussian with empirical covariance.
+
+    Each generated sample is drawn from N(mu_class, Sigma_class) where
+    Sigma_class is the empirical sample covariance of the class's real images.
+    The covariance is never materialized (it would be (H*W)x(H*W)): instead,
+    samples use the linear-combination identity
+
+        x = mu + R^T z / sqrt(N - 1),    z ~ N(0, I_N)
+
+    where R is the (N, H*W) matrix of mean-centered class residuals. A direct
+    computation gives Cov(x) = R^T R / (N - 1), which is exactly the unbiased
+    sample covariance. Each sample lies in the affine hull of the real class,
+    which is the correct interpretation of "the best linear-Gaussian model of
+    the data" — no more, no less. Per-sample cost is O(N * H * W) and the
+    effective rank of the implied covariance is at most N - 1.
+
+    Skill profile across the BT metrics: first and second moments are exact,
+    so the radial profile MAE, the average radial PSD MSE, and per-pixel
+    Gaussian marginals are all near the noise floor. Higher-order structure
+    is mis-modeled, so DAV (a nonlinear gradient-angle functional) and any
+    per-image coherent structure (eye, eyewall) collapse. This is the
+    textbook information-theoretic null for "everything that can be learned
+    from the first two moments of the field."
+    """
+    _validate_real_by_class(real_by_class)
+    rng = np.random.default_rng(int(seed))
+    images: dict[int, np.ndarray] = {}
+    for cid in sorted(real_by_class):
+        real = np.asarray(real_by_class[cid], dtype=np.float32)
+        n = int(real.shape[0])
+        if n < 2:
+            raise ValueError(
+                "GAUSS-FULL requires at least 2 real samples per class to "
+                f"estimate a sample covariance; class {cid} has {n}."
+            )
+        h, w = int(real.shape[1]), int(real.shape[2])
+        mean_img = real.mean(axis=0)
+        # Centered residuals, (N, H*W). Promoted to float64 for the matmul
+        # to keep the linear combination numerically stable when N is large.
+        residuals = (real - mean_img).reshape(n, -1).astype(np.float64)
+        scale = 1.0 / np.sqrt(float(n - 1))
+        z = rng.standard_normal((int(n_per_class), n))
+        deltas = (z @ residuals) * scale
+        out = mean_img.reshape(1, -1).astype(np.float64) + deltas
+        images[cid] = out.reshape(int(n_per_class), h, w).astype(np.float32)
+    return BaselineResult(
+        name="GAUSS-FULL",
+        images_by_class=images,
+        storm_ids_by_class=None,
+        description=BASELINE_DESCRIPTIONS["GAUSS-FULL"],
+        provenance={
+            "construction": (
+                "per_class_max_entropy_gaussian_with_empirical_covariance_"
+                "sampled_via_linear_combination_of_centered_residuals"
+            ),
+            "moments_matched": ["per_pixel_mean", "full_pixel_covariance"],
+            "rank_bound": "at_most_N_minus_1_per_class",
             "deterministic": False,
             "seed": int(seed),
         },
@@ -264,6 +354,7 @@ def build_phase_shuffle_baseline(
 BASELINE_BUILDERS = {
     "CLIM": build_climatology_baseline,
     "GAUSS-PIX": build_gauss_pix_baseline,
+    "GAUSS-FULL": build_gauss_full_baseline,
     "CROSS-CLASS": build_cross_class_baseline,
     "PHASE-SHUFFLE": build_phase_shuffle_baseline,
 }
@@ -286,6 +377,10 @@ def build_baseline(
         return build_climatology_baseline(real_by_class, n_per_class=int(n_per_class))
     if key == "GAUSS-PIX":
         return build_gauss_pix_baseline(
+            real_by_class, n_per_class=int(n_per_class), seed=int(seed),
+        )
+    if key == "GAUSS-FULL":
+        return build_gauss_full_baseline(
             real_by_class, n_per_class=int(n_per_class), seed=int(seed),
         )
     if key == "CROSS-CLASS":

@@ -8,6 +8,7 @@ import numpy as np
 from .metrics import (
     DAVComputer,
     PolarBinner,
+    c2st_auc,
     centered_disk_mask,
     cold_cloud_fraction,
     eye_contrast_proxy,
@@ -85,6 +86,7 @@ PRIMARY_RAW_AGG_KEYS = (
     "eye_contrast_proxy_w1_k",
     "psd_l2",
     "feature_mmd2",
+    "c2st_auc",
     "diversity_feature_space_abs_gap",
     "gen_exceedance_rate_total",
     "radial_profile_mae_k",
@@ -518,9 +520,11 @@ def compute_class_scalar_summary(
 
     real_psd = select_rows(cache.real_psd_profiles, real_idx)
     gen_psd = select_rows(cache.gen_raw_psd_profiles, gen_idx)
+    real_feat = select_rows(cache.real_features, real_idx)
+    gen_feat = select_rows(cache.gen_raw_features, gen_idx)
     mmd2, div_real, div_gen = compute_feature_metrics(
-        select_rows(cache.real_features, real_idx),
-        select_rows(cache.gen_raw_features, gen_idx),
+        real_feat,
+        gen_feat,
         cache.feature_gamma_raw,
     )
 
@@ -539,6 +543,7 @@ def compute_class_scalar_summary(
         "eye_contrast_proxy_w1_k": float(wasserstein1_1d_from_samples(real_eye, gen_eye)),
         "psd_l2": mean_profile_mse_gap(real_psd, gen_psd),
         "feature_mmd2": float(mmd2),
+        "c2st_auc": float(c2st_auc(real_feat, gen_feat)),
         "diversity_feature_space_abs_gap": float(abs(div_real - div_gen)),
         "gen_exceedance_rate_total": float(select_rows(cache.gen_raw_exceed_total, gen_idx).mean()),
         "real_pixel_mean": float(select_rows(cache.real_pixel_mean, real_idx).mean()),
@@ -582,6 +587,7 @@ def compute_real_vs_real_class_summary(
         "eye_contrast_proxy_w1_k": float(wasserstein1_1d_from_samples(left_eye, right_eye)),
         "psd_l2": mean_profile_mse_gap(left_psd, right_psd),
         "feature_mmd2": float(mmd2),
+        "c2st_auc": float(c2st_auc(left_features, right_features)),
         "diversity_feature_space_abs_gap": float(abs(div_left - div_right)),
         "radial_profile_mae_k": float(
             np.mean(np.abs(left_radial.mean(axis=0) - right_radial.mean(axis=0)))

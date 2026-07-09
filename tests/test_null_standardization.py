@@ -316,8 +316,52 @@ def test_phase_shuffle_preserves_amplitude_spectrum_and_mean() -> None:
     assert rel_err < 1e-4
 
 
+def test_gauss_full_baseline_matches_full_covariance() -> None:
+    rng = np.random.default_rng(11)
+    # Construct a small image with a known non-diagonal pixel covariance:
+    # two pixels are tightly coupled, the other two are independent.
+    n = 400
+    shared = rng.normal(0.0, 1.0, size=(n,))
+    p0 = 240.0 + 10.0 * shared
+    p1 = 240.0 + 10.0 * shared + rng.normal(0.0, 0.5, size=(n,))
+    p2 = 230.0 + 5.0 * rng.normal(0.0, 1.0, size=(n,))
+    p3 = 230.0 + 5.0 * rng.normal(0.0, 1.0, size=(n,))
+    real = np.stack([p0, p1, p2, p3], axis=1).reshape(n, 2, 2).astype(np.float32)
+    real_by_class = {0: real}
+    result = build_baseline("GAUSS-FULL", real_by_class, n_per_class=40000, seed=4)
+    emp = result.images_by_class[0].reshape(40000, -1).astype(np.float64)
+    flat_real = real.reshape(n, -1).astype(np.float64)
+    target_mean = flat_real.mean(axis=0)
+    target_cov = np.cov(flat_real, rowvar=False, ddof=1)
+    emp_mean = emp.mean(axis=0)
+    emp_cov = np.cov(emp, rowvar=False, ddof=1)
+    se_mean = np.sqrt(np.diag(target_cov) / emp.shape[0])
+    assert np.all(np.abs(emp_mean - target_mean) < 6.0 * (se_mean + 1.0e-6))
+    # Wishart approximation for sample-covariance SE; the 8x factor leaves
+    # generous headroom for finite-sample fluctuation at n_per_class=40000.
+    diag = np.diag(target_cov)
+    se_cov = np.sqrt((np.outer(diag, diag) + target_cov ** 2) / emp.shape[0])
+    assert np.all(np.abs(emp_cov - target_cov) < 8.0 * (se_cov + 1.0e-6))
+    # Off-diagonal coupling between the correlated pair is recovered.
+    assert emp_cov[0, 1] > 50.0
+
+
+def test_gauss_full_baseline_rejects_singleton_classes() -> None:
+    real_by_class = {0: np.zeros((1, 4, 4), dtype=np.float32)}
+    import pytest
+
+    with pytest.raises(ValueError, match="at least 2 real samples"):
+        build_baseline("GAUSS-FULL", real_by_class, n_per_class=10, seed=0)
+
+
 def test_baseline_names_match_public_enum() -> None:
-    assert set(BASELINE_NAMES) == {"CLIM", "GAUSS-PIX", "CROSS-CLASS", "PHASE-SHUFFLE"}
+    assert set(BASELINE_NAMES) == {
+        "CLIM",
+        "GAUSS-PIX",
+        "GAUSS-FULL",
+        "CROSS-CLASS",
+        "PHASE-SHUFFLE",
+    }
 
 
 def test_wasserstein_1d_detects_variance_mismatch_under_zero_mean_gap() -> None:

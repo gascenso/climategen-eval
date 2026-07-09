@@ -834,6 +834,68 @@ def rbf_mmd2(X: np.ndarray, Y: np.ndarray, gamma: Optional[float] = None) -> flo
     return float(mmd2)
 
 
+def _rank_auc(labels: np.ndarray, scores: np.ndarray) -> float:
+    """AUC via the Mann-Whitney rank statistic (ties averaged). labels in {0,1}."""
+    from scipy.stats import rankdata
+
+    labels = np.asarray(labels)
+    n_pos = int(np.sum(labels == 1))
+    n_neg = int(np.sum(labels == 0))
+    if n_pos == 0 or n_neg == 0:
+        return 0.5
+    ranks = rankdata(np.asarray(scores, dtype=np.float64))
+    return float((ranks[labels == 1].sum() - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
+
+
+def c2st_auc(
+    x_real: np.ndarray,
+    x_gen: np.ndarray,
+    *,
+    seed: int = 0,
+    test_frac: float = 0.5,
+    ridge: float = 1.0e-2,
+) -> float:
+    """Classifier two-sample test (C2ST) — the Q5 discriminative check.
+
+    Fits a regularized linear-discriminant classifier to separate real (label 0) from
+    generated (label 1) feature vectors and returns its held-out AUC. 0.5 means the two
+    samples are indistinguishable to a linear classifier (this is where the real-vs-real
+    floor sits, by construction); AUC -> 1 means the generated samples are detectably
+    off-distribution regardless of which marginal metrics passed. Linear (LDA) classifier,
+    numpy+scipy only (no sklearn dependency); single stratified split so it is cheap enough
+    to run inside the bootstrap, and its own real-vs-real floor is obtained by feeding two
+    disjoint real halves (see compute_real_vs_real_class_summary).
+    """
+    xr = np.asarray(x_real, dtype=np.float64)
+    xg = np.asarray(x_gen, dtype=np.float64)
+    m = min(xr.shape[0], xg.shape[0])
+    if m < 8 or xr.ndim != 2:
+        return 0.5
+    rng = np.random.default_rng(seed)
+    xr = xr[rng.choice(xr.shape[0], m, replace=False)]
+    xg = xg[rng.choice(xg.shape[0], m, replace=False)]
+    X = np.vstack([xr, xg])
+    y = np.concatenate([np.zeros(m), np.ones(m)])
+    X = (X - X.mean(axis=0)) / (X.std(axis=0) + 1e-8)
+    n = 2 * m
+    perm = rng.permutation(n)
+    n_te = max(2, int(round(n * test_frac)))
+    te, tr = perm[:n_te], perm[n_te:]
+    y_tr = y[tr]
+    if np.unique(y_tr).size < 2 or np.unique(y[te]).size < 2:
+        return 0.5
+    X0 = X[tr][y_tr == 0]
+    X1 = X[tr][y_tr == 1]
+    mu0 = X0.mean(axis=0)
+    mu1 = X1.mean(axis=0)
+    d = X.shape[1]
+    sw = np.cov(X0, rowvar=False) * (len(X0) - 1) + np.cov(X1, rowvar=False) * (len(X1) - 1)
+    sw = sw / max(len(X0) + len(X1) - 2, 1) + ridge * np.eye(d)
+    w = np.linalg.solve(sw, (mu1 - mu0))  # LDA direction (oriented so generated scores higher)
+    scores = X[te] @ w
+    return _rank_auc(y[te], scores)
+
+
 def weighted_mean_and_cov(
     X: np.ndarray,
     sample_weights: Optional[np.ndarray] = None,

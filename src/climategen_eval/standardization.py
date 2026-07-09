@@ -26,6 +26,7 @@ RANGE_DIRECTIONS = {
     "psd_l2": "lower",
     "eye_contrast_proxy_w1_k": "lower",
     "feature_mmd2": "lower",
+    "c2st_auc": "lower",
     "diversity_feature_space_abs_gap": "lower",
     "gen_exceedance_rate_total": "lower",
 }
@@ -989,6 +990,8 @@ def compute_standardization_report(
     calibration_reps: int | None = None,
     progress: bool = False,
     real_storm_ids_by_class: dict[int, np.ndarray] | None = None,
+    skip_corruption_validation: bool = False,
+    skip_bootstrap_calibration: bool = False,
 ) -> dict[str, Any]:
     if not real_by_class:
         raise ValueError("real_by_class must contain at least one class.")
@@ -1053,31 +1056,37 @@ def compute_standardization_report(
         null_quantile=0.95,
     )
     good_values = dict(good_reference.get("values", {}))
-    # Independent calibration bootstrap. Uses a disjoint seed so the
-    # replicates do not share Monte Carlo state with the noise-floor draw,
-    # which is what makes the FPR meaningful.
-    bootstrap_calibration = compute_bootstrap_calibration(
-        class_caches,
-        standardization_ranges=standardization_ranges,
-        reps=int(
-            real_reference_reps if calibration_reps is None else calibration_reps
-        ),
-        seed=int(seed) + 1_000_003,
-        progress=progress,
-    )
-    corruption_validation = compute_corruption_validation(
-        class_caches=class_caches,
-        pseudo_sources_by_class=pseudo_sources_by_class,
-        pseudo_source_ids_by_class=pseudo_source_ids_by_class,
-        controls=controls,
-        grids=default_validation_grids(cfg),
-        cfg=cfg,
-        reps=int(real_reference_reps if validation_reps is None else validation_reps),
-        seed=int(seed),
-        real_vs_real_summary=good_reference.get("summary", {}),
-        target_power=float(validation_target_power),
-        progress=progress,
-    )
+    if skip_bootstrap_calibration:
+        bootstrap_calibration = {"enabled": False, "reason": "skipped_by_caller"}
+    else:
+        # Independent calibration bootstrap. Uses a disjoint seed so the
+        # replicates do not share Monte Carlo state with the noise-floor draw,
+        # which is what makes the FPR meaningful.
+        bootstrap_calibration = compute_bootstrap_calibration(
+            class_caches,
+            standardization_ranges=standardization_ranges,
+            reps=int(
+                real_reference_reps if calibration_reps is None else calibration_reps
+            ),
+            seed=int(seed) + 1_000_003,
+            progress=progress,
+        )
+    if skip_corruption_validation:
+        corruption_validation = {"enabled": False, "reason": "skipped_by_caller"}
+    else:
+        corruption_validation = compute_corruption_validation(
+            class_caches=class_caches,
+            pseudo_sources_by_class=pseudo_sources_by_class,
+            pseudo_source_ids_by_class=pseudo_source_ids_by_class,
+            controls=controls,
+            grids=default_validation_grids(cfg),
+            cfg=cfg,
+            reps=int(real_reference_reps if validation_reps is None else validation_reps),
+            seed=int(seed),
+            real_vs_real_summary=good_reference.get("summary", {}),
+            target_power=float(validation_target_power),
+            progress=progress,
+        )
 
     report = {
         "schema": "climategen_eval.metric_standardization_report.v4",

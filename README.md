@@ -32,22 +32,33 @@ motivated metrics. Results are reported on a single interpretable axis:
    brightness shift, center jitter, mode collapse) drives it past its noise
    floor at the configured power threshold. Metrics that do not respond to any
    degradation are flagged and excluded.
-5. **A bad-but-sensible baseline panel.** Four parameter-free reference
-   procedures with textbook interpretations are evaluated alongside the model:
-   - **CLIM** — per-class pixel-wise climatological mean (the WMO no-skill
-     forecast). Saturates variance- and structure-sensitive metrics.
-   - **GAUSS-PIX** — per-class mean plus iid Gaussian noise at the per-pixel
-     std. The MLE under independent-Gaussian pixels. Correct first two pixel
-     moments, wrong spatial structure.
-   - **CROSS-CLASS** — real images drawn from the other intensity classes.
-     The class-conditional-independence null; tests label fidelity.
+5. **A spanning set of targeted-null baselines.** Five parameter-free
+   reference procedures, each preserving a specific sufficient statistic of
+   the class-conditional distribution and nothing beyond it:
+   - **GAUSS-FULL** — per-class maximum-entropy Gaussian with empirical
+     mean and full spatial covariance. The textbook information-theoretic
+     null for "everything learnable from the first two moments." Preserves
+     the average radial PSD exactly; fails on higher-than-Gaussian structure
+     (non-Gaussian pixel tails, gradient-angle statistics, per-image eye).
+     Sampled via the linear-combination identity
+     `x = mu + R^T z / sqrt(N - 1)` so the (H*W)^2 covariance is never
+     materialized.
+   - **CROSS-CLASS** — real images drawn from the *other* intensity classes.
+     Orthogonal to any unconditional null; tests label/intensity fidelity.
    - **PHASE-SHUFFLE** — Theiler-style FFT phase randomization under
-     Hermitian symmetry. Preserves per-image radial PSD and pixel histogram,
-     destroys coherent spatial structure.
-   These complementary baselines anchor the "decidedly not good enough" side
-   of the scale: a model strictly inside the baseline cluster on every metric
-   is doing real work; one mixing with the baselines on some metrics has work
-   left.
+     Hermitian symmetry. Per-image surrogate: preserves each image's PSD
+     and pixel histogram, destroys coherent spatial phase. Orthogonal to
+     GAUSS-FULL (ensemble-level) since it operates per-image.
+   - **CLIM** (ablation) — per-class pixel-wise mean replicated to fill the
+     bank. Degenerate case of GAUSS-FULL with covariance set to zero.
+   - **GAUSS-PIX** (ablation) — per-class mean plus iid per-pixel Gaussian
+     noise. Degenerate case of GAUSS-FULL with off-diagonal covariance set
+     to zero.
+   The three primary nulls (GAUSS-FULL / CROSS-CLASS / PHASE-SHUFFLE) span
+   complementary failure modes; CLIM and GAUSS-PIX are retained as
+   ablations of GAUSS-FULL that strip progressively more covariance
+   information out. A generative model is required to sit, on every metric,
+   strictly inside the gap of every null that the metric is sensitive to.
 
 The final figure overlays models and baselines on the same standardized-gap
 axis. The x-axis defaults to a symmetric-log scale with `linthresh = 1` so the
@@ -151,10 +162,11 @@ axis:
 python scripts/plot_model_metric_summary.py \
   --input FINAL_BASELINE=outputs/tropical_cyclone_bt/eval/FINAL_BASELINE/metrics.json \
   --input pinn_loss=outputs/tropical_cyclone_bt/eval/pinn_loss/metrics.json \
-  --baseline CLIM=outputs/tropical_cyclone_bt/baselines/clim/metrics.json \
-  --baseline GAUSS-PIX=outputs/tropical_cyclone_bt/baselines/gauss_pix/metrics.json \
+  --baseline GAUSS-FULL=outputs/tropical_cyclone_bt/baselines/gauss_full/metrics.json \
   --baseline CROSS-CLASS=outputs/tropical_cyclone_bt/baselines/cross_class/metrics.json \
   --baseline PHASE-SHUFFLE=outputs/tropical_cyclone_bt/baselines/phase_shuffle/metrics.json \
+  --baseline CLIM=outputs/tropical_cyclone_bt/baselines/clim/metrics.json \
+  --baseline GAUSS-PIX=outputs/tropical_cyclone_bt/baselines/gauss_pix/metrics.json \
   --standardization-report \
     outputs/tropical_cyclone_bt/standardization/test_n1000/metric_standardization.json \
   --baseline-responsiveness \

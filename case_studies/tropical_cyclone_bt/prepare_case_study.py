@@ -26,9 +26,11 @@ from climategen_eval.data import (
 )
 
 
+# usa1min case-study models (refreshed 2026-07): baseline (ZTSNR), physics LOSS, physics GUIDANCE.
 DEFAULT_BANKS = {
-    "FINAL_BASELINE": "outputs/FINAL_BASELINE/sample_banks/test/final_bank",
-    "pinn_loss": "outputs/pinn_loss/sample_banks/test/final_bank",
+    "baseline": "outputs/baseline_ztsnr/sample_banks/test/test_baseline_n1000",
+    "pinn_loss": "outputs/pinn_cc_lam0.0002/sample_banks/test/test_pinnloss_n1000",
+    "pinn_guided": "outputs/baseline_ztsnr/sample_banks/test/test_guidance_n1000",
 }
 
 
@@ -95,9 +97,9 @@ def export_real_test_data(
         print(f"Real test export already exists: {manifest_path}")
         return
 
-    dataset_index_path = source_repo / "data" / "dataset_index_wind.json"
-    split_file = source_repo / "data" / "splits" / "files_test.txt"
-    packed_manifest = source_repo / "data" / "packed_tc_memmap" / "manifest.json"
+    dataset_index_path = source_repo / "data" / "dataset_index_usa1min.json"
+    split_file = source_repo / "data" / "splits_usa1min" / "files_test.txt"
+    packed_manifest = source_repo / "data" / "packed_tc_memmap_usa1min" / "manifest.json"
 
     class_to_files, sample_meta = load_dataset_index(dataset_index_path)
     test_files = load_split_file_set(split_file)
@@ -191,15 +193,18 @@ def copy_source_manifests(*, source_repo: Path, output_root: Path, overwrite: bo
     dst_root = output_root / "source_manifests"
     dst_root.mkdir(parents=True, exist_ok=True)
     for rel in [
-        "data/dataset_index_wind.json",
-        "data/splits/files_test.txt",
-        "data/splits/split_report.json",
-        "data/packed_tc_memmap/manifest.json",
-        "data/packed_tc_memmap/rel_paths.txt",
+        "data/dataset_index_usa1min.json",
+        "data/splits_usa1min/files_test.txt",
+        "data/splits_usa1min/split_report.json",
+        "data/packed_tc_memmap_usa1min/manifest.json",
+        "data/packed_tc_memmap_usa1min/rel_paths.txt",
     ]:
         src = source_repo / rel
         dst = dst_root / rel.replace("/", "__")
         if dst.exists() and not overwrite:
+            continue
+        if not src.exists():
+            print(f"[warn] source manifest not found, skipping: {src}")
             continue
         shutil.copy2(src, dst)
 
