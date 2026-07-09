@@ -31,8 +31,12 @@ to have no tuneable knobs aligned with the metrics being validated.
   level — orthogonal to any unconditional null.
 * PHASE-SHUFFLE (Theiler-style surrogate): real images of the right class
   with their 2-D Fourier phases randomized under a strict Hermitian
-  symmetry constraint. Preserves the per-image radial PSD and pixel
-  histogram almost exactly while destroying coherent spatial structure
+  symmetry constraint. Preserves the per-image power spectrum EXACTLY —
+  the full 2-D periodogram and hence every function of it (radial average,
+  azimuthal, slope, band-power) to machine precision — and the pixel mean
+  and variance, but NOT the higher-order marginal: phase randomization
+  Gaussianizes the one-point distribution (CLT), so skew/kurtosis and the
+  pixel histogram are destroyed along with coherent spatial structure
   (eye, eyewall, asymmetry). The standard surrogate-data null from
   nonlinear-dynamics analysis (Theiler et al. 1992). Per-image, not
   ensemble: orthogonal to GAUSS-FULL, which preserves ensemble covariance
@@ -86,7 +90,9 @@ BASELINE_DESCRIPTIONS: dict[str, str] = {
     "PHASE-SHUFFLE": (
         "Real images with 2-D Fourier phases randomized under Hermitian "
         "symmetry, amplitudes preserved. Standard surrogate-data null: keeps "
-        "radial PSD and pixel histogram, destroys coherent spatial structure."
+        "the full power spectrum (2-D/radial) exactly + pixel mean/variance, "
+        "Gaussianizes the marginal (destroys the pixel histogram) and all "
+        "coherent spatial structure."
     ),
 }
 
@@ -343,7 +349,13 @@ def build_phase_shuffle_baseline(
         description=BASELINE_DESCRIPTIONS["PHASE-SHUFFLE"],
         provenance={
             "construction": "per_class_real_image_fft_phase_randomization_hermitian_symmetric",
-            "preserves": ["radial_psd_per_image", "pixel_histogram_per_image", "image_mean"],
+            "preserves": [
+                "power_spectrum_2d_per_image",  # exact: full 2-D periodogram and every function of it (radial, azimuthal, slope, band-power)
+                "radial_psd_per_image",
+                "image_mean",
+                "image_variance",
+            ],
+            "does_not_preserve": ["pixel_histogram_shape", "skewness", "kurtosis", "spatial_phase_structure"],
             "drawn_storm_ids_propagated": drawn_ids is not None,
             "deterministic": False,
             "seed": int(seed),
