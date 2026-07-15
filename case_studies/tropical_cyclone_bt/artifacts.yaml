@@ -3,7 +3,7 @@ status: LOCAL_ONLY_NOT_ARCHIVED
 release_ready: false
 
 real_archive:
-  role: held_out_real_fields
+  role: held_out_real_fields_track1_and_final_test
   local_manifest: data/tropical_cyclone_bt/real_test/manifest.json
   archive_url: PENDING
   archive_doi: PENDING
@@ -11,32 +11,45 @@ real_archive:
   redistribution_permission: PENDING
 
 real_train_archive:
-  role: training_real_fields_and_train_fit_artifacts
+  role: diffusion_training_fields_memorization_reference_and_downstream_training
   local_manifest: data/tropical_cyclone_bt/real_train/manifest.json
   archive_url: PENDING
   archive_doi: PENDING
   sha256: PENDING
   redistribution_permission: PENDING
 
+real_validation_archive:
+  role: downstream_model_selection_only
+  local_manifest: data/tropical_cyclone_bt/real_val/manifest.json
+  archive_url: PENDING
+  archive_doi: PENDING
+  sha256: PENDING
+  redistribution_permission: PENDING
+
 generated_sample_banks:
-  - id: baseline_ztsnr
-    local_path: data/tropical_cyclone_bt/generated/baseline/test_baseline_n1000
-    current_state: absolute_local_symlink
+  - id: baseline_ztsnr_test
+    role: track1_held_out_generation
+    local_path: data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000
+    current_state: local_copy_or_hardlink
     archive_url: PENDING
     archive_sha256: PENDING
-    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/baseline.json
-  - id: physics_loss
-    local_path: data/tropical_cyclone_bt/generated/pinn_loss/test_pinnloss_n1000
-    current_state: absolute_local_symlink
+    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/baseline_ztsnr_test.json
+  - id: baseline_ztsnr_train_development
+    role: >-
+      track2 development only; prohibited for final holdout inference because the
+      generator saw the complete diffusion training split
+    local_path: data/tropical_cyclone_bt/generated/baseline_ztsnr/train/aug_guidance_train
+    current_state: local_copy_or_hardlink_not_leakage_free
     archive_url: PENDING
     archive_sha256: PENDING
-    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/pinn_loss.json
-  - id: physics_guidance
-    local_path: data/tropical_cyclone_bt/generated/pinn_guided/test_guidance_n1000
-    current_state: absolute_local_symlink
-    archive_url: PENDING
-    archive_sha256: PENDING
-    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/pinn_guided.json
+    sha256_manifest: >-
+      data/tropical_cyclone_bt/generated/manifests/baseline_ztsnr_train_development.json
+
+label_contract:
+  wind_variable: USA_WIND
+  averaging_period: 1-minute
+  mixed_WMO_WIND_labels_prohibited: true
+  real_manifest_schema: gauge_climate.tc_bt_real_dataset.v2
 
 small_fixture:
   path: tests/fixtures/tc_bt
@@ -45,6 +58,7 @@ small_fixture:
   license: BSD-3-Clause
 
 release_rule: >-
-  Replace all absolute symlinks with downloadable, permission-cleared artifacts;
-  record per-file SHA-256 checksums; verify from a clean checkout; then set
-  release_ready only through the release audit.
+  Archive the USA_WIND real splits and baseline_ztsnr banks with permission-cleared
+  URLs; record per-file SHA-256 checksums; provide three leakage-free generated
+  banks from the restricted Track-2 generator fits; verify from a clean checkout;
+  then set release_ready only through the release audit.

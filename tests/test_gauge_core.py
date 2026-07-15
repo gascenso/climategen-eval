@@ -148,6 +148,41 @@ def test_perfect_generator_has_two_separate_conclusions():
     assert cell.reference_position is not None
 
 
+def test_evaluation_transforms_lazy_fields_in_bounded_batches():
+    class LazyArchive:
+        def __init__(self, values):
+            self.values = values
+            self.shape = values.shape
+            self.dtype = values.dtype
+            self.batch_sizes = []
+
+        def __getitem__(self, key):
+            result = self.values[key]
+            self.batch_sizes.append(int(result.shape[0]))
+            return result
+
+        def __array__(self, *args, **kwargs):  # pragma: no cover - must not run
+            raise AssertionError("Full lazy archive was materialized.")
+
+    train, real, generated = _datasets()
+    real_fields = LazyArchive(real.fields)
+    generated_fields = LazyArchive(generated.fields)
+    real = gauge.Dataset(real_fields, blocks=real.blocks)
+    generated = gauge.Dataset(generated_fields)
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(transform_batch_size=17),
+    )
+    assert max(real_fields.batch_sizes) <= 17
+    assert max(generated_fields.batch_sizes) <= 17
+
+
 def test_joint_detection_is_only_issued_for_a_preregistered_family():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(

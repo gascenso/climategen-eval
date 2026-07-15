@@ -169,6 +169,7 @@ class EvaluationConfig:
     reference_stability_tolerance: float = 0.25
     simultaneous_family: tuple[str, ...] = ()
     max_materialize_bytes: int | None = None
+    transform_batch_size: int = 128
     include_partitions: bool = True
 
     def __post_init__(self) -> None:
@@ -197,6 +198,8 @@ class EvaluationConfig:
             raise ValueError("shift_grid_size must be at least eight.")
         if not 0 < self.reference_stability_tolerance <= 1:
             raise ValueError("reference_stability_tolerance must be in (0, 1].")
+        if self.transform_batch_size < 1:
+            raise ValueError("transform_batch_size must be positive.")
         if isinstance(self.simultaneous_family, str):
             raise ValueError(
                 "simultaneous_family must be a list/tuple of exact 'stratum:metric' keys."

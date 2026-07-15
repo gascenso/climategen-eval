@@ -21,6 +21,10 @@ def _entries(manifest: dict):
         real_train = dict(manifest["real_train_archive"])
         real_train["id"] = "real_train_archive"
         yield real_train
+    if "real_validation_archive" in manifest:
+        real_validation = dict(manifest["real_validation_archive"])
+        real_validation["id"] = "real_validation_archive"
+        yield real_validation
     yield from manifest["generated_sample_banks"]
 
 

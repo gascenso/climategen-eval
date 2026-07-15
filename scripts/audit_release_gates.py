@@ -64,6 +64,16 @@ def main() -> int:
             mapping_key="files",
         )
     )
+    for bank in artifacts.get("generated_sample_banks", []):
+        bank_id = str(bank.get("id", "missing"))
+        checksum_path = ROOT / str(bank.get("sha256_manifest", "missing"))
+        bank_root = ROOT / str(bank.get("local_path", "missing"))
+        bank_failures = _verify_checksum_manifest(
+            checksum_path,
+            files_root=bank_root,
+            mapping_key="files",
+        )
+        failures.extend(f"{bank_id}: {failure}" for failure in bank_failures)
     absolute_symlinks = []
     for path in ROOT.rglob("*"):
         if path.is_symlink() and path.readlink().is_absolute():
@@ -101,10 +111,16 @@ def main() -> int:
         validation = json.loads(validation_path.read_text(encoding="utf-8"))
         if not validation.get("passed"):
             failures.append("Statistical validation gate did not pass.")
-    for split in ("real_train", "real_test"):
+    for split in ("real_train", "real_val", "real_test"):
         manifest = ROOT / "data/tropical_cyclone_bt" / split / "manifest.json"
         if not manifest.exists():
             failures.append(f"TC {split} manifest is missing.")
+            continue
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        if payload.get("wind_source") != "USA_WIND":
+            failures.append(f"TC {split} does not declare USA_WIND provenance.")
+        if payload.get("wind_averaging_period") != "1-minute":
+            failures.append(f"TC {split} does not declare 1-minute winds.")
     if not (ROOT / "case_studies/tropical_cyclone_bt/partition_summary.json").exists():
         failures.append("TC storm/frame/class partition summary is missing.")
     if failures:

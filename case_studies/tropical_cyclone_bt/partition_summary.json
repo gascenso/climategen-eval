@@ -1,0 +1,144 @@
+{
+  "schema": "gauge_climate.tc_bt_partition_summary.v2",
+  "wind_source": "USA_WIND",
+  "wind_averaging_period": "1-minute",
+  "storm_overlap_count": 0,
+  "pairwise_storm_overlap": {
+    "train_val": 0,
+    "train_test": 0,
+    "val_test": 0
+  },
+  "cross_category_storms": {
+    "train": 1582,
+    "val": 224,
+    "test": 211
+  },
+  "rows": [
+    {
+      "split": "train",
+      "class_id": 0,
+      "class_name": "TS",
+      "frames": 28347,
+      "storms_with_frames": 2747
+    },
+    {
+      "split": "train",
+      "class_id": 1,
+      "class_name": "C1",
+      "frames": 10576,
+      "storms_with_frames": 1586
+    },
+    {
+      "split": "train",
+      "class_id": 2,
+      "class_name": "C2",
+      "frames": 5265,
+      "storms_with_frames": 1061
+    },
+    {
+      "split": "train",
+      "class_id": 3,
+      "class_name": "C3",
+      "frames": 3547,
+      "storms_with_frames": 800
+    },
+    {
+      "split": "train",
+      "class_id": 4,
+      "class_name": "C4",
+      "frames": 3508,
+      "storms_with_frames": 561
+    },
+    {
+      "split": "train",
+      "class_id": 5,
+      "class_name": "C5",
+      "frames": 647,
+      "storms_with_frames": 159
+    },
+    {
+      "split": "val",
+      "class_id": 0,
+      "class_name": "TS",
+      "frames": 3943,
+      "storms_with_frames": 377
+    },
+    {
+      "split": "val",
+      "class_id": 1,
+      "class_name": "C1",
+      "frames": 1498,
+      "storms_with_frames": 223
+    },
+    {
+      "split": "val",
+      "class_id": 2,
+      "class_name": "C2",
+      "frames": 661,
+      "storms_with_frames": 150
+    },
+    {
+      "split": "val",
+      "class_id": 3,
+      "class_name": "C3",
+      "frames": 489,
+      "storms_with_frames": 114
+    },
+    {
+      "split": "val",
+      "class_id": 4,
+      "class_name": "C4",
+      "frames": 509,
+      "storms_with_frames": 79
+    },
+    {
+      "split": "val",
+      "class_id": 5,
+      "class_name": "C5",
+      "frames": 91,
+      "storms_with_frames": 23
+    },
+    {
+      "split": "test",
+      "class_id": 0,
+      "class_name": "TS",
+      "frames": 3942,
+      "storms_with_frames": 368
+    },
+    {
+      "split": "test",
+      "class_id": 1,
+      "class_name": "C1",
+      "frames": 1318,
+      "storms_with_frames": 211
+    },
+    {
+      "split": "test",
+      "class_id": 2,
+      "class_name": "C2",
+      "frames": 700,
+      "storms_with_frames": 149
+    },
+    {
+      "split": "test",
+      "class_id": 3,
+      "class_name": "C3",
+      "frames": 505,
+      "storms_with_frames": 106
+    },
+    {
+      "split": "test",
+      "class_id": 4,
+      "class_name": "C4",
+      "frames": 461,
+      "storms_with_frames": 76
+    },
+    {
+      "split": "test",
+      "class_id": 5,
+      "class_name": "C5",
+      "frames": 85,
+      "storms_with_frames": 22
+    }
+  ]
+}

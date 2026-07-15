@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import itertools
 import json
 from pathlib import Path
 
@@ -17,6 +18,10 @@ CLASS_NAMES = {0: "TS", 1: "C1", 2: "C2", 3: "C3", 4: "C4", 5: "C5"}
 def load_split(root: Path, split: str):
     split_root = root / f"real_{split}"
     manifest = json.loads((split_root / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("wind_source") != "USA_WIND":
+        raise ValueError(f"{split} manifest does not declare USA_WIND provenance.")
+    if manifest.get("wind_averaging_period") != "1-minute":
+        raise ValueError(f"{split} manifest does not declare one-minute winds.")
     labels = np.load(split_root / manifest["labels"], mmap_mode="r")
     storms = np.load(split_root / manifest["storm_ids"], mmap_mode="r")
     if labels.shape != storms.shape:
@@ -29,10 +34,14 @@ def main() -> int:
     parser.add_argument("--data", type=Path, default=Path("data/tropical_cyclone_bt"))
     parser.add_argument("--output", type=Path, default=Path("case_studies/tropical_cyclone_bt/partition_summary"))
     args = parser.parse_args()
-    loaded = {split: load_split(args.data, split) for split in ("train", "test")}
-    overlap = sorted(set(loaded["train"][2]) & set(loaded["test"][2]))
-    if overlap:
-        raise ValueError(f"Storm leakage across train/test: {overlap[:10]}.")
+    splits = ("train", "val", "test")
+    loaded = {split: load_split(args.data, split) for split in splits}
+    overlaps = {}
+    for left, right in itertools.combinations(splits, 2):
+        overlap = sorted(set(loaded[left][2]) & set(loaded[right][2]))
+        overlaps[f"{left}_{right}"] = len(overlap)
+        if overlap:
+            raise ValueError(f"Storm leakage across {left}/{right}: {overlap[:10]}.")
     rows = []
     cross_category = {}
     for split, (_, labels, storms) in loaded.items():
@@ -57,12 +66,15 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     csv_path = args.output.with_suffix(".csv")
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     payload = {
-        "schema": "gauge_climate.tc_bt_partition_summary.v1",
+        "schema": "gauge_climate.tc_bt_partition_summary.v2",
+        "wind_source": "USA_WIND",
+        "wind_averaging_period": "1-minute",
         "storm_overlap_count": 0,
+        "pairwise_storm_overlap": overlaps,
         "cross_category_storms": cross_category,
         "rows": rows,
     }

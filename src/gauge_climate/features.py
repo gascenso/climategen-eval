@@ -28,7 +28,7 @@ class TrainFittedFeatureSpace:
     @classmethod
     def fit(
         cls,
-        fields: np.ndarray,
+        fields: Any,
         functionals: Sequence[FunctionalSpec],
         *,
         n_eof: int = 20,
@@ -37,20 +37,29 @@ class TrainFittedFeatureSpace:
         batch_size: int = 128,
         fit_source: str = "train",
     ) -> "TrainFittedFeatureSpace":
-        fields = np.asarray(fields)
-        if fields.ndim < 2 or fields.shape[0] < 2:
+        shape = getattr(fields, "shape", None)
+        if shape is None or len(shape) < 2 or int(shape[0]) < 2:
             raise ValueError("Feature fitting requires shape (N, ...), N >= 2.")
+        dtype = np.dtype(getattr(fields, "dtype", np.float64))
+        if not np.issubdtype(dtype, np.number):
+            raise TypeError("Feature fitting requires numeric fields.")
         if n_eof < 0:
             raise ValueError("n_eof may not be negative.")
+        if max_fit_samples < 2:
+            raise ValueError("max_fit_samples must be at least two.")
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive.")
         if fit_source != "train":
             raise ValueError("GAUGE feature artifacts must be fitted on the training split.")
         rng = np.random.default_rng(seed)
-        fit_n = min(int(max_fit_samples), fields.shape[0])
-        fit_indices = np.sort(rng.choice(fields.shape[0], size=fit_n, replace=False))
+        fit_n = min(int(max_fit_samples), int(shape[0]))
+        fit_indices = np.sort(rng.choice(int(shape[0]), size=fit_n, replace=False))
         fit_fields = np.asarray(fields[fit_indices], dtype=np.float64)
+        if not np.all(np.isfinite(fit_fields)):
+            raise ValueError("Feature fitting fields contain NaN or infinite values.")
         source_digest = hashlib.sha256()
-        source_digest.update(str(fields.shape).encode())
-        source_digest.update(str(fields.dtype).encode())
+        source_digest.update(str(tuple(int(value) for value in shape)).encode())
+        source_digest.update(str(dtype).encode())
         source_digest.update(fit_indices.tobytes())
         source_digest.update(fit_fields.tobytes())
         flat = fit_fields.reshape(fit_n, -1)
@@ -83,26 +92,35 @@ class TrainFittedFeatureSpace:
             functional_scale=functional_scale.astype(np.float64),
             eof_scale=eof_scale.astype(np.float64),
             fit_indices=fit_indices.astype(np.int64),
-            sample_shape=tuple(int(value) for value in fields.shape[1:]),
+            sample_shape=tuple(int(value) for value in shape[1:]),
             fit_source=fit_source,
             source_fingerprint=source_digest.hexdigest()[:16],
             batch_size=int(batch_size),
         )
 
-    def transform(self, fields: np.ndarray) -> np.ndarray:
-        fields = np.asarray(fields)
-        if tuple(fields.shape[1:]) != self.sample_shape:
+    def transform(self, fields: Any) -> np.ndarray:
+        shape = getattr(fields, "shape", None)
+        if shape is None or tuple(int(value) for value in shape[1:]) != self.sample_shape:
             raise ValueError("Fields do not match the sample shape used to fit the feature space.")
         parts: list[np.ndarray] = []
         if self.functionals:
-            matrix = np.column_stack([spec.transform(fields) for spec in self.functionals])
+            matrices = []
+            for start in range(0, int(shape[0]), self.batch_size):
+                stop = min(start + self.batch_size, int(shape[0]))
+                batch = np.asarray(fields[start:stop])
+                matrices.append(
+                    np.column_stack([
+                        spec.transform(batch) for spec in self.functionals
+                    ])
+                )
+            matrix = np.concatenate(matrices, axis=0)
             parts.append((matrix - self.functional_mean) / self.functional_scale)
         if self.eof_components.shape[0]:
             coefficients = np.empty(
-                (fields.shape[0], self.eof_components.shape[0]), dtype=np.float64
+                (int(shape[0]), self.eof_components.shape[0]), dtype=np.float64
             )
-            for start in range(0, fields.shape[0], self.batch_size):
-                stop = min(start + self.batch_size, fields.shape[0])
+            for start in range(0, int(shape[0]), self.batch_size):
+                stop = min(start + self.batch_size, int(shape[0]))
                 flat = np.asarray(fields[start:stop], dtype=np.float64).reshape(stop - start, -1)
                 coefficients[start:stop] = (flat - self.pixel_mean) @ self.eof_components.T
             parts.append(coefficients / self.eof_scale)
@@ -142,7 +160,7 @@ class TrainFittedFeatureSpace:
 
     def registered_metrics(
         self,
-        train_fields: np.ndarray,
+        train_fields: Any,
         *,
         density_k: int = 5,
         bandwidth_seed: int = 1789,

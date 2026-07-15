@@ -9,6 +9,7 @@ import numpy as np
 import yaml
 
 from .adapters import tc_bt
+from .adapters.tc_data import load_real_archive, load_sample_bank
 from .data import Dataset, validate_generated, validate_split
 from .evaluation import evaluate
 from .features import TrainFittedFeatureSpace
@@ -41,8 +42,31 @@ def _load_array(config_path: Path, value: str | None, *, mmap: bool = True):
 
 
 def _dataset(config_path: Path, node: dict[str, Any], name: str) -> Dataset:
-    if not isinstance(node, dict) or "fields" not in node:
-        raise ValueError(f"data.{name} must provide a fields path.")
+    if not isinstance(node, dict):
+        raise ValueError(f"data.{name} must be a mapping.")
+    sources = [
+        key
+        for key in ("fields", "tc_real_manifest", "tc_sample_bank")
+        if key in node
+    ]
+    if len(sources) != 1:
+        raise ValueError(
+            f"data.{name} must provide exactly one of fields, tc_real_manifest, "
+            "or tc_sample_bank."
+        )
+    target = str(node.get("target", "category"))
+    if sources[0] == "tc_real_manifest":
+        return load_real_archive(
+            _resolve(config_path, str(node["tc_real_manifest"])),
+            target=target,
+        )
+    if sources[0] == "tc_sample_bank":
+        required_run = node.get("required_run", "baseline_ztsnr")
+        return load_sample_bank(
+            _resolve(config_path, str(node["tc_sample_bank"])),
+            target=target,
+            required_run=None if required_run is None else str(required_run),
+        )
     return Dataset(
         _load_array(config_path, str(node["fields"])),
         blocks=_load_array(config_path, node.get("blocks")),
@@ -129,9 +153,9 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
     feature_enabled = bool(feature_node.get("enabled", False))
     memorization_result = None
     if fit_artifacts and feature_enabled:
-        train_fields = train.as_numpy(max_bytes=config.max_materialize_bytes)
-        real_fields = real.as_numpy(max_bytes=config.max_materialize_bytes)
-        generated_fields = generated.as_numpy(max_bytes=config.max_materialize_bytes)
+        train_fields = train.fields
+        real_fields = real.fields
+        generated_fields = generated.fields
         feature_space = TrainFittedFeatureSpace.fit(
             train_fields,
             functionals,

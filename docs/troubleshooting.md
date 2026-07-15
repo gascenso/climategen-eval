@@ -11,9 +11,10 @@
 - **No practical verdict:** v0.1 finite-sample W1 tolerance inference needs a
   bounded scalar functional and the block-balanced estimand. The reference
   result remains usable for detection; clustered bootstrap output is diagnostic.
-- **Lazy xarray exceeds memory:** set `max_materialize_bytes`, rechunk upstream,
-  or evaluate smaller predeclared batches. GAUGE never triggers uncontrolled
-  materialization deliberately.
+- **Lazy archive exceeds memory:** lower `transform_batch_size`; for train-fit
+  EOF features, also lower the preregistered `max_fit_samples` or feature-space
+  batch size. `max_materialize_bytes` guards explicit `Dataset.as_numpy()` calls;
+  the evaluation engine and TC sample-bank adapter process fields in batches.
 - **Positive control fails:** do not interpret that metric. Revisit preprocessing,
   severity, feature fitting, and valid input domain.
 - **Different labels in real/generated data:** conditional support must match.

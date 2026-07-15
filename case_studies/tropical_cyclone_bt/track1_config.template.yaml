@@ -3,22 +3,16 @@ adapter: tc_bt
 
 data:
   train:
-    fields: ../../data/tropical_cyclone_bt/real_train/bt_k.npy
-    blocks: ../../data/tropical_cyclone_bt/real_train/storm_ids.npy
-    labels: ../../data/tropical_cyclone_bt/real_train/labels.npy
-    units: K
-    metadata: {manifest_sha256: PENDING}
+    tc_real_manifest: ../../data/tropical_cyclone_bt/real_train/manifest.json
+    target: category
   real:
-    fields: ../../data/tropical_cyclone_bt/real_test/bt_k.npy
-    blocks: ../../data/tropical_cyclone_bt/real_test/storm_ids.npy
-    labels: ../../data/tropical_cyclone_bt/real_test/labels.npy
-    units: K
-    metadata: {manifest_sha256: PENDING}
+    tc_real_manifest: ../../data/tropical_cyclone_bt/real_test/manifest.json
+    target: category
   generated:
-    fields: PENDING_ARCHIVED_PRIMARY_MODEL_FIELDS.npy
-    labels: PENDING_ARCHIVED_PRIMARY_MODEL_LABELS.npy
-    units: K
-    metadata: {artifact_id: PENDING, archive_sha256: PENDING, checkpoint: PENDING}
+    tc_sample_bank: >-
+      ../../data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000
+    target: category
+    required_run: baseline_ztsnr
 
 adapter_options:
   field_shape: [256, 256]
@@ -79,6 +73,7 @@ evaluation:
   shift_power: 0.80
   shift_grid_size: 33
   reference_stability_tolerance: 0.25
+  transform_batch_size: 128
   simultaneous_family: PENDING_FREEZE_EXACT_STRATUM_METRIC_KEYS
   include_partitions: true
 

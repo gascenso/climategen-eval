@@ -83,15 +83,27 @@ def _config_hash(config: EvaluationConfig, manifests: Sequence[Mapping[str, Any]
     return hashlib.sha256(encoded).hexdigest()[:16]
 
 
-def _metric_values(metric: MetricSpec, fields: np.ndarray) -> np.ndarray:
-    values = np.asarray(metric.transform(fields))
-    if values.ndim < 1 or values.shape[0] != fields.shape[0]:
-        raise ValueError(
-            f"Metric {metric.id!r} transform must preserve the sample axis; got {values.shape}."
-        )
-    if not np.all(np.isfinite(values)):
-        raise ValueError(f"Metric {metric.id!r} transform produced non-finite values.")
-    return values
+def _metric_values(
+    metric: MetricSpec, fields: Any, *, batch_size: int
+) -> np.ndarray:
+    shape = getattr(fields, "shape", None)
+    if shape is None or len(shape) < 2:
+        raise ValueError("Metric fields must expose shape (N, ...sample dimensions...).")
+    batches = []
+    for start in range(0, int(shape[0]), batch_size):
+        stop = min(start + batch_size, int(shape[0]))
+        values = np.asarray(metric.transform(np.asarray(fields[start:stop])))
+        if values.ndim < 1 or values.shape[0] != stop - start:
+            raise ValueError(
+                f"Metric {metric.id!r} transform must preserve the sample axis; "
+                f"got {values.shape} for a batch of {stop - start}."
+            )
+        if not np.all(np.isfinite(values)):
+            raise ValueError(
+                f"Metric {metric.id!r} transform produced non-finite values."
+            )
+        batches.append(values)
+    return np.concatenate(batches, axis=0)
 
 
 def _dataset_manifest(dataset: Dataset) -> dict[str, Any]:
@@ -265,16 +277,24 @@ def evaluate(
             f"tolerances for {unsupported_tolerances} or register a future validated method."
         )
 
-    real_fields = real.as_numpy(max_bytes=config.max_materialize_bytes)
-    generated_fields = generated.as_numpy(max_bytes=config.max_materialize_bytes)
+    real_fields = real.fields
+    generated_fields = generated.fields
     transformed: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     transform_cache: dict[int, tuple[np.ndarray, np.ndarray]] = {}
     for metric in metric_list:
         cache_key = id(metric.transform)
         if cache_key not in transform_cache:
             transform_cache[cache_key] = (
-                _metric_values(metric, real_fields),
-                _metric_values(metric, generated_fields),
+                _metric_values(
+                    metric,
+                    real_fields,
+                    batch_size=config.transform_batch_size,
+                ),
+                _metric_values(
+                    metric,
+                    generated_fields,
+                    batch_size=config.transform_batch_size,
+                ),
             )
         transformed[metric.id] = transform_cache[cache_key]
 

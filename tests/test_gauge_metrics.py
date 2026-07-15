@@ -76,6 +76,32 @@ def test_train_fitted_features_are_deterministic():
     assert all(metric.provenance["fit_source"] == "train" for metric in registered)
 
 
+def test_train_fitted_features_do_not_materialize_lazy_archive():
+    class LazyArchive:
+        def __init__(self, values):
+            self.values = values
+            self.shape = values.shape
+            self.dtype = values.dtype
+
+        def __getitem__(self, key):
+            return self.values[key]
+
+        def __array__(self, *args, **kwargs):  # pragma: no cover - must not run
+            raise AssertionError("Full lazy archive was materialized.")
+
+    rng = np.random.default_rng(51)
+    fields = LazyArchive(rng.normal(size=(30, 4, 4)).astype(np.float32))
+    functional = FunctionalSpec("mean", lambda x: x.mean(axis=(1, 2)), "K", "mean")
+    fitted = TrainFittedFeatureSpace.fit(
+        fields,
+        [functional],
+        n_eof=2,
+        max_fit_samples=8,
+        batch_size=5,
+    )
+    assert fitted.transform(fields).shape == (30, 3)
+
+
 def test_feature_space_rejects_same_size_wrong_dimension_order():
     fields = np.zeros((10, 2, 3, 4))
     fitted = TrainFittedFeatureSpace.fit(fields, (), n_eof=2)

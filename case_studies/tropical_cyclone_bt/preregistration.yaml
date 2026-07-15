@@ -20,7 +20,11 @@ estimand:
 
 partitions:
   storm_disjoint_required: true
+  wind_source: USA_WIND
+  wind_averaging_period: 1-minute
+  mixed_wmo_wind_labels_prohibited: true
   train_manifest_sha256: PENDING
+  validation_manifest_sha256: PENDING
   test_manifest_sha256: PENDING
   thin_stratum: C5
   predeclared_aggregate:
@@ -30,10 +34,10 @@ partitions:
   temporal_shift_analysis: PENDING_FREEZE
 
 models:
-  candidates: [baseline_ztsnr, physics_loss, physics_guidance]
-  primary: PENDING_FREEZE_BEFORE_FINAL_TEST
+  candidates: [baseline_ztsnr]
+  primary: baseline_ztsnr
   secondary: []
-  checkpoint_selection_rule: PENDING_FREEZE
+  checkpoint_selection_rule: weights_ema_best_val; selected without Track-1 test metrics
 
 functionals:
   - {id: min_core_bt, units: K, support: [170.0, 325.0], tolerance: PENDING}
@@ -84,6 +88,7 @@ track2:
     storm_ids: PENDING_FREEZE
     whole_storm_removal: true
   generator_retrained_per_holdout: true
+  full_training_generator_bank_role: development_only_prohibited_for_final_contrasts
   generated_conditioning:
     variable: Vmax
     units: kt
@@ -93,7 +98,12 @@ track2:
     bin_edges_kt: PENDING_FREEZE
   downstream_seeds: [101, 102, 103, 104, 105]
   callback_determinism_audit: true
-  transforms: PENDING_FREEZE
+  transforms:
+    candidate: tc_rot90_reflect_shift_v1
+    rotations: right_angles
+    translations_pixels: [-2, 2]
+    boundary: reflect_padding
+    status: PENDING_FREEZE
   primary_endpoint:
     task: Vmax_regression
     metric: PENDING_FREEZE
