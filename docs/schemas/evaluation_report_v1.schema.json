@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gascenso/climategen-eval/docs/schemas/evaluation_report_v1.schema.json",
+  "title": "GAUGE Climate evaluation report v1",
+  "type": "object",
+  "required": ["schema", "metadata", "cells", "warnings", "sensitivity", "diagnostics", "partitions"],
+  "properties": {
+    "schema": {"const": "gauge_climate.evaluation.v1"},
+    "metadata": {"type": "object"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "memorization": {"type": ["object", "null"]},
+    "sensitivity": {"type": "object"},
+    "diagnostics": {"type": "object"},
+    "partitions": {"type": "object"},
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "metric", "stratum", "kind", "pillar", "units", "estimate",
+          "ci_low", "ci_high", "reference_q025", "reference_q50",
+          "reference_q95", "reference_q975", "reference_detection_boundary",
+          "tolerance", "n_eval",
+          "n_real", "n_generated", "n_blocks", "estimand",
+          "detection_status", "practical_status", "sensitivity_status",
+          "simultaneous_detection_status", "provenance"
+        ],
+        "properties": {
+          "metric": {"type": "string"},
+          "stratum": {"type": "string"},
+          "kind": {"enum": ["functional_w1", "set", "curve", "rate", "matrix"]},
+          "pillar": {
+            "enum": [
+              "physical_fidelity", "conditional_fidelity",
+              "diversity_and_coverage", "memorization", "admissibility"
+            ]
+          },
+          "units": {"type": "string"},
+          "estimate": {"type": ["number", "null"]},
+          "ci_low": {"type": ["number", "null"]},
+          "ci_high": {"type": ["number", "null"]},
+          "reference_q025": {"type": ["number", "null"]},
+          "reference_q50": {"type": ["number", "null"]},
+          "reference_q95": {"type": ["number", "null"]},
+          "reference_q975": {"type": ["number", "null"]},
+          "reference_detection_boundary": {"type": ["number", "null"]},
+          "tolerance": {"type": ["number", "null"]},
+          "n_eval": {"type": "integer", "minimum": 2},
+          "n_real": {"type": "integer", "minimum": 0},
+          "n_generated": {"type": "integer", "minimum": 0},
+          "n_blocks": {"type": "integer", "minimum": 0},
+          "estimand": {"enum": ["block_balanced", "frame_weighted"]},
+          "detection_status": {
+            "enum": ["NO_DEPARTURE_DETECTED", "DEPARTURE_DETECTED", "NOT_EVALUATED"]
+          },
+          "simultaneous_detection_status": {
+            "enum": ["NO_DEPARTURE_DETECTED", "DEPARTURE_DETECTED", "NOT_EVALUATED"]
+          },
+          "practical_status": {
+            "enum": [
+              "WITHIN_TOLERANCE", "EXCEEDS_TOLERANCE", "INCONCLUSIVE",
+              "UNDERPOWERED", "NOT_APPLICABLE"
+            ]
+          },
+          "sensitivity_status": {
+            "enum": ["ADEQUATE", "INADEQUATE", "NOT_EVALUATED", "NOT_APPLICABLE"]
+          },
+          "provenance": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}

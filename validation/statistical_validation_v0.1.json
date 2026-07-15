@@ -1,0 +1,105 @@
+{
+  "schema": "gauge_climate.statistical_validation.v1",
+  "seed": 1789,
+  "trials": 200,
+  "resamples": 200,
+  "scenarios": {
+    "bounded_shift_dkw": {
+      "true_w1": 0.4,
+      "coverage": 1.0,
+      "coverage_wilson_95": [
+        0.9811546736227335,
+        1.0
+      ]
+    },
+    "bounded_equality_dkw": {
+      "false_positive_rate": 0.0,
+      "false_positive_wilson_95": [
+        1.734723475976807e-18,
+        0.018845326377266575
+      ]
+    },
+    "cluster_bootstrap_diagnostic": {
+      "coverage": 0.94,
+      "release_gate": false,
+      "reason": "Classical bootstrap coverage is not guaranteed for empirical W1."
+    },
+    "unequal_block_reference_plan": {
+      "invariant_failures": 0
+    },
+    "simultaneous_reference": {
+      "method": "Bonferroni order-statistic boundaries",
+      "family_size": 5,
+      "false_positive_rate": 0.045,
+      "false_positive_wilson_95": [
+        0.023852543001492997,
+        0.0832967040018196
+      ],
+      "resolved_at_declared_resamples": true
+    },
+    "reference_detection": {
+      "rule": "median model discrepancy exceeds q95 real-reference discrepancy",
+      "calibration_target": "one-sided type-I error no greater than alpha; conservatism is reported",
+      "rates": {
+        "equality": 0.005,
+        "location_shift": 1.0,
+        "variance_change": 1.0,
+        "tail_contamination": 1.0,
+        "train_test_shift": 1.0,
+        "unequal_block_equality": 0.0,
+        "frame_weighted_unequal_block_equality": 0.005
+      },
+      "wilson_95": {
+        "equality": [
+          0.0008831687156009814,
+          0.02777370439789293
+        ],
+        "location_shift": [
+          0.9811546736227335,
+          1.0
+        ],
+        "variance_change": [
+          0.9811546736227335,
+          1.0
+        ],
+        "tail_contamination": [
+          0.9811546736227335,
+          1.0
+        ],
+        "train_test_shift": [
+          0.9811546736227335,
+          1.0
+        ],
+        "unequal_block_equality": [
+          1.734723475976807e-18,
+          0.018845326377266575
+        ],
+        "frame_weighted_unequal_block_equality": [
+          0.0008831687156009814,
+          0.02777370439789293
+        ]
+      },
+      "declared_severities": {
+        "location_shift": 0.4,
+        "variance_scale_on_frame_component": 0.35,
+        "tail_contamination_fraction": 0.2,
+        "tail_value": 1.45,
+        "train_test_location_shift": 0.4
+      }
+    }
+  },
+  "gate": {
+    "dkw_coverage_at_least_nominal_with_mc_uncertainty": true,
+    "dkw_false_positive_at_most_alpha_with_mc_uncertainty": true,
+    "reference_plan_invariants": true,
+    "reference_detection_false_positive_control": true,
+    "reference_detection_location_power": true,
+    "reference_detection_variance_power": true,
+    "reference_detection_tail_power": true,
+    "reference_detection_train_test_shift_power": true,
+    "unequal_block_false_positive_control": true,
+    "frame_weighted_unequal_block_false_positive_control": true,
+    "simultaneous_reference_calibration": true
+  },
+  "passed": true
+}

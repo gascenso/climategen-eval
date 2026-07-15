@@ -1,12 +1,27 @@
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
 .venv/
 .vscode/
+.claude/
+.DS_Store
+*.swp
+*.swo
+.coverage
+coverage.xml
+htmlcov/
 *.egg-info/
+*.egg
+pip-wheel-metadata/
+build/
+dist/
 
 # Case-study data and generated reports are intentionally reproducible artifacts,
 # not source files.
 data/
 outputs/
-
+runs/
+survey/figures/

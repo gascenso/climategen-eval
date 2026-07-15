@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use GAUGE Climate, cite this software and the accompanying paper when available."
+title: "GAUGE Climate: reference-aware evaluation of generated Earth-system fields"
+type: software
+version: 0.1.0
+date-released: 2026-07-15
+license: BSD-3-Clause
+repository-code: "https://github.com/gascenso/climategen-eval"
+abstract: >-
+  A portable protocol for physical, distributional, memorization, admissibility,
+  sensitivity, and downstream evaluation of generated Earth-system fields.
+authors:
+  - family-names: "Ascenso"
+    given-names: "Guido"
+keywords:
+  - climate science
+  - generative models
+  - evaluation
+  - Wasserstein distance
+  - uncertainty quantification
