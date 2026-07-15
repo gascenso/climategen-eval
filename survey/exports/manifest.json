@@ -1,0 +1,11 @@
+{
+  "schema": "gauge_climate.survey_manifest.v1",
+  "source_sha256": "4a98a7c3d1a4d2017d594985422f1d4486233397e24a2899f99c6cc26f957f60",
+  "outputs": {
+    "additional_candidates.csv": "6f16c53c26a2f9d3a79a8e31affc4b166e460a79424d3c0684a0ae3c29fe7199",
+    "codebook.csv": "d67df754db4b088fa46a92c1dc3c7c4ae09a100dbd2da9d13f604ea1966e98f2",
+    "coded_papers.csv": "aa39e79eada2c2fdc7b696357f103d1ad2762de4124cc9ad93660462e50b5346",
+    "double_coding_sample.csv": "76222ceb2d49eac51f242baa4288f464e2accb2a3261fa059bf630f2e067df5b",
+    "summary.json": "58e46427f5f6841a57a9f38a11303fd4cbc59e91b5fafa0f989b0ccc4ea2b393"
+  }
+}

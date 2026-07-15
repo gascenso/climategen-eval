@@ -1,0 +1,36 @@
+Field,Definition / coding rule
+Year; Venue; Venue type,"Bibliographic. Venue type in {ML, domain, hybrid/workshop} -- ML = NeurIPS/ICML/ICLR/CVPR/AAAI-style venues; domain = atmospheric/climate/remote-sensing journals; hybrid/workshop = interdisciplinary or ML-workshop-on-climate venues."
+Model family (as reported); Model class (derived),"Model family is the architecture as the paper names it. Model class is derived by keyword classification into {GAN, Diffusion, VAE, Normalizing flow, Autoregressive, Other/unclassified} (or a '+'-joined combination for comparative papers), used for the model-class breakdown in the Summary sheet."
+Task type,"{unconditional, low-dim conditional, high-dim conditional}. High-dim = downscaling/nowcasting/forecasting conditioned on a full input field."
+Variable(s); Data source; Grid size; N_train; N_eval,"As reported in the paper, or ""not stated""."
+Held-out test set?,{yes/no/unclear} -- is there a genuinely held-out evaluation split at all?
+Split unit,"{random frame, spatial, temporal, event/block, not stated} -- the unit at which train/test were separated."
+Leakage-prone?,Fixed operational rule: yes if data are autocorrelated in space/time beyond the split unit and no block separation is described; no if block/temporal separation is explicit; unclear otherwise.
+Temporal separation stated?,Whether the paper explicitly states non-overlapping train/test time periods.
+Q1a,Quantitative distributional comparison of a physical quantity (distance/divergence/statistic -- not visual only)?
+Q1b,"Distribution comparison done VISUALLY ONLY (histogram/PDF overlay + prose similarity claim, no quantification)?"
+Q1c,Spatial spectra reported? {no / visual overlay / quantified}
+Q1d,Extremes/tails specifically evaluated (beyond bulk)?
+Q2a,"Conditional fidelity evaluated at all (per-condition statistics, proper scores, rank/PIT, spread-error)? Applicable only when the model is conditional."
+Q2b,Probabilistic calibration specifically (rank/PIT/spread-error/reliability diagram)?
+Q3,"Physical admissibility of individual samples (bounds, conservation, non-negativity, structural constraints)?"
+Q4a,Diversity/coverage assessed with ANY quantitative metric?
+Q4b,Memorization / nearest-neighbor-to-training-set check?
+Q5a,Discriminative two-sample test (C2ST / classifier real-vs-generated)?
+Q5b,"Downstream-task utility (TSTR, augmentation gain, task metric)?"
+V1,Any metric-validity control -- sensitivity (metric responds to a degradation?) or non-gameability (metric checked against a statistic-matched null / degenerate baseline)?
+U1,"Uncertainty quantification ON THE EVALUATION METRICS themselves (CIs, error bars, bootstrap/resampling)?"
+U2,"Any real-vs-real reference computed (a ""floor""-like quantity, e.g. sampling-noise baseline, split-half comparison)? This is the paper's core proposed innovation: without this, a reported distance/metric value is uninterpretable."
+B1,"Non-ML baseline included (climatology, persistence, analog, statistical downscaling)?"
+R1,Code released?
+R2,Seeds/protocol sufficient to reproduce the EVALUATION specifically?
+Notable practices,"Free text: anything methodologically notable, good or bad, about how the paper evaluates its model."
+Memorable unquantified-similarity quotes,Verbatim quotes where authors assert visual/qualitative realism without quantitative backing -- direct evidence for the paper's central claim that this is common practice.
+Eligibility notes,Flags borderline cases against the survey's eligibility criteria (§2.1): must (i) train/apply a deep generative model (GAN/VAE/normalizing flow/diffusion/flow matching/stochastic-output hybrid) (ii) to produce 2D+ geophysical fields (iii) where the generated field is itself a claimed output.
+QC method applied,"How this row's coding was quality-checked: either a sample spot-check (original 41 papers -- 3 papers independently re-verified across ~9 claims, all confirmed) or a per-paper adversarial verify pass (papers_second_batch -- every paper's model_family, Q4a, Q4b, U2, V1 and eligibility_notes independently re-checked against the source PDF by a second reviewer-agent, with corrections applied where discrepancies were found)."
+,
+Answer conventions,"yes / no / partial (partial = does something in this direction but incompletely) / unclear (paper is ambiguous) / n/a (question does not apply, e.g. Q2a-b for unconditional models)."
+Color key,Green = yes / quantified; Red = no; Yellow = partial / visual overlay; Grey = unclear / n/a.
+On including GANs (and VAEs/flows),"The protocol is architecture-agnostic by design: every check (W1 on functionals, real-vs-real floors, coverage/density, NN-distance memorization, C2ST) operates only on the generated SAMPLES and never inspects the model's training objective or requires a tractable likelihood. GAN/VAE papers are coded identically to diffusion papers, with no field forced to ""n/a"" for architecture reasons. The one genuine dependency is that Q2b (calibration) and Q4a (diversity) require the model to actually be RUN in sampling mode (multiple draws) -- true for GANs and diffusion models alike, and tracked as a finding (how often papers of each model class actually exploit stochasticity), not an eligibility criterion."
+Downstream baseline strength,Human-coded strength of the strongest count/transform-matched non-generated downstream baseline; vocabulary and decision rules must be frozen before coding.
+Load-bearing fields human verification,"Required full-corpus verification status for memorization, real-reference, downstream-utility, and metric-validity fields."
