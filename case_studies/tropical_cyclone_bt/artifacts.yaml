@@ -1,0 +1,50 @@
+schema: gauge_climate.tc_bt_artifacts.v1
+status: LOCAL_ONLY_NOT_ARCHIVED
+release_ready: false
+
+real_archive:
+  role: held_out_real_fields
+  local_manifest: data/tropical_cyclone_bt/real_test/manifest.json
+  archive_url: PENDING
+  archive_doi: PENDING
+  sha256: PENDING
+  redistribution_permission: PENDING
+
+real_train_archive:
+  role: training_real_fields_and_train_fit_artifacts
+  local_manifest: data/tropical_cyclone_bt/real_train/manifest.json
+  archive_url: PENDING
+  archive_doi: PENDING
+  sha256: PENDING
+  redistribution_permission: PENDING
+
+generated_sample_banks:
+  - id: baseline_ztsnr
+    local_path: data/tropical_cyclone_bt/generated/baseline/test_baseline_n1000
+    current_state: absolute_local_symlink
+    archive_url: PENDING
+    archive_sha256: PENDING
+    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/baseline.json
+  - id: physics_loss
+    local_path: data/tropical_cyclone_bt/generated/pinn_loss/test_pinnloss_n1000
+    current_state: absolute_local_symlink
+    archive_url: PENDING
+    archive_sha256: PENDING
+    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/pinn_loss.json
+  - id: physics_guidance
+    local_path: data/tropical_cyclone_bt/generated/pinn_guided/test_guidance_n1000
+    current_state: absolute_local_symlink
+    archive_url: PENDING
+    archive_sha256: PENDING
+    sha256_manifest: data/tropical_cyclone_bt/generated/manifests/pinn_guided.json
+
+small_fixture:
+  path: tests/fixtures/tc_bt
+  status: GENERATED_SYNTHETIC
+  manifest: tests/fixtures/tc_bt/manifest.json
+  license: BSD-3-Clause
+
+release_rule: >-
+  Replace all absolute symlinks with downloadable, permission-cleared artifacts;
+  record per-file SHA-256 checksums; verify from a clean checkout; then set
+  release_ready only through the release audit.

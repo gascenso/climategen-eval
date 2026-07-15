@@ -1,0 +1,62 @@
+{
+  "schema": "gauge_climate.synthetic_tc_bt_fixture.v1",
+  "generator_seed": 1789,
+  "scientific_use": "none; software smoke tests only",
+  "license": "BSD-3-Clause",
+  "files": {
+    "train_fields.npy": {
+      "sha256": "95cbcea450534a20a088bb5fdcd9a24d8e7f22d5c76a0427680aa173f125a4dc",
+      "shape": [
+        48,
+        32,
+        32
+      ]
+    },
+    "train_blocks.npy": {
+      "sha256": "79af2052db5e1576b8f040fe1a79e7ab3db1535fbf5f9003b172909b4e6bc88b",
+      "shape": [
+        48
+      ]
+    },
+    "train_labels.npy": {
+      "sha256": "793c39943b527d1aa73b3c3ef1af60729ebcf15575c85401a23caccfded95d0a",
+      "shape": [
+        48
+      ]
+    },
+    "real_fields.npy": {
+      "sha256": "4580790b5ad5eb07200b7df3f3e987a2250d3c99ae02825bfd5a757c4bc8985e",
+      "shape": [
+        48,
+        32,
+        32
+      ]
+    },
+    "real_blocks.npy": {
+      "sha256": "e0a9de251ccc8edf8e8660cbb1c0852042045a5ac0b3148982af8619f772acd5",
+      "shape": [
+        48
+      ]
+    },
+    "real_labels.npy": {
+      "sha256": "793c39943b527d1aa73b3c3ef1af60729ebcf15575c85401a23caccfded95d0a",
+      "shape": [
+        48
+      ]
+    },
+    "generated_fields.npy": {
+      "sha256": "4a40efae91ac1ea737c3173ab6dabf8fb304ce2722de1600376396aedde94366",
+      "shape": [
+        30,
+        32,
+        32
+      ]
+    },
+    "generated_labels.npy": {
+      "sha256": "688e7b3fd2115cf3185c4ee08316cc989d8218a3af72a33a88713d9b40d80cb8",
+      "shape": [
+        30
+      ]
+    }
+  }
+}

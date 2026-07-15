@@ -1,0 +1,89 @@
+schema: gauge_climate.cli_config.v1
+adapter: tc_bt
+
+data:
+  train:
+    fields: ../../data/tropical_cyclone_bt/real_train/bt_k.npy
+    blocks: ../../data/tropical_cyclone_bt/real_train/storm_ids.npy
+    labels: ../../data/tropical_cyclone_bt/real_train/labels.npy
+    units: K
+    metadata: {manifest_sha256: PENDING}
+  real:
+    fields: ../../data/tropical_cyclone_bt/real_test/bt_k.npy
+    blocks: ../../data/tropical_cyclone_bt/real_test/storm_ids.npy
+    labels: ../../data/tropical_cyclone_bt/real_test/labels.npy
+    units: K
+    metadata: {manifest_sha256: PENDING}
+  generated:
+    fields: PENDING_ARCHIVED_PRIMARY_MODEL_FIELDS.npy
+    labels: PENDING_ARCHIVED_PRIMARY_MODEL_LABELS.npy
+    units: K
+    metadata: {artifact_id: PENDING, archive_sha256: PENDING, checkpoint: PENDING}
+
+adapter_options:
+  field_shape: [256, 256]
+  bt_min_k: 170.0
+  bt_max_k: 325.0
+  pixel_size_km: 8.0
+  core_radius_km: 100.0
+  organization_radius_km: 300.0
+  max_profile_radius_km: 500.0
+  cold_threshold_k: 220.0
+  profile_bins: 32
+  psd_bins: 24
+  eye_radius_km: 50.0
+  eyewall_inner_km: 50.0
+  eyewall_outer_km: 150.0
+  dav_center_region_size: 3
+
+# Replace every PENDING value with a justified native-unit tolerance and freeze
+# this file before the final test run. Leaving a value nonnumeric makes the CLI
+# fail closed.
+tolerances:
+  min_core_bt: PENDING
+  cold_frac_220: PENDING
+  r_maxgrad: PENDING
+  axisym: PENDING
+  dav: PENDING
+  eye_contrast: PENDING
+  p01_bt: PENDING
+
+feature_metrics:
+  enabled: true
+  n_eof: PENDING_FREEZE
+  max_fit_samples: PENDING_FREEZE
+  fit_seed: 1789
+  density_k: 5
+  bandwidth_seed: 1789
+  dependence_pairs: true
+  memorization:
+    enabled: true
+    n_regions: PENDING_FREEZE
+    n_resamples: 1000
+    min_real_blocks: 5
+
+tc_admissibility: true
+sensitivity_results: PENDING_PRECOMPUTED_TRAIN_OR_RESERVED_REAL_LANES_JSON
+
+evaluation:
+  n_eval: PENDING
+  n_resamples: 200
+  bootstrap_resamples: 1000
+  sensitivity_resamples: 200
+  alpha: 0.05
+  confidence: 0.95
+  estimand: block_balanced
+  seed: 1789
+  min_blocks_per_half: 10
+  warn_blocks_per_half: 30
+  shift_power: 0.80
+  shift_grid_size: 33
+  reference_stability_tolerance: 0.25
+  simultaneous_family: PENDING_FREEZE_EXACT_STRATUM_METRIC_KEYS
+  include_partitions: true
+
+conditional: true
+outputs:
+  json: ../../outputs/tropical_cyclone_bt/gauge_track1/evaluation.json
+  html: ../../outputs/tropical_cyclone_bt/gauge_track1/evaluation.html
+  profile: ../../outputs/tropical_cyclone_bt/gauge_track1/reference_profile.pdf

@@ -1,0 +1,120 @@
+schema: gauge_climate.tc_bt_preregistration.v1
+status: DRAFT_NOT_FROZEN
+final_test_run_permitted: false
+
+scope:
+  field: storm-centered infrared brightness temperature
+  sample_shape: [256, 256]
+  channels: 1
+  field_units: K
+  pixel_size_km: 8.0
+  classes: [TS, C1, C2, C3, C4, C5]
+  excluded_class_claims: [TD]
+
+estimand:
+  primary: block_balanced
+  block: storm_id
+  sampling_description: uniformly sample a storm, then uniformly sample an eligible frame
+  secondary_frame_weighted: false
+  n_eval: PENDING_FREEZE
+
+partitions:
+  storm_disjoint_required: true
+  train_manifest_sha256: PENDING
+  test_manifest_sha256: PENDING
+  thin_stratum: C5
+  predeclared_aggregate:
+    id: C4_plus
+    members: [C4, C5]
+    scientific_rationale: PENDING_FREEZE
+  temporal_shift_analysis: PENDING_FREEZE
+
+models:
+  candidates: [baseline_ztsnr, physics_loss, physics_guidance]
+  primary: PENDING_FREEZE_BEFORE_FINAL_TEST
+  secondary: []
+  checkpoint_selection_rule: PENDING_FREEZE
+
+functionals:
+  - {id: min_core_bt, units: K, support: [170.0, 325.0], tolerance: PENDING}
+  - {id: cold_frac_220, units: percent, support: [0.0, 100.0], tolerance: PENDING}
+  - {id: r_maxgrad, units: km, support: [0.0, 500.0], tolerance: PENDING}
+  - {id: axisym, units: K, support: [0.0, 155.0], tolerance: PENDING}
+  - {id: dav, units: degree_squared, support: [0.0, 8100.0], tolerance: PENDING}
+  - {id: eye_contrast, units: K, support: [-155.0, 155.0], tolerance: PENDING}
+  - {id: p01_bt, units: K, support: [170.0, 325.0], tolerance: PENDING}
+
+curve_metrics:
+  radial_profile:
+    radius_km: 500.0
+    bins: 32
+    center: image_center
+    mask: none_within_grid
+    missing_values: reject
+  radial_psd:
+    detrending: subtract_per_image_spatial_mean
+    window: separable_hann
+    normalization: divide_by_window_energy
+    coordinates: physical_cycles_per_km
+    radial_bins: 24_log_spaced
+    zero_mode: excluded
+    missing_values: reject
+
+feature_space:
+  fit_split: training_only
+  scalar_standardization: training_mean_sd
+  eof_components: PENDING_FREEZE
+  eof_fit_sample_count: PENDING_FREEZE
+  mmd_bandwidth_rule: training_only_median_distance
+  memorization_regions: PENDING_FREEZE
+
+sensitivity_lanes:
+  status: PENDING_FREEZE
+  controls:
+    copyist: {expected: localized_copying_detected, severity: exact_training_replay}
+    blur: {expected: psd_and_gradient_response, sigma_pixels: PENDING}
+    phase_shuffle: {expected: structure_response_with_spectrum_control, severity: PENDING}
+    warm_shift: {expected: monotone_BT_functional_response, kelvin: PENDING}
+    center_jitter: {expected: radial_structure_response, pixels: PENDING}
+  interpretation_rule: a metric failing its predeclared response is not interpreted
+
+track2:
+  holdouts:
+    count: 3
+    storm_ids: PENDING_FREEZE
+    whole_storm_removal: true
+  generator_retrained_per_holdout: true
+  generated_conditioning:
+    variable: Vmax
+    units: kt
+    source_distribution: restricted_training_only
+  matching_strata:
+    variable: Vmax
+    bin_edges_kt: PENDING_FREEZE
+  downstream_seeds: [101, 102, 103, 104, 105]
+  callback_determinism_audit: true
+  transforms: PENDING_FREEZE
+  primary_endpoint:
+    task: Vmax_regression
+    metric: PENDING_FREEZE
+    delta_task: PENDING_FREEZE
+  secondary_endpoint:
+    task: intensity_category_classification
+    metric: PENDING_FREEZE
+    delta_task: PENDING_FREEZE
+  headline_contrast: A5_generated_geo_minus_A3_copy_geo
+  source_only_contrast: A4_generated_minus_A2_copy
+  headroom_contrast: A7_restored_real_geo_minus_A3_copy_geo
+  holdout_heterogeneity: report_each_plus_hierarchical_summary
+
+exclusions:
+  corrupt_or_missing_fields: PENDING_FREEZE
+  failed_generator_samples: report_and_count_as_admissibility_failures
+  posthoc_endpoint_switching: prohibited
+  posthoc_stratum_merging: prohibited
+
+freeze_record:
+  frozen_at_utc: null
+  commit: null
+  approvers: []
+  rationale_document: PENDING

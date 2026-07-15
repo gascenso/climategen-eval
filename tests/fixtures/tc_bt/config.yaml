@@ -1,0 +1,81 @@
+schema: gauge_climate.cli_config.v1
+adapter: tc_bt
+# All values are software-test fixtures, not scientific tolerances or TC results.
+
+data:
+  train:
+    fields: train_fields.npy
+    blocks: train_blocks.npy
+    labels: train_labels.npy
+    units: K
+    metadata: {fixture: deterministic_synthetic}
+  real:
+    fields: real_fields.npy
+    blocks: real_blocks.npy
+    labels: real_labels.npy
+    units: K
+    metadata: {fixture: deterministic_synthetic}
+  generated:
+    fields: generated_fields.npy
+    labels: generated_labels.npy
+    units: K
+    metadata: {fixture: deterministic_synthetic}
+
+adapter_options:
+  field_shape: [32, 32]
+  pixel_size_km: 16.0
+  max_profile_radius_km: 250.0
+  profile_bins: 8
+  psd_bins: 8
+
+tolerances:
+  min_core_bt: 5.0
+  cold_frac_220: 5.0
+  r_maxgrad: 40.0
+  axisym: 5.0
+  dav: 500.0
+  eye_contrast: 5.0
+  p01_bt: 5.0
+
+feature_metrics:
+  enabled: true
+  n_eof: 4
+  max_fit_samples: 24
+  density_k: 3
+  dependence_pairs: true
+  memorization:
+    enabled: true
+    n_regions: 2
+    n_resamples: 100
+    min_real_blocks: 3
+
+tc_admissibility: true
+
+evaluation:
+  n_eval: 24
+  n_resamples: 200
+  bootstrap_resamples: 20
+  sensitivity_resamples: 20
+  min_blocks_per_half: 5
+  warn_blocks_per_half: 10
+  shift_grid_size: 8
+  simultaneous_family:
+    - global:w1:min_core_bt
+    - global:w1:cold_frac_220
+    - global:w1:r_maxgrad
+    - global:w1:axisym
+    - global:w1:dav
+    - global:w1:eye_contrast
+    - global:w1:p01_bt
+    - global:radial_profile_mae
+    - global:radial_log_psd_mse
+  seed: 1789
+
+conditional: false
+outputs:
+  json: ../../../outputs/tc_fixture/evaluation.json
+  html: ../../../outputs/tc_fixture/evaluation.html
+  profile: ../../../outputs/tc_fixture/reference_profile.pdf
+  curves:
+    - {metric: radial_profile_mae, stratum: global, path: ../../../outputs/tc_fixture/radial_profile.pdf}
+    - {metric: radial_log_psd_mse, stratum: global, path: ../../../outputs/tc_fixture/radial_psd.pdf}
