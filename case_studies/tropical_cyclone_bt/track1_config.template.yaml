@@ -51,12 +51,13 @@ feature_metrics:
   dependence_pairs: true
   memorization:
     enabled: true
+    require_copyist_control: true
     n_regions: 8
     n_resamples: 1000
     min_real_blocks: 5
 
 tc_admissibility: true
-sensitivity_results: ../../outputs/tropical_cyclone_bt/controls/sensitivity_lanes.json
+sensitivity_results: control_results/sensitivity_lanes.json
 
 evaluation:
   n_eval: null

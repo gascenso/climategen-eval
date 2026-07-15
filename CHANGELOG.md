@@ -6,9 +6,20 @@ semantic versioning once the public API is frozen.
 ## [Unreleased]
 
 - Independent statistical review and clean-room TC reproduction.
-- Frozen TC tolerances, perturbation severities, and downstream task margins.
+- TC-specific statistical calibration before the final Track-1 run.
 - Three leakage-free restricted generator retrains and the final Track-2 study.
 - Reconciled and independently double-coded literature survey.
+
+### Added
+
+- Frozen, training-only TC warm-shift, blur, center-jitter, phase, and exact-copyist
+  controls with a versioned JSON artifact and figure.
+- Separate sensitivity response-contract and finite-sample resolution conclusions.
+
+### Changed
+
+- TC radial PSD bins now use discrete-support-aware physical log targets, avoiding
+  undefined empty low-wavenumber shells on the registered 256×256 grid.
 
 ## [0.1.0] - 2026-07-15
 

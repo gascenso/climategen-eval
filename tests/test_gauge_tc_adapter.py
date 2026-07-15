@@ -46,3 +46,19 @@ def test_tc_curve_metrics_are_finite_and_respond_to_blur():
         assert np.isfinite(metric.estimator(values[:2], values[2:]))
     assert len(psd.provenance["coordinate_values"]) == 8
     assert psd.provenance["coordinate_units"] == "cycles/km"
+
+
+def test_registered_256_grid_has_24_nonempty_psd_bins():
+    config = TCBTConfig(
+        field_shape=(256, 256),
+        pixel_size_km=8.0,
+        profile_bins=32,
+        psd_bins=24,
+    )
+    fields = np.random.default_rng(91).normal(size=(2, 256, 256))
+    _, psd = curve_metrics(config)
+    values = psd.transform(fields)
+    coordinates = np.asarray(psd.provenance["coordinate_values"])
+    assert values.shape == (2, 24)
+    assert np.all(np.isfinite(values))
+    assert np.all(np.diff(coordinates) > 0)

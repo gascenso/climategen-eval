@@ -43,6 +43,29 @@ Sensitivity sweeps are frozen in `preregistration.yaml`. Failure of an expected
 metric response withholds interpretation for that metric; it does not authorize
 changing the perturbation after seeing final model results.
 
+The controls use 80 deterministically selected training storms and a
+block-balanced sample size of 1,000, matching a native-class evaluation cell.
+Real-reference boundaries use 500 whole-block resamples at the 95th percentile.
+Warm shift, Gaussian blur, and center jitter are paired severity sweeps. Full
+phase shuffling must both trigger the registered structure metrics and preserve
+each image's discrete Fourier power to the declared numerical tolerance. The
+localized copying procedure must detect an exact-copyist control using the same
+512-frame feature-fit limit and eight regions as the registered analysis.
+
+For severity sweeps, response validity and resolution are separate: a metric
+passes its response contract when the Spearman severity trend is at least 0.8.
+Whether the maximum frozen severity exceeds the real-reference boundary is
+reported separately and may reveal limited sensitivity at this N. Binary phase
+and copyist positive controls still require boundary crossing or copying
+detection, respectively.
+
+Amendment, before any final test or generated outcome was inspected: naïve
+geometric PSD edges produced empty low-frequency bins on the 256×256 discrete
+Fourier grid. The frozen implementation therefore selects 24 distinct observed
+radial wavenumbers nearest the log-spaced targets and uses geometric-midpoint
+boundaries. This retains 24 ordered bins in physical cycles/km while guaranteeing
+that every bin is defined.
+
 ## Track 2
 
 Three whole-storm holdouts were selected uniformly with seed 1789 from 97 storms
@@ -75,7 +98,8 @@ two pixels, applied only to added rows.
 
 ## Gates still blocking final inference
 
-- Execute and pass the frozen Track-1 sensitivity and copyist controls.
+- Complete and independently review the TC-specific statistical calibration;
+  the frozen training-only sensitivity and copyist controls have passed.
 - Produce three restricted generator fits and their checksum-bound provenance.
 - Archive permission-cleared real/generated artifacts.
 - Preserve this record in Git history and record any amendments.

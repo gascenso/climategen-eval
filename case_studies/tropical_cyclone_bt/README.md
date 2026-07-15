@@ -14,10 +14,12 @@ are TS and Categories 1–5; TD is not claimed.
   `USA_WIND`, whose averaging period is one minute. `WMO_WIND` is prohibited
   because it mixes agency-specific averaging periods. Preparation fails closed
   if this provenance is absent or inconsistent with the Saffir-Simpson class.
-- [`preregistration.yaml`](preregistration.yaml) deliberately keeps tolerances,
-  perturbation severities, three Track-2 storms, and task margins unresolved.
-  A final evaluation is prohibited until those choices are
-  justified and frozen without examining final test outcomes.
+- [`preregistration.yaml`](preregistration.yaml) freezes tolerances,
+  perturbation severities and sampling, three Track-2 storms, transforms,
+  endpoints, and task margins without examining final GAUGE test outcomes.
+  The training-only sensitivity and copyist controls have passed their response
+  contracts; final evaluation remains prohibited until TC-specific statistical
+  calibration is completed and reviewed.
 - Local generated banks are copied or hardlinked from the selected
   `baseline_ztsnr` run. The release audit fails until archived artifacts with
   URLs and SHA-256 checksums replace this local-only provenance.
@@ -28,8 +30,8 @@ The final run uses the corrected storm-disjoint train/validation/test partitions
 and the `baseline_ztsnr` test sample bank. The training split is required for
 train-fit features and the three-sample memorization test; validation is reserved
 for model selection; test is used for final Track-1 claims. Category 5 is
-predeclared as thin; C4+ is the only permitted aggregate, and only if its
-scientific rationale is completed before evaluation.
+predeclared as thin; C4+ is the only permitted aggregate, with its
+major-hurricane-threshold rationale frozen before evaluation.
 
 Prepare the local data, attempting hardlinks first and falling back to copies
 when the source and destination are on different filesystems:
@@ -55,6 +57,25 @@ Audit the discrete Vmax conditioning support in both selected sample banks with
 conditioning distribution is compared with the corresponding corrected real
 split, so common operationally reported wind values are not mistaken for model
 collapse.
+
+Execute the frozen training-only control suite before unlocking the final test
+run:
+
+```bash
+python case_studies/tropical_cyclone_bt/run_track1_controls.py
+```
+
+The runner uses 80 deterministically selected training storms, a block-balanced
+control size of 1,000, 500 real-reference resamples, and the train-only feature
+fit. It writes the versioned JSON artifact and severity-response figure under
+`control_results/`. A failed response contract withholds interpretation; failure
+to clear the reference boundary is retained separately as resolution information
+and is not silently retuned.
+
+The versioned [control artifact](control_results/sensitivity_lanes.json) passes
+all five response contracts without using test fields. Its resolution fields
+remain part of the result: small center jitter and gradient-radius response to
+the frozen blur sweep do not clear the real-reference boundary at N=1,000.
 
 ## Track 2
 

@@ -85,6 +85,9 @@ finite-sample limitations. The scientific contract and its
 statistical qualifications are in [the blueprint](docs/methods/gauge_blueprint.md).
 The tropical-cyclone case study is tracked separately under
 [`case_studies/tropical_cyclone_bt`](case_studies/tropical_cyclone_bt).
+Its preregistered training-only controls run with
+`python case_studies/tropical_cyclone_bt/run_track1_controls.py`; final test
+inference remains locked until those controls and TC-specific calibration pass.
 
 ## Development state
 

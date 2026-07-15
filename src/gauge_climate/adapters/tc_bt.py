@@ -81,22 +81,59 @@ def radial_profiles(fields: np.ndarray, config: TCBTConfig = TCBTConfig()) -> np
     return output
 
 
-def _psd_edges(shape: tuple[int, int], config: TCBTConfig) -> np.ndarray:
+def _psd_geometry(
+    shape: tuple[int, int], config: TCBTConfig
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return nonempty radial bins near log-spaced physical targets.
+
+    A naïve geometric sequence can place boundaries between sparse low-frequency
+    Fourier shells and create empty bins. We therefore choose distinct observed
+    radial wavenumbers nearest the log-spaced targets, then put boundaries at
+    geometric midpoints. Every registered bin contains at least one discrete
+    Fourier mode while retaining the intended logarithmic ordering.
+    """
+
     h, w = shape
-    k_min = min(1.0 / (h * config.pixel_size_km), 1.0 / (w * config.pixel_size_km))
     ky = np.fft.fftfreq(h, d=config.pixel_size_km)
     kx = np.fft.fftfreq(w, d=config.pixel_size_km)
     radial_k = np.sqrt(ky[:, None] ** 2 + kx[None, :] ** 2)
     k_max = min(0.5 / config.pixel_size_km, float(radial_k.max()))
-    return np.geomspace(k_min, k_max * (1.0 + 1e-9), config.psd_bins + 1)
+    support = np.unique(radial_k[(radial_k > 0) & (radial_k <= k_max)])
+    if support.size < config.psd_bins:
+        raise ValueError(
+            f"Only {support.size} positive radial Fourier shells are available "
+            f"for {config.psd_bins} PSD bins."
+        )
+    targets = np.geomspace(float(support[0]), float(support[-1]), config.psd_bins)
+    selected = []
+    previous = -1
+    for index, target in enumerate(targets):
+        lower = previous + 1
+        upper = support.size - (config.psd_bins - index)
+        candidates = support[lower : upper + 1]
+        local = int(np.argmin(np.abs(np.log(candidates) - np.log(target))))
+        chosen = lower + local
+        selected.append(chosen)
+        previous = chosen
+    centers = support[np.asarray(selected, dtype=np.int64)]
+    edges = np.empty(config.psd_bins + 1, dtype=np.float64)
+    edges[0] = np.nextafter(centers[0], 0.0)
+    edges[-1] = np.nextafter(centers[-1], np.inf)
+    edges[1:-1] = np.sqrt(centers[:-1] * centers[1:])
+    return edges, centers
+
+
+def _psd_edges(shape: tuple[int, int], config: TCBTConfig) -> np.ndarray:
+    return _psd_geometry(shape, config)[0]
 
 
 def radial_log_psd(fields: np.ndarray, config: TCBTConfig = TCBTConfig()) -> np.ndarray:
     """Hann-windowed, mean-removed, area-normalized radial log10 PSD.
 
     Wavenumbers are cycles/km. The zero mode is excluded and positive
-    wavenumbers are aggregated into fixed log-spaced bins from the fundamental
-    domain frequency to the smaller-axis Nyquist frequency.
+    wavenumbers are aggregated into fixed, nonempty, discrete-support-aware bins
+    nearest log-spaced targets from the fundamental domain frequency to the
+    smaller-axis Nyquist frequency.
     """
 
     fields = _validate(fields, config)
@@ -314,8 +351,8 @@ def curve_metrics(config: TCBTConfig = TCBTConfig()) -> tuple[MetricSpec, Metric
     )
     psd_centers = None
     if config.field_shape is not None:
-        psd_edges = _psd_edges(config.field_shape, config)
-        psd_centers = np.sqrt(psd_edges[:-1] * psd_edges[1:]).tolist()
+        _, selected_centers = _psd_geometry(config.field_shape, config)
+        psd_centers = selected_centers.tolist()
     psd = MetricSpec(
         id="radial_log_psd_mse",
         transform=lambda fields: radial_log_psd(fields, config),
@@ -327,7 +364,10 @@ def curve_metrics(config: TCBTConfig = TCBTConfig()) -> tuple[MetricSpec, Metric
         description="MSE between mean Hann-windowed radial log10 power spectra.",
         provenance={
             "bins": config.psd_bins,
-            "binning": "log-spaced physical wavenumber in cycles/km",
+            "binning": (
+                "distinct discrete radial wavenumbers nearest log-spaced targets; "
+                "geometric-midpoint boundaries"
+            ),
             "detrending": "per-image spatial mean removed",
             "window": "separable Hann",
             "normalization": "window-energy normalized",

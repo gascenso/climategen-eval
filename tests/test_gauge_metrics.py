@@ -3,7 +3,14 @@ from __future__ import annotations
 import numpy as np
 
 from gauge_climate.features import TrainFittedFeatureSpace
-from gauge_climate.lanes import additive_shift_lane, phase_shuffle, run_perturbation_sweep
+from gauge_climate.lanes import (
+    additive_shift_lane,
+    center_jitter_lane,
+    gaussian_blur_lane,
+    phase_shuffle,
+    phase_shuffle_fields,
+    run_perturbation_sweep,
+)
 from gauge_climate.memorization import localized_copying_test
 from gauge_climate.metrics import (
     admissibility_metric,
@@ -183,6 +190,28 @@ def test_predeclared_sensitivity_lane_has_monotone_response():
     assert result["metrics"][metric.id]["values"] == [0.0, 0.5, 1.0]
 
 
+def test_sweep_separates_response_validity_from_detection_resolution():
+    source = np.zeros((20, 2, 2))
+    functional = FunctionalSpec(
+        "mean", lambda fields: fields.mean(axis=(1, 2)), "K", "mean field value"
+    )
+    metric = functional_w1(functional)
+    lane = additive_shift_lane(
+        severities=(0.0, 0.1, 0.2), expected_metrics=(metric.id,)
+    )
+    result = run_perturbation_sweep(
+        lane,
+        source_fields=source,
+        reference_fields=source,
+        metrics=(metric,),
+        reference_boundaries={metric.id: 1.0},
+    )
+    cell = result["metrics"][metric.id]
+    assert result["passed"] is True
+    assert cell["response_contract_passed"] is True
+    assert cell["resolution_status"] == "BELOW_REFERENCE_AT_MAX_SEVERITY"
+
+
 def test_phase_shuffle_preserves_each_discrete_power_spectrum():
     rng = np.random.default_rng(18)
     fields = rng.normal(size=(3, 16, 18))
@@ -192,3 +221,30 @@ def test_phase_shuffle_preserves_each_discrete_power_spectrum():
     original_power = np.abs(np.fft.fft2(selected, axes=(-2, -1))) ** 2
     shuffled_power = np.abs(np.fft.fft2(shuffled, axes=(-2, -1))) ** 2
     assert np.allclose(original_power, shuffled_power, rtol=1e-5, atol=1e-5)
+
+
+def test_phase_shuffle_fields_preserves_order_and_power():
+    rng = np.random.default_rng(28)
+    fields = rng.normal(size=(4, 12, 14))
+    shuffled = phase_shuffle_fields(fields, seed=19)
+    original_power = np.abs(np.fft.fft2(fields, axes=(-2, -1))) ** 2
+    shuffled_power = np.abs(np.fft.fft2(shuffled, axes=(-2, -1))) ** 2
+    assert shuffled.shape == fields.shape
+    assert np.allclose(original_power, shuffled_power, rtol=1e-5, atol=1e-5)
+
+
+def test_spatial_lanes_are_identity_at_zero_and_paired_across_severity():
+    fields = np.zeros((3, 10, 10), dtype=np.float32)
+    fields[:, 3:7, 4:6] = 1.0
+    blur = gaussian_blur_lane(
+        severities=(0.0, 0.5, 1.0), expected_metrics=("metric",)
+    )
+    jitter = center_jitter_lane(
+        severities=(0.0, 1.0, 2.0), expected_metrics=("metric",)
+    )
+    assert np.array_equal(blur.apply(fields, 0.0, 7), fields)
+    assert np.array_equal(jitter.apply(fields, 0.0, 7), fields)
+    assert not np.array_equal(blur.apply(fields, 1.0, 7), fields)
+    first = jitter.apply(fields, 2.0, 7)
+    second = jitter.apply(fields, 2.0, 7)
+    assert np.array_equal(first, second)

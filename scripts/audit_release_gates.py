@@ -58,6 +58,42 @@ def main() -> int:
         failures.append("TC preregistration is not frozen for a final test run.")
     if "PENDING" in json.dumps(prereg):
         failures.append("TC preregistration still contains PENDING fields.")
+    control_path = (
+        ROOT
+        / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json"
+    )
+    control_figure = (
+        ROOT
+        / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.pdf"
+    )
+    if not control_path.exists():
+        failures.append("TC Track-1 control artifact is missing.")
+    else:
+        control = json.loads(control_path.read_text(encoding="utf-8"))
+        if control.get("status") != "PASSED":
+            failures.append("TC Track-1 response/copyist controls have not passed.")
+        metadata = control.get("_metadata", {})
+        if metadata.get("test_fields_used") is not False:
+            failures.append("TC Track-1 controls do not attest training-only execution.")
+        control_sources = {
+            "real_train_manifest_sha256": (
+                ROOT / "data/tropical_cyclone_bt/real_train/manifest.json"
+            ),
+            "preregistration_sha256": (
+                ROOT / "case_studies/tropical_cyclone_bt/preregistration.yaml"
+            ),
+            "track1_config_sha256": (
+                ROOT / "case_studies/tropical_cyclone_bt/track1_config.template.yaml"
+            ),
+            "runner_sha256": (
+                ROOT / "case_studies/tropical_cyclone_bt/run_track1_controls.py"
+            ),
+        }
+        for key, source in control_sources.items():
+            if not source.is_file() or metadata.get(key) != _sha256(source):
+                failures.append(f"TC control provenance mismatch: {key}.")
+    if not control_figure.is_file():
+        failures.append("TC Track-1 control figure is missing.")
     artifacts = _yaml(ROOT / "case_studies/tropical_cyclone_bt/artifacts.yaml")
     if not artifacts.get("release_ready"):
         failures.append("TC artifacts are not archived and release-ready.")

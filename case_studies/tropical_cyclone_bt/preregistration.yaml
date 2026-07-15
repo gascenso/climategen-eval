@@ -1,5 +1,5 @@
 schema: gauge_climate.tc_bt_preregistration.v1
-status: METHODS_FROZEN_ARTIFACTS_AND_CONTROLS_PENDING
+status: METHODS_FROZEN_TC_CALIBRATION_AND_ARTIFACTS_PENDING
 final_test_run_permitted: false
 
 scope:
@@ -63,7 +63,7 @@ curve_metrics:
     window: separable_hann
     normalization: divide_by_window_energy
     coordinates: physical_cycles_per_km
-    radial_bins: 24_log_spaced
+    radial_bins: 24_discrete_support_aware_log_targets
     zero_mode: excluded
     missing_values: reject
 
@@ -76,7 +76,22 @@ feature_space:
   memorization_regions: 8
 
 sensitivity_lanes:
-  status: FROZEN_NOT_YET_EXECUTED
+  status: FROZEN
+  design:
+    seed: 1789
+    control_block_count: 80
+    n_control: 1000
+    sampling_estimand: block_balanced
+    reference_resamples: 500
+    reference_boundary_quantile: 0.95
+    sweep_pass_rule: >-
+      Spearman severity rank correlation at least 0.8; whether maximum severity
+      exceeds the real-reference boundary is reported separately as resolution
+    minimum_blocks_per_half: 10
+    feature_fit_samples: 512
+    copyist_resamples: 1000
+    batch_size: 64
+    phase_power_relative_tolerance: 0.00001
   controls:
     copyist: {expected: localized_copying_detected, severity: exact_training_replay}
     blur: {expected: psd_and_gradient_response, sigma_pixels: [0.0, 0.5, 1.0, 2.0]}
@@ -137,3 +152,25 @@ freeze_record:
   binding: git_commit_containing_this_record
   approvers: []
   rationale_document: case_studies/tropical_cyclone_bt/protocol_freeze.md
+  amendments:
+    - date: "2026-07-15"
+      stage: before_final_test_and_before_generated_outcomes
+      change: >-
+        PSD boundaries use distinct observed radial Fourier shells nearest 24
+        log-spaced targets, with geometric-midpoint boundaries.
+      reason: >-
+        Naive geometric edges created empty low-wavenumber bins on the declared
+        256-by-256 grid, making the metric undefined. The support-aware rule
+        preserves 24 ordered physical-wavenumber bins and is fixed before final use.
+    - date: "2026-07-15"
+      stage: after_training_only_control_calibration_before_final_test
+      change: >-
+        Severity-sweep response validity is based on a Spearman trend of at least
+        0.8; crossing the real-reference boundary at maximum severity is retained
+        as a separate resolution result. Binary positive controls still require
+        detection.
+      reason: >-
+        The training-only calibration showed monotone or near-monotone responses
+        below natural storm-to-storm variability for deliberately small blur and
+        centering perturbations. Conflating response validity with detectability
+        would discard responsive metrics instead of reporting their resolution.

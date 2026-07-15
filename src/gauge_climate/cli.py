@@ -228,6 +228,33 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
             sensitivity_results = json.load(handle)
         if not isinstance(sensitivity_results, dict):
             raise ValueError("sensitivity_results must contain a JSON object.")
+    copying_config = feature_node.get("memorization", {}) or {}
+    if memorization_result is not None and bool(
+        copying_config.get("require_copyist_control", False)
+    ):
+        copyist_control = (sensitivity_results or {}).get("copyist")
+        if not isinstance(copyist_control, dict):
+            raise ValueError(
+                "The registered memorization analysis requires a copyist positive control."
+            )
+        raw_status = memorization_result.get("status")
+        memorization_result = {
+            **memorization_result,
+            "copyist_positive_control": {
+                "passed": bool(copyist_control.get("passed", False)),
+                "observed_status": copyist_control.get("result", {}).get("status"),
+            },
+        }
+        if not copyist_control.get("passed", False):
+            memorization_result = {
+                **memorization_result,
+                "status": "CONTROL_FAILED",
+                "uninterpreted_status": raw_status,
+                "reason": (
+                    "Memorization interpretation withheld because the preregistered "
+                    "copyist positive control failed."
+                ),
+            }
     return (
         train,
         real,
