@@ -18,7 +18,8 @@ python -m pip install -e .
 ```
 
 Use `.[xarray]` for the optional xarray/Dask adapter and `.[dev]` to run the
-test suite.
+test suite. The concrete TC downstream CNN is isolated in the optional
+`.[tc-downstream]` extra.
 
 ## One-screen example
 

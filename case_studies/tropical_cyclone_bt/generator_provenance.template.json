@@ -1,0 +1,19 @@
+{
+  "schema": "gauge_climate.tc_generator_fit.v1",
+  "holdout_id": "PENDING_HOLDOUT_ID",
+  "model_family": "baseline_ztsnr",
+  "run_name": "PENDING_UNIQUE_RESTRICTED_RUN_NAME",
+  "withheld_storms": [
+    "PENDING_WITHHELD_STORM"
+  ],
+  "training_storms": [
+    "PENDING_EXACT_RESTRICTED_TRAINING_STORM_LIST"
+  ],
+  "wind_source": "USA_WIND",
+  "wind_averaging_period": "1-minute",
+  "conditioning_variable": "Vmax_kt",
+  "restricted_split_sha256": "PENDING",
+  "generator_config_sha256": "PENDING",
+  "checkpoint_sha256": "PENDING",
+  "sample_bank_manifest_sha256": "PENDING"
+}

@@ -1,0 +1,66 @@
+schema: gauge_climate.tc_track2_config.v1
+
+# Paths are resolved relative to this file. Replace every PENDING value only
+# after the corresponding choice/artifact is frozen.
+data:
+  real_train_manifest: ../../data/tropical_cyclone_bt/real_train/manifest.json
+  real_val_manifest: ../../data/tropical_cyclone_bt/real_val/manifest.json
+
+holdout_plan: track2_holdouts.json
+
+# Each bank must come from a generator independently retrained without the
+# listed holdout storm(s). The full-training development bank is prohibited.
+generated_by_holdout:
+  holdout_1:
+    bank_path: PENDING_RESTRICTED_GENERATOR_BANK
+    generator_provenance: PENDING_RESTRICTED_GENERATOR_PROVENANCE_JSON
+  holdout_2:
+    bank_path: PENDING_RESTRICTED_GENERATOR_BANK
+    generator_provenance: PENDING_RESTRICTED_GENERATOR_PROVENANCE_JSON
+  holdout_3:
+    bank_path: PENDING_RESTRICTED_GENERATOR_BANK
+    generator_provenance: PENDING_RESTRICTED_GENERATOR_PROVENANCE_JSON
+
+matching:
+  wind_bin_edges_kt: [64.0, 83.0, 96.0, 113.0, 137.0]
+
+task_margins:
+  vmax_mae_kt: PENDING_FREEZE
+  category_accuracy: PENDING_FREEZE
+
+cnn:
+  bt_min_k: 170.0
+  bt_max_k: 325.0
+  stage_channels: [32, 64, 128, 256]
+  blocks_per_stage: 2
+  embedding_dim: 256
+  group_norm_groups: 8
+  spatial_dropout_rate: 0.05
+  embedding_dropout_rate: 0.25
+  epochs: 27
+  batch_size: 16
+  learning_rate: 0.0003
+  weight_decay: 0.0005
+  huber_delta: 1.0
+  label_smoothing: 0.04
+  classification_weight: 1.0
+  regression_weight: 1.0
+  gradient_clip_norm: 1.0
+  reduce_lr_factor: 0.5
+  reduce_lr_patience: 5
+  minimum_learning_rate: 0.000001
+  early_stopping_patience: 6
+  min_delta_kt: 0.001
+  deterministic_ops: true
+
+ladder:
+  seeds: [101, 102, 103, 104, 105]
+  bootstrap_resamples: 10000
+  confidence: 0.95
+  alpha: 0.05
+  random_seed: 1789
+  audit_callback_determinism: true
+
+outputs:
+  runs: ../../runs/tc_track2
+  report: ../../outputs/tc_track2/downstream_report.json

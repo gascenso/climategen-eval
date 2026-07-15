@@ -64,6 +64,9 @@ def test_ladder_count_transform_and_pairing_contract():
                 )
             ]
             assert len(set(counts)) == 1
+            for arm in Arm:
+                batch = seen[(holdout.id, seed, arm)]
+                assert batch.metadata["restricted_count"] == 10
             for arm in (Arm.A3_COPY_GEO, Arm.A5_GENERATED_GEO, Arm.A7_RESTORED_REAL_GEO):
                 assert seen[(holdout.id, seed, arm)].metadata["transform_applied"] is True
                 plan = report.plans[holdout.id]["arms"][f"{seed}:{arm.value}"]

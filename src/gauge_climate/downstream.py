@@ -42,7 +42,7 @@ class Holdout:
 
 @dataclass(frozen=True)
 class ArmBatch:
-    fields: np.ndarray
+    fields: Any
     labels: np.ndarray
     matching_strata: np.ndarray
     sample_weights: np.ndarray | None
@@ -53,6 +53,91 @@ class ArmBatch:
 
 TaskCallback = Callable[[ArmBatch, int, str], Mapping[str, Any]]
 TransformCallback = Callable[[np.ndarray, np.ndarray, np.random.Generator], np.ndarray]
+
+
+class _IndexedFields:
+    """Lazy sample-axis view used to avoid copying full gridded archives."""
+
+    def __init__(self, source: Any, indices: np.ndarray):
+        self.source = source
+        self.indices = np.asarray(indices, dtype=np.int64)
+        self.shape = (int(self.indices.size), *tuple(int(v) for v in source.shape[1:]))
+        self.dtype = np.dtype(source.dtype)
+
+    def __len__(self) -> int:
+        return int(self.shape[0])
+
+    def __getitem__(self, key: Any) -> np.ndarray:
+        sample_key, trailing = (key[0], key[1:]) if isinstance(key, tuple) else (key, ())
+        mapped = self.indices[sample_key]
+        values = self.source[mapped]
+        if not trailing:
+            return values
+        return values[trailing] if np.ndim(mapped) == 0 else values[(slice(None), *trailing)]
+
+    def __array__(
+        self, dtype: np.dtype | None = None, copy: bool | None = None
+    ) -> np.ndarray:
+        array = np.asarray(self.source[self.indices], dtype=dtype)
+        return array.copy() if copy else array
+
+
+class _ConcatenatedFields:
+    """Lazy concatenation along the sample axis with arbitrary batch indexing."""
+
+    def __init__(self, parts: Sequence[Any]):
+        self.parts = tuple(part for part in parts if int(part.shape[0]) > 0)
+        if not self.parts:
+            raise ValueError("A lazy field concatenation requires at least one non-empty part.")
+        sample_shape = tuple(int(v) for v in self.parts[0].shape[1:])
+        if any(tuple(int(v) for v in part.shape[1:]) != sample_shape for part in self.parts):
+            raise ValueError("Lazy field concatenation received inconsistent sample shapes.")
+        self.dtype = np.result_type(*(np.dtype(part.dtype) for part in self.parts))
+        sizes = [int(part.shape[0]) for part in self.parts]
+        self._offsets = np.cumsum([0, *sizes], dtype=np.int64)
+        self.shape = (int(sum(sizes)), *sample_shape)
+
+    def __len__(self) -> int:
+        return int(self.shape[0])
+
+    def __getitem__(self, key: Any) -> np.ndarray:
+        sample_key, trailing = (key[0], key[1:]) if isinstance(key, tuple) else (key, ())
+        selected = np.arange(len(self), dtype=np.int64)[sample_key]
+        if np.ndim(selected) == 0:
+            index = int(selected)
+            part_index = int(np.searchsorted(self._offsets[1:], index, side="right"))
+            values = self.parts[part_index][index - int(self._offsets[part_index])]
+            return values[trailing] if trailing else values
+        selected = np.asarray(selected, dtype=np.int64)
+        output = np.empty((selected.size, *self.shape[1:]), dtype=self.dtype)
+        for part_index, part in enumerate(self.parts):
+            start = int(self._offsets[part_index])
+            stop = int(self._offsets[part_index + 1])
+            mask = (selected >= start) & (selected < stop)
+            if np.any(mask):
+                output[mask] = part[selected[mask] - start]
+        return output[(slice(None), *trailing)] if trailing else output
+
+    def __array__(
+        self, dtype: np.dtype | None = None, copy: bool | None = None
+    ) -> np.ndarray:
+        array = np.concatenate([np.asarray(part) for part in self.parts], axis=0)
+        if dtype is not None:
+            array = array.astype(dtype, copy=False)
+        return array.copy() if copy else array
+
+
+def _lazy_source(fields: Any) -> Any:
+    source = fields
+    if hasattr(source, "data") and source.__class__.__module__.startswith("xarray"):
+        source = source.data
+    shape = getattr(source, "shape", None)
+    if shape is None or len(shape) < 2:
+        raise ValueError("Downstream fields must expose shape (N, ...sample dimensions...).")
+    dtype = np.dtype(getattr(source, "dtype", np.float64))
+    if not np.issubdtype(dtype, np.number):
+        raise TypeError("Downstream fields must have a numeric dtype.")
+    return source
 
 
 @dataclass(frozen=True)
@@ -398,7 +483,7 @@ class Ladder:
 
     def _augmented_rows(
         self,
-        source_fields: np.ndarray,
+        source_fields: Any,
         source_labels: np.ndarray,
         source_strata: np.ndarray,
         target_counts: Mapping[Any, int],
@@ -439,20 +524,24 @@ class Ladder:
         arm: Arm,
         *,
         holdout: Holdout,
-        restricted_fields: np.ndarray,
+        restricted_fields: Any,
         restricted_labels: np.ndarray,
         restricted_strata: np.ndarray,
-        restored_fields: np.ndarray,
+        restored_fields: Any,
         restored_labels: np.ndarray,
         restored_strata: np.ndarray,
-        generated_fields: np.ndarray,
+        generated_fields: Any,
         generated_labels: np.ndarray,
         generated_strata: np.ndarray,
         target_counts: Mapping[Any, int],
         arm_seed: int,
     ) -> tuple[ArmBatch, dict[str, Any]]:
         rng = np.random.default_rng(arm_seed)
-        metadata: dict[str, Any] = {"arm_seed": arm_seed, "selected_indices": {}}
+        metadata: dict[str, Any] = {
+            "arm_seed": arm_seed,
+            "selected_indices": {},
+            "restricted_count": int(restricted_labels.shape[0]),
+        }
         weights = None
         if arm is Arm.A0_NO_AUG:
             fields, labels, strata = restricted_fields, restricted_labels, restricted_strata
@@ -538,11 +627,11 @@ class Ladder:
                 ).hexdigest()
             else:
                 metadata["transform_applied"] = False
-            fields = np.concatenate([restricted_fields, extra_fields])
+            fields = _ConcatenatedFields((restricted_fields, extra_fields))
             labels = np.concatenate([restricted_labels, extra_labels])
             strata = np.concatenate([restricted_strata, extra_strata])
         batch = ArmBatch(
-            fields=np.asarray(fields),
+            fields=fields,
             labels=np.asarray(labels),
             matching_strata=np.asarray(strata),
             sample_weights=weights,
@@ -553,7 +642,7 @@ class Ladder:
         return batch, metadata
 
     def run(self) -> LadderReport:
-        train_fields = self.train.as_numpy()
+        train_fields = _lazy_source(self.train.fields)
         train_labels = np.asarray(self.train.labels)
         train_strata = np.asarray(self.matching_strata(train_labels))
         if train_strata.shape != train_labels.shape:
@@ -567,10 +656,10 @@ class Ladder:
             withheld_mask = np.isin(train_blocks, np.asarray(holdout.blocks, dtype=object))
             if not np.any(withheld_mask) or np.all(withheld_mask):
                 raise ValueError(f"Holdout {holdout.id!r} creates an empty restricted/restored side.")
-            restricted_fields = train_fields[~withheld_mask]
+            restricted_fields = _IndexedFields(train_fields, np.flatnonzero(~withheld_mask))
             restricted_labels = train_labels[~withheld_mask]
             restricted_strata = train_strata[~withheld_mask]
-            restored_fields = train_fields[withheld_mask]
+            restored_fields = _IndexedFields(train_fields, np.flatnonzero(withheld_mask))
             restored_labels = train_labels[withheld_mask]
             restored_strata = train_strata[withheld_mask]
             unique, counts = np.unique(restored_strata, return_counts=True)
@@ -578,7 +667,7 @@ class Ladder:
                 label: int(count) for label, count in zip(unique, counts, strict=True)
             }
             generated = self.generated_by_holdout[holdout.id]
-            generated_fields = generated.as_numpy()
+            generated_fields = _lazy_source(generated.fields)
             generated_labels = np.asarray(generated.labels)
             generated_strata = np.asarray(self.matching_strata(generated_labels))
             if generated_strata.shape != generated_labels.shape:
