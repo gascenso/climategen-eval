@@ -303,6 +303,7 @@ def command_run(args: argparse.Namespace) -> int:
         memorization_result=memorization_result,
         sensitivity_results=sensitivity_results,
         conditional=bool(payload.get("conditional", False)),
+        conditional_groups=payload.get("conditional_groups", {}),
     )
     outputs = payload.get("outputs", {})
     json_path = _resolve(path, str(outputs.get("json", "evaluation_card.json")))

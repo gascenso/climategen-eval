@@ -1,5 +1,5 @@
 schema: gauge_climate.tc_bt_preregistration.v1
-status: DRAFT_NOT_FROZEN
+status: METHODS_FROZEN_ARTIFACTS_AND_CONTROLS_PENDING
 final_test_run_permitted: false
 
 scope:
@@ -16,22 +16,25 @@ estimand:
   block: storm_id
   sampling_description: uniformly sample a storm, then uniformly sample an eligible frame
   secondary_frame_weighted: false
-  n_eval: PENDING_FREEZE
+  n_eval: all_available_generated_samples_per_registered_stratum
 
 partitions:
   storm_disjoint_required: true
   wind_source: USA_WIND
   wind_averaging_period: 1-minute
   mixed_wmo_wind_labels_prohibited: true
-  train_manifest_sha256: PENDING
-  validation_manifest_sha256: PENDING
-  test_manifest_sha256: PENDING
+  train_manifest_sha256: f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a
+  validation_manifest_sha256: c64ad082f47d60956a31233f571e347a00cd3304fa90dc2db22289dba456a3ed
+  test_manifest_sha256: edd7d0f6bf3ec37c5332b53ee57afd9f690f32a6d98def7d3af60cdcb53fd89e
   thin_stratum: C5
   predeclared_aggregate:
     id: C4_plus
     members: [C4, C5]
-    scientific_rationale: PENDING_FREEZE
-  temporal_shift_analysis: PENDING_FREEZE
+    scientific_rationale: >-
+      C4 and C5 are both major hurricanes (Vmax at least 113 kt); aggregating them
+      preserves an operationally meaningful threshold while stabilizing the thin
+      C5 reference (85 frames from 22 test storms).
+  temporal_shift_analysis: descriptive_secondary_only_no_endpoint_switching
 
 models:
   candidates: [baseline_ztsnr]
@@ -40,13 +43,13 @@ models:
   checkpoint_selection_rule: weights_ema_best_val; selected without Track-1 test metrics
 
 functionals:
-  - {id: min_core_bt, units: K, support: [170.0, 325.0], tolerance: PENDING}
-  - {id: cold_frac_220, units: percent, support: [0.0, 100.0], tolerance: PENDING}
-  - {id: r_maxgrad, units: km, support: [0.0, 500.0], tolerance: PENDING}
-  - {id: axisym, units: K, support: [0.0, 155.0], tolerance: PENDING}
-  - {id: dav, units: degree_squared, support: [0.0, 8100.0], tolerance: PENDING}
-  - {id: eye_contrast, units: K, support: [-155.0, 155.0], tolerance: PENDING}
-  - {id: p01_bt, units: K, support: [170.0, 325.0], tolerance: PENDING}
+  - {id: min_core_bt, units: K, support: [170.0, 325.0], tolerance: 1.0}
+  - {id: cold_frac_220, units: percent, support: [0.0, 100.0], tolerance: 1.0}
+  - {id: r_maxgrad, units: km, support: [0.0, 500.0], tolerance: 15.625}
+  - {id: axisym, units: K, support: [0.0, 155.0], tolerance: 1.0}
+  - {id: dav, units: degree_squared, support: [0.0, 8100.0], tolerance: 100.0}
+  - {id: eye_contrast, units: K, support: [-155.0, 155.0], tolerance: 1.0}
+  - {id: p01_bt, units: K, support: [170.0, 325.0], tolerance: 1.0}
 
 curve_metrics:
   radial_profile:
@@ -67,25 +70,30 @@ curve_metrics:
 feature_space:
   fit_split: training_only
   scalar_standardization: training_mean_sd
-  eof_components: PENDING_FREEZE
-  eof_fit_sample_count: PENDING_FREEZE
+  eof_components: 20
+  eof_fit_sample_count: 512
   mmd_bandwidth_rule: training_only_median_distance
-  memorization_regions: PENDING_FREEZE
+  memorization_regions: 8
 
 sensitivity_lanes:
-  status: PENDING_FREEZE
+  status: FROZEN_NOT_YET_EXECUTED
   controls:
     copyist: {expected: localized_copying_detected, severity: exact_training_replay}
-    blur: {expected: psd_and_gradient_response, sigma_pixels: PENDING}
-    phase_shuffle: {expected: structure_response_with_spectrum_control, severity: PENDING}
-    warm_shift: {expected: monotone_BT_functional_response, kelvin: PENDING}
-    center_jitter: {expected: radial_structure_response, pixels: PENDING}
+    blur: {expected: psd_and_gradient_response, sigma_pixels: [0.0, 0.5, 1.0, 2.0]}
+    phase_shuffle: {expected: structure_response_with_spectrum_control, severity: full}
+    warm_shift: {expected: monotone_BT_functional_response, kelvin: [0.0, 0.5, 1.0, 2.0, 4.0]}
+    center_jitter: {expected: radial_structure_response, pixels: [0, 1, 2, 4]}
   interpretation_rule: a metric failing its predeclared response is not interpreted
 
 track2:
   holdouts:
     count: 3
-    storm_ids: PENDING_FREEZE
+    storm_ids: [2006259N19155, 2016273N13300, 2018269N11220]
+    plan_sha256: eb4a3b04eb45b51945ad90f8b2522c47096a7af9f09202b001998c6e9ac9aab9
+    selection_seed: 1789
+    eligibility: >-
+      at least 20 total frames, at least 10 C4+ frames, at least one C5 frame,
+      and every exact Vmax value represented in the restricted training set
     whole_storm_removal: true
   generator_retrained_per_holdout: true
   full_training_generator_bank_role: development_only_prohibited_for_final_contrasts
@@ -95,7 +103,7 @@ track2:
     source_distribution: restricted_training_only
   matching_strata:
     variable: Vmax
-    bin_edges_kt: PENDING_FREEZE
+    policy: exact_value_kt
   downstream_seeds: [101, 102, 103, 104, 105]
   callback_determinism_audit: true
   transforms:
@@ -103,28 +111,29 @@ track2:
     rotations: right_angles
     translations_pixels: [-2, 2]
     boundary: reflect_padding
-    status: PENDING_FREEZE
+    status: FROZEN
   primary_endpoint:
     task: Vmax_regression
-    metric: PENDING_FREEZE
-    delta_task: PENDING_FREEZE
+    metric: storm_balanced_MAE_kt
+    delta_task: 2.5
   secondary_endpoint:
     task: intensity_category_classification
-    metric: PENDING_FREEZE
-    delta_task: PENDING_FREEZE
+    metric: storm_balanced_accuracy
+    delta_task: 0.02
   headline_contrast: A5_generated_geo_minus_A3_copy_geo
   source_only_contrast: A4_generated_minus_A2_copy
   headroom_contrast: A7_restored_real_geo_minus_A3_copy_geo
   holdout_heterogeneity: report_each_plus_hierarchical_summary
 
 exclusions:
-  corrupt_or_missing_fields: PENDING_FREEZE
+  corrupt_or_missing_fields: reject_before_run_and_report_count
   failed_generator_samples: report_and_count_as_admissibility_failures
   posthoc_endpoint_switching: prohibited
   posthoc_stratum_merging: prohibited
 
 freeze_record:
-  frozen_at_utc: null
-  commit: null
+  frozen_at_utc: "2026-07-15T19:57:32Z"
+  base_commit: b765b73
+  binding: git_commit_containing_this_record
   approvers: []
-  rationale_document: PENDING
+  rationale_document: case_studies/tropical_cyclone_bt/protocol_freeze.md

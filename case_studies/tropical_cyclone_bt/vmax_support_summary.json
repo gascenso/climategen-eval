@@ -1,0 +1,581 @@
+{
+  "schema": "gauge_climate.tc_bt_vmax_support_audit.v1",
+  "wind_source": "USA_WIND",
+  "wind_averaging_period": "1-minute",
+  "interpretation": "Repeated conditioning values are assessed against the corresponding corrected real discrete distribution; repetition alone is not evidence of generator conditioning collapse.",
+  "generated_majority_value_cells": [
+    {
+      "bank": "cnn_train",
+      "class_id": 5,
+      "wind_kt": 140.0,
+      "count": 2691,
+      "share": 0.5827197921177999
+    }
+  ],
+  "banks": {
+    "track1_test": {
+      "role": "Track-1 held-out generation",
+      "bank_manifest": "data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000/manifest.json",
+      "bank_manifest_sha256": "722b5c45a15502a348adfae90b343fe1b2288e0652084131fc66333cc84facce",
+      "reference_manifest": "data/tropical_cyclone_bt/real_test/manifest.json",
+      "reference_manifest_sha256": "edd7d0f6bf3ec37c5332b53ee57afd9f690f32a6d98def7d3af60cdcb53fd89e",
+      "classes": {
+        "0": {
+          "generated": {
+            "n": 1000,
+            "n_unique": 12,
+            "min_kt": 35.0,
+            "q25_kt": 40.0,
+            "median_kt": 45.0,
+            "q75_kt": 55.0,
+            "max_kt": 63.0,
+            "mean_kt": 45.65999984741211,
+            "sd_kt": 8.384771347045898,
+            "most_common": {
+              "wind_kt": 35.0,
+              "count": 224,
+              "share": 0.224
+            },
+            "support_kt": [
+              35.0,
+              38.0,
+              40.0,
+              43.0,
+              45.0,
+              48.0,
+              50.0,
+              53.0,
+              55.0,
+              58.0,
+              60.0,
+              63.0
+            ]
+          },
+          "real_reference": {
+            "n": 3942,
+            "n_unique": 13,
+            "min_kt": 35.0,
+            "q25_kt": 40.0,
+            "median_kt": 45.0,
+            "q75_kt": 55.0,
+            "max_kt": 63.0,
+            "mean_kt": 45.872398376464844,
+            "sd_kt": 8.290771484375,
+            "most_common": {
+              "wind_kt": 35.0,
+              "count": 837,
+              "share": 0.21232876712328766
+            },
+            "support_kt": [
+              35.0,
+              38.0,
+              40.0,
+              43.0,
+              45.0,
+              48.0,
+              50.0,
+              53.0,
+              55.0,
+              58.0,
+              59.0,
+              60.0,
+              63.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.031481481481481485
+        },
+        "1": {
+          "generated": {
+            "n": 1000,
+            "n_unique": 7,
+            "min_kt": 65.0,
+            "q25_kt": 65.0,
+            "median_kt": 70.0,
+            "q75_kt": 75.0,
+            "max_kt": 80.0,
+            "mean_kt": 71.35399627685547,
+            "sd_kt": 5.567646026611328,
+            "most_common": {
+              "wind_kt": 65.0,
+              "count": 342,
+              "share": 0.342
+            },
+            "support_kt": [
+              65.0,
+              68.0,
+              70.0,
+              73.0,
+              75.0,
+              78.0,
+              80.0
+            ]
+          },
+          "real_reference": {
+            "n": 1318,
+            "n_unique": 7,
+            "min_kt": 65.0,
+            "q25_kt": 65.0,
+            "median_kt": 70.0,
+            "q75_kt": 75.0,
+            "max_kt": 80.0,
+            "mean_kt": 71.2928695678711,
+            "sd_kt": 5.603147506713867,
+            "most_common": {
+              "wind_kt": 65.0,
+              "count": 462,
+              "share": 0.3505311077389985
+            },
+            "support_kt": [
+              65.0,
+              68.0,
+              70.0,
+              73.0,
+              75.0,
+              78.0,
+              80.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.012142640364188152
+        },
+        "2": {
+          "generated": {
+            "n": 1000,
+            "n_unique": 6,
+            "min_kt": 83.0,
+            "q25_kt": 85.0,
+            "median_kt": 90.0,
+            "q75_kt": 90.0,
+            "max_kt": 95.0,
+            "mean_kt": 89.29100036621094,
+            "sd_kt": 3.4670333862304688,
+            "most_common": {
+              "wind_kt": 90.0,
+              "count": 490,
+              "share": 0.49
+            },
+            "support_kt": [
+              83.0,
+              85.0,
+              88.0,
+              90.0,
+              93.0,
+              95.0
+            ]
+          },
+          "real_reference": {
+            "n": 700,
+            "n_unique": 6,
+            "min_kt": 83.0,
+            "q25_kt": 85.0,
+            "median_kt": 90.0,
+            "q75_kt": 90.0,
+            "max_kt": 95.0,
+            "mean_kt": 89.39571380615234,
+            "sd_kt": 3.542675733566284,
+            "most_common": {
+              "wind_kt": 90.0,
+              "count": 332,
+              "share": 0.4742857142857143
+            },
+            "support_kt": [
+              83.0,
+              85.0,
+              88.0,
+              90.0,
+              93.0,
+              95.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.02014285714285712
+        },
+        "3": {
+          "generated": {
+            "n": 1000,
+            "n_unique": 6,
+            "min_kt": 98.0,
+            "q25_kt": 100.0,
+            "median_kt": 105.0,
+            "q75_kt": 108.0,
+            "max_kt": 110.0,
+            "mean_kt": 104.072998046875,
+            "sd_kt": 3.9999587535858154,
+            "most_common": {
+              "wind_kt": 100.0,
+              "count": 424,
+              "share": 0.424
+            },
+            "support_kt": [
+              98.0,
+              100.0,
+              103.0,
+              105.0,
+              108.0,
+              110.0
+            ]
+          },
+          "real_reference": {
+            "n": 505,
+            "n_unique": 6,
+            "min_kt": 98.0,
+            "q25_kt": 100.0,
+            "median_kt": 105.0,
+            "q75_kt": 110.0,
+            "max_kt": 110.0,
+            "mean_kt": 104.19603729248047,
+            "sd_kt": 4.038329124450684,
+            "most_common": {
+              "wind_kt": 100.0,
+              "count": 210,
+              "share": 0.4158415841584158
+            },
+            "support_kt": [
+              98.0,
+              100.0,
+              103.0,
+              105.0,
+              108.0,
+              110.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.015326732673267339
+        },
+        "4": {
+          "generated": {
+            "n": 1000,
+            "n_unique": 8,
+            "min_kt": 113.0,
+            "q25_kt": 115.0,
+            "median_kt": 120.0,
+            "q75_kt": 125.0,
+            "max_kt": 135.0,
+            "mean_kt": 122.0469970703125,
+            "sd_kt": 6.5909624099731445,
+            "most_common": {
+              "wind_kt": 115.0,
+              "count": 321,
+              "share": 0.321
+            },
+            "support_kt": [
+              113.0,
+              115.0,
+              118.0,
+              120.0,
+              123.0,
+              125.0,
+              130.0,
+              135.0
+            ]
+          },
+          "real_reference": {
+            "n": 461,
+            "n_unique": 8,
+            "min_kt": 113.0,
+            "q25_kt": 115.0,
+            "median_kt": 120.0,
+            "q75_kt": 125.0,
+            "max_kt": 135.0,
+            "mean_kt": 121.65943908691406,
+            "sd_kt": 6.4241838455200195,
+            "most_common": {
+              "wind_kt": 115.0,
+              "count": 152,
+              "share": 0.3297180043383948
+            },
+            "support_kt": [
+              113.0,
+              115.0,
+              118.0,
+              120.0,
+              123.0,
+              125.0,
+              130.0,
+              135.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.031190889370932753
+        },
+        "5": {
+          "generated": {
+            "n": 1000,
+            "n_unique": 9,
+            "min_kt": 138.0,
+            "q25_kt": 140.0,
+            "median_kt": 140.0,
+            "q75_kt": 150.0,
+            "max_kt": 170.0,
+            "mean_kt": 146.4759979248047,
+            "sd_kt": 8.725790023803711,
+            "most_common": {
+              "wind_kt": 140.0,
+              "count": 483,
+              "share": 0.483
+            },
+            "support_kt": [
+              138.0,
+              140.0,
+              143.0,
+              145.0,
+              150.0,
+              155.0,
+              160.0,
+              165.0,
+              170.0
+            ]
+          },
+          "real_reference": {
+            "n": 85,
+            "n_unique": 9,
+            "min_kt": 138.0,
+            "q25_kt": 140.0,
+            "median_kt": 140.0,
+            "q75_kt": 150.0,
+            "max_kt": 170.0,
+            "mean_kt": 146.04705810546875,
+            "sd_kt": 8.767460823059082,
+            "most_common": {
+              "wind_kt": 140.0,
+              "count": 45,
+              "share": 0.5294117647058824
+            },
+            "support_kt": [
+              138.0,
+              140.0,
+              143.0,
+              145.0,
+              150.0,
+              155.0,
+              160.0,
+              165.0,
+              170.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.05500000000000001
+        }
+      }
+    },
+    "cnn_train": {
+      "role": "tc-diffusion evaluator synthetic augmentation",
+      "bank_manifest": "data/tropical_cyclone_bt/generated/baseline_ztsnr/train/aug_guidance_train/manifest.json",
+      "bank_manifest_sha256": "f73d067e8daf11ca7d87881ed7fdf0570bcdb21c57908124dbcd6348dc4bf241",
+      "reference_manifest": "data/tropical_cyclone_bt/real_train/manifest.json",
+      "reference_manifest_sha256": "f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a",
+      "classes": {
+        "3": {
+          "generated": {
+            "n": 1718,
+            "n_unique": 6,
+            "min_kt": 98.0,
+            "q25_kt": 100.0,
+            "median_kt": 105.0,
+            "q75_kt": 108.0,
+            "max_kt": 110.0,
+            "mean_kt": 103.96391296386719,
+            "sd_kt": 4.071949005126953,
+            "most_common": {
+              "wind_kt": 100.0,
+              "count": 722,
+              "share": 0.420256111757858
+            },
+            "support_kt": [
+              98.0,
+              100.0,
+              103.0,
+              105.0,
+              108.0,
+              110.0
+            ]
+          },
+          "real_reference": {
+            "n": 3547,
+            "n_unique": 6,
+            "min_kt": 98.0,
+            "q25_kt": 100.0,
+            "median_kt": 105.0,
+            "q75_kt": 108.0,
+            "max_kt": 110.0,
+            "mean_kt": 104.03890991210938,
+            "sd_kt": 4.091793537139893,
+            "most_common": {
+              "wind_kt": 100.0,
+              "count": 1482,
+              "share": 0.417817874259938
+            },
+            "support_kt": [
+              98.0,
+              100.0,
+              103.0,
+              105.0,
+              108.0,
+              110.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.008655431322539538
+        },
+        "4": {
+          "generated": {
+            "n": 1757,
+            "n_unique": 11,
+            "min_kt": 113.0,
+            "q25_kt": 115.0,
+            "median_kt": 120.0,
+            "q75_kt": 125.0,
+            "max_kt": 135.0,
+            "mean_kt": 121.63972473144531,
+            "sd_kt": 6.654877185821533,
+            "most_common": {
+              "wind_kt": 115.0,
+              "count": 641,
+              "share": 0.3648264086511098
+            },
+            "support_kt": [
+              113.0,
+              115.0,
+              118.0,
+              120.0,
+              123.0,
+              124.0,
+              125.0,
+              128.0,
+              130.0,
+              133.0,
+              135.0
+            ]
+          },
+          "real_reference": {
+            "n": 3508,
+            "n_unique": 12,
+            "min_kt": 113.0,
+            "q25_kt": 115.0,
+            "median_kt": 120.0,
+            "q75_kt": 125.0,
+            "max_kt": 135.0,
+            "mean_kt": 121.85946655273438,
+            "sd_kt": 6.683334827423096,
+            "most_common": {
+              "wind_kt": 115.0,
+              "count": 1211,
+              "share": 0.3452109464082098
+            },
+            "support_kt": [
+              113.0,
+              115.0,
+              118.0,
+              120.0,
+              122.0,
+              123.0,
+              124.0,
+              125.0,
+              128.0,
+              130.0,
+              133.0,
+              135.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.023614939168233366
+        },
+        "5": {
+          "generated": {
+            "n": 4618,
+            "n_unique": 11,
+            "min_kt": 138.0,
+            "q25_kt": 140.0,
+            "median_kt": 140.0,
+            "q75_kt": 145.0,
+            "max_kt": 185.0,
+            "mean_kt": 144.0281524658203,
+            "sd_kt": 6.324116230010986,
+            "most_common": {
+              "wind_kt": 140.0,
+              "count": 2691,
+              "share": 0.5827197921177999
+            },
+            "support_kt": [
+              138.0,
+              140.0,
+              143.0,
+              145.0,
+              148.0,
+              150.0,
+              155.0,
+              160.0,
+              165.0,
+              180.0,
+              185.0
+            ]
+          },
+          "real_reference": {
+            "n": 647,
+            "n_unique": 11,
+            "min_kt": 138.0,
+            "q25_kt": 140.0,
+            "median_kt": 140.0,
+            "q75_kt": 145.0,
+            "max_kt": 185.0,
+            "mean_kt": 144.00772094726562,
+            "sd_kt": 6.1945481300354,
+            "most_common": {
+              "wind_kt": 140.0,
+              "count": 376,
+              "share": 0.5811437403400309
+            },
+            "support_kt": [
+              138.0,
+              140.0,
+              143.0,
+              145.0,
+              148.0,
+              150.0,
+              155.0,
+              160.0,
+              165.0,
+              180.0,
+              185.0
+            ]
+          },
+          "generated_support_subset_of_reference": true,
+          "discrete_distribution_total_variation": 0.007066629270718763
+        }
+      },
+      "tc_diffusion_evaluator_runs": [
+        {
+          "run": "cm_E3_s42",
+          "evidence": "data/tropical_cyclone_bt/source_manifests/runs__cm_E3_s42__synthetic_augmentation.json",
+          "evidence_sha256": "10d31987cc4b00ff8c9b0e4b0e9abdd6a2516ca0945db4220c013812cfcea24d",
+          "per_class_used": {
+            "3": 1718,
+            "4": 1757,
+            "5": 4618
+          }
+        },
+        {
+          "run": "cm_E3_s43",
+          "evidence": "data/tropical_cyclone_bt/source_manifests/runs__cm_E3_s43__synthetic_augmentation.json",
+          "evidence_sha256": "10d31987cc4b00ff8c9b0e4b0e9abdd6a2516ca0945db4220c013812cfcea24d",
+          "per_class_used": {
+            "3": 1718,
+            "4": 1757,
+            "5": 4618
+          }
+        },
+        {
+          "run": "cm_E3_s44",
+          "evidence": "data/tropical_cyclone_bt/source_manifests/runs__cm_E3_s44__synthetic_augmentation.json",
+          "evidence_sha256": "10d31987cc4b00ff8c9b0e4b0e9abdd6a2516ca0945db4220c013812cfcea24d",
+          "per_class_used": {
+            "3": 1718,
+            "4": 1757,
+            "5": 4618
+          }
+        }
+      ]
+    }
+  }
+}

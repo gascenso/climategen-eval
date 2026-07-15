@@ -636,6 +636,9 @@ def copy_source_manifests(*, source_repo: Path, output_root: Path, overwrite: bo
         "data/packed_tc_memmap_usa1min/rel_paths.txt",
         "runs/baseline_ztsnr/config.yaml",
         "runs/baseline_ztsnr/meta.json",
+        "runs/cm_E3_s42/synthetic_augmentation.json",
+        "runs/cm_E3_s43/synthetic_augmentation.json",
+        "runs/cm_E3_s44/synthetic_augmentation.json",
     ]:
         src = source_repo / rel
         dst = dst_root / rel.replace("/", "__")

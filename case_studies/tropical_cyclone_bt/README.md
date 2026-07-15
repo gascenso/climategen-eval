@@ -50,6 +50,12 @@ training or explicitly reserved real blocks only.
 After all three real splits are prepared, generate and audit Table 1 inputs with
 `python case_studies/tropical_cyclone_bt/summarize_partitions.py`.
 
+Audit the discrete Vmax conditioning support in both selected sample banks with
+`python case_studies/tropical_cyclone_bt/audit_vmax_support.py`. The generated
+conditioning distribution is compared with the corresponding corrected real
+split, so common operationally reported wind values are not mistaken for model
+collapse.
+
 ## Track 2
 
 Vmax regression is primary and category classification secondary. Three
@@ -75,8 +81,15 @@ examining downstream results:
 ```bash
 python case_studies/tropical_cyclone_bt/plan_track2_holdouts.py \
   --real-manifest data/tropical_cyclone_bt/real_train/manifest.json \
-  --eligible-label 4 --eligible-label 5
+  --eligible-label 4 --eligible-label 5 --require-label 5 \
+  --minimum-frames 20 --minimum-eligible-frames 10
 ```
+
+The frozen seed selected storms `2006259N19155`, `2016273N13300`, and
+`2018269N11220` from 97 eligible storms. Added copy, generated, and restored-real
+rows are matched at the exact reported Vmax value—not merely by intensity
+category—because Vmax regression is primary. Each selected storm's Vmax support
+also occurs in its restricted training partition.
 
 `downstream_cnn.py` provides the concrete TensorFlow task callback, adapted from
 `tc-diffusion/tc_diffusion/evaluator`. It trains a residual CNN with Vmax and
@@ -107,5 +120,7 @@ python scripts/audit_release_gates.py
 python case_studies/tropical_cyclone_bt/plan_track2_holdouts.py --help
 ```
 
-The first command is expected to fail until the preregistration, survey, and
-artifact gates are genuinely complete. Do not bypass it for a release.
+The first command is expected to fail until the scientific controls and artifact
+gates are genuinely complete. The literature survey is currently a separate
+workstream; add `--include-survey` only for the full manuscript audit. Do not
+bypass failed software/TC gates for a release.

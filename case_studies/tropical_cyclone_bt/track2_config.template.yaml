@@ -22,11 +22,11 @@ generated_by_holdout:
     generator_provenance: PENDING_RESTRICTED_GENERATOR_PROVENANCE_JSON
 
 matching:
-  wind_bin_edges_kt: [64.0, 83.0, 96.0, 113.0, 137.0]
+  policy: exact_vmax_kt
 
 task_margins:
-  vmax_mae_kt: PENDING_FREEZE
-  category_accuracy: PENDING_FREEZE
+  vmax_mae_kt: 2.5
+  category_accuracy: 0.02
 
 cnn:
   bt_min_k: 170.0

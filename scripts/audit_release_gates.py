@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -44,6 +45,13 @@ def _verify_checksum_manifest(
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--include-survey",
+        action="store_true",
+        help="Also enforce manuscript literature-survey verification artifacts.",
+    )
+    args = parser.parse_args()
     failures = []
     prereg = _yaml(ROOT / "case_studies/tropical_cyclone_bt/preregistration.yaml")
     if prereg.get("status") != "FROZEN" or not prereg.get("final_test_run_permitted"):
@@ -82,28 +90,33 @@ def main() -> int:
         failures.append(
             "Absolute local symlinks remain: " + ", ".join(absolute_symlinks[:8])
         )
-    summary_path = ROOT / "survey/exports/summary.json"
-    if not summary_path.exists():
-        failures.append("Survey summary has not been generated.")
-    else:
-        summary = json.loads(summary_path.read_text(encoding="utf-8"))
-        if not summary.get("verification", {}).get("headline_use_permitted"):
-            failures.append("Survey verification does not permit headline use.")
-    survey_manifest = ROOT / "survey/exports/manifest.json"
-    failures.extend(
-        _verify_checksum_manifest(
-            survey_manifest,
-            files_root=ROOT / "survey/exports",
-            mapping_key="outputs",
+    if args.include_survey:
+        summary_path = ROOT / "survey/exports/summary.json"
+        if not summary_path.exists():
+            failures.append("Survey summary has not been generated.")
+        else:
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            if not summary.get("verification", {}).get("headline_use_permitted"):
+                failures.append("Survey verification does not permit headline use.")
+        survey_manifest = ROOT / "survey/exports/manifest.json"
+        failures.extend(
+            _verify_checksum_manifest(
+                survey_manifest,
+                files_root=ROOT / "survey/exports",
+                mapping_key="outputs",
+            )
         )
-    )
-    if survey_manifest.exists():
-        survey_checksums = json.loads(survey_manifest.read_text(encoding="utf-8"))
-        survey_source = ROOT / "docs/methods/genAI_climate_eval_survey.xlsx"
-        if not survey_source.is_file():
-            failures.append("Survey source workbook is missing.")
-        elif _sha256(survey_source) != survey_checksums.get("source_sha256"):
-            failures.append("Survey source workbook checksum does not match its export manifest.")
+        if survey_manifest.exists():
+            survey_checksums = json.loads(
+                survey_manifest.read_text(encoding="utf-8")
+            )
+            survey_source = ROOT / "docs/methods/genAI_climate_eval_survey.xlsx"
+            if not survey_source.is_file():
+                failures.append("Survey source workbook is missing.")
+            elif _sha256(survey_source) != survey_checksums.get("source_sha256"):
+                failures.append(
+                    "Survey source workbook checksum does not match its export manifest."
+                )
     validation_path = ROOT / "validation/statistical_validation_v0.1.json"
     if not validation_path.exists():
         failures.append("Statistical validation artifact is missing.")
@@ -124,11 +137,13 @@ def main() -> int:
     if not (ROOT / "case_studies/tropical_cyclone_bt/partition_summary.json").exists():
         failures.append("TC storm/frame/class partition summary is missing.")
     if failures:
-        print("GAUGE release gates: FAILED")
+        scope = "paper" if args.include_survey else "software/TC"
+        print(f"GAUGE {scope} release gates: FAILED")
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print("GAUGE release gates: PASSED")
+    scope = "paper" if args.include_survey else "software/TC"
+    print(f"GAUGE {scope} release gates: PASSED")
     return 0
 
 

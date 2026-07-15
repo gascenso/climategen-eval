@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -79,6 +80,9 @@ def main() -> int:
     )
     if len(holdouts) != 3:
         raise ValueError("The final TC Track-2 protocol requires exactly three holdouts.")
+    holdout_nodes = {
+        str(node["id"]): node for node in holdout_plan["holdouts"]
+    }
     configured = config.get("generated_by_holdout", {})
     generated = {}
     provenance = {}
@@ -86,6 +90,23 @@ def main() -> int:
     train_blocks = np.asarray([str(value) for value in train.blocks], dtype=object)
     train_winds = np.asarray(train.labels, dtype=np.float32)
     for holdout in holdouts:
+        withheld_mask = np.isin(
+            train_blocks, np.asarray(holdout.blocks, dtype=object)
+        )
+        observed_winds = dict(sorted(
+            Counter(f"{value:g}" for value in train_winds[withheld_mask]).items(),
+            key=lambda item: float(item[0]),
+        ))
+        declared_winds = {
+            str(key): int(value)
+            for key, value in holdout_nodes[holdout.id].get(
+                "wind_counts_kt", {}
+            ).items()
+        }
+        if observed_winds != declared_winds:
+            raise ValueError(
+                f"Holdout plan has incorrect exact Vmax counts for {holdout.id}."
+            )
         if holdout.id not in configured:
             raise ValueError(f"Missing generated/provenance artifacts for {holdout.id}.")
         node = configured[holdout.id]
@@ -171,9 +192,8 @@ def main() -> int:
         raise ValueError("Freeze numeric Vmax and category task margins before running.") from exc
     if vmax_margin <= 0 or category_margin <= 0:
         raise ValueError("Track-2 task margins must be positive.")
-    edges = np.asarray(config["matching"]["wind_bin_edges_kt"], dtype=np.float32)
-    if edges.shape != (5,) or not np.all(np.diff(edges) > 0):
-        raise ValueError("TC Track-2 requires five increasing wind-bin edges.")
+    if config.get("matching", {}).get("policy") != "exact_vmax_kt":
+        raise ValueError("TC Track-2 requires exact-Vmax matching across added arms.")
 
     report = Ladder(
         task=task,
@@ -199,8 +219,14 @@ def main() -> int:
             "boundary": "reflect padding",
             "applies_to": "matched added samples only",
         },
-        matching_strata=lambda values: np.digitize(values, edges),
-        matching_metadata={"policy": "frozen_vmax_bins", "edges_kt": edges.tolist()},
+        matching_strata=lambda values: np.asarray(values, dtype=np.float32),
+        matching_metadata={
+            "policy": "exact_vmax_kt",
+            "rationale": (
+                "Primary task is continuous Vmax regression; exact matching removes "
+                "conditioning-label distribution as an arm-level confound."
+            ),
+        },
         config=LadderConfig(**ladder_node),
     ).run()
     output = _resolve(base, config["outputs"]["report"])

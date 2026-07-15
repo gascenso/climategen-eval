@@ -258,6 +258,30 @@ def test_thin_conditional_stratum_is_reported_underpowered():
     assert thin.practical_status is gauge.PracticalStatus.UNDERPOWERED
 
 
+def test_predeclared_conditional_aggregate_is_an_explicit_report_stratum():
+    train, real, generated = _datasets()
+    real_labels = np.tile([0, 1], real.n_samples // 2)
+    generated_labels = np.tile([0, 1], generated.n_samples // 2)
+    real = gauge.Dataset(real.fields, blocks=real.blocks, labels=real_labels)
+    generated = gauge.Dataset(generated.fields, labels=generated_labels)
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(),
+        conditional=False,
+        conditional_groups={"all_labels": (0, 1)},
+    )
+    assert {cell.stratum for cell in report.cells} == {"global", "all_labels"}
+    assert report.metadata["analysis"]["conditional_groups"] == {
+        "all_labels": [0, 1]
+    }
+
+
 def test_report_round_trip_and_render():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(

@@ -9,7 +9,7 @@ from typing import Any
 import numpy as np
 import scipy
 
-from .data import Dataset, label_indices, normalized_blocks, validate_generated, validate_split
+from .data import Dataset, normalized_blocks, validate_generated, validate_split
 from .inference import (
     Interval,
     dkw_w1_interval,
@@ -75,8 +75,16 @@ def _metric_manifest(metric: MetricSpec) -> dict[str, Any]:
     }
 
 
-def _config_hash(config: EvaluationConfig, manifests: Sequence[Mapping[str, Any]]) -> str:
-    payload = {"config": config.to_dict(), "metrics": list(manifests)}
+def _config_hash(
+    config: EvaluationConfig,
+    manifests: Sequence[Mapping[str, Any]],
+    analysis: Mapping[str, Any],
+) -> str:
+    payload = {
+        "config": config.to_dict(),
+        "metrics": list(manifests),
+        "analysis": dict(analysis),
+    }
     encoded = json.dumps(
         _jsonable(payload), sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
@@ -233,6 +241,7 @@ def evaluate(
     conditional: bool | str = False,
     memorization_result: Mapping[str, Any] | None = None,
     sensitivity_results: Mapping[str, Any] | None = None,
+    conditional_groups: Mapping[str, Sequence[Any]] | None = None,
 ) -> EvaluationReport:
     """Evaluate generated fields using the two-layer GAUGE Track-1 protocol."""
 
@@ -298,16 +307,59 @@ def evaluate(
             )
         transformed[metric.id] = transform_cache[cache_key]
 
-    groups: list[tuple[str, Any | None]] = [("global", None)]
-    if conditional:
+    groups: list[tuple[str, np.ndarray, np.ndarray]] = [
+        (
+            "global",
+            np.arange(real.n_samples, dtype=np.int64),
+            np.arange(generated.n_samples, dtype=np.int64),
+        )
+    ]
+    normalized_conditional_groups = {
+        str(name): tuple(values)
+        for name, values in (conditional_groups or {}).items()
+    }
+    if conditional or normalized_conditional_groups:
         if real.labels is None or generated.labels is None:
             raise ValueError("Conditional evaluation requires labels on real and generated data.")
-        real_labels = set(np.asarray(real.labels).tolist())
-        generated_labels = set(np.asarray(generated.labels).tolist())
+        real_label_array = np.asarray(real.labels)
+        generated_label_array = np.asarray(generated.labels)
+        real_labels = set(real_label_array.tolist())
+        generated_labels = set(generated_label_array.tolist())
         missing = sorted(str(value) for value in real_labels ^ generated_labels)
         if missing:
             raise ValueError(f"Conditional label support differs: {', '.join(missing)}")
-        groups.extend((str(label), label) for label in sorted(real_labels, key=str))
+        if conditional:
+            groups.extend(
+                (
+                    str(label),
+                    np.flatnonzero(real_label_array == label),
+                    np.flatnonzero(generated_label_array == label),
+                )
+                for label in sorted(real_labels, key=str)
+            )
+        occupied_names = {name for name, _, _ in groups}
+        for name, members in normalized_conditional_groups.items():
+            if not name or name in occupied_names:
+                raise ValueError(f"Conditional group name {name!r} is empty or duplicated.")
+            if not members or len(members) != len(set(members)):
+                raise ValueError(
+                    f"Conditional group {name!r} needs unique supported labels."
+                )
+            unsupported = sorted(
+                str(value) for value in set(members) - real_labels
+            )
+            if unsupported:
+                raise ValueError(
+                    f"Conditional group {name!r} has unsupported labels: {unsupported}."
+                )
+            groups.append(
+                (
+                    name,
+                    np.flatnonzero(np.isin(real_label_array, members)),
+                    np.flatnonzero(np.isin(generated_label_array, members)),
+                )
+            )
+            occupied_names.add(name)
 
     warnings: list[str] = []
     cells: list[CellReport] = []
@@ -316,9 +368,7 @@ def evaluate(
     partitions: dict[str, Any] = {}
     diagnostics: dict[str, Any] = {}
     sensitivity_payload: dict[str, Any] = dict(sensitivity_results or {})
-    for group_name, label in groups:
-        real_idx = label_indices(real, label)
-        generated_idx = label_indices(generated, label)
+    for group_name, real_idx, generated_idx in groups:
         group_blocks = real_blocks[real_idx]
         n_blocks = int(np.unique(group_blocks).size)
         n_eval = len(generated_idx) if config.n_eval is None else int(config.n_eval)
@@ -597,7 +647,7 @@ def evaluate(
                 kind=metric.kind.value,
                 pillar=(
                     "conditional_fidelity"
-                    if label is not None and metric.pillar == "physical_fidelity"
+                    if group_name != "global" and metric.pillar == "physical_fidelity"
                     else metric.pillar
                 ),
                 units=metric.units,
@@ -700,12 +750,20 @@ def evaluate(
         cells = updated
 
     metric_manifests = [_metric_manifest(metric) for metric in metric_list]
-    hash_value = _config_hash(config, metric_manifests)
+    analysis_design = {
+        "conditional_individual_labels": bool(conditional),
+        "conditional_groups": {
+            name: list(values)
+            for name, values in normalized_conditional_groups.items()
+        },
+    }
+    hash_value = _config_hash(config, metric_manifests, analysis_design)
     metadata = {
         "gauge_version": "0.1.0",
         "method": "matched-reference-plus-bounded-w1-v1",
         "config_hash": hash_value,
         "config": config.to_dict(),
+        "analysis": analysis_design,
         "metric_registry": metric_manifests,
         "estimand": config.estimand.value,
         "n_eval": config.n_eval if config.n_eval is not None else "generated_pool_per_stratum",

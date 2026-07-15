@@ -30,38 +30,37 @@ adapter_options:
   eyewall_outer_km: 150.0
   dav_center_region_size: 3
 
-# Replace every PENDING value with a justified native-unit tolerance and freeze
-# this file before the final test run. Leaving a value nonnumeric makes the CLI
-# fail closed.
+# Frozen resolution/materiality tolerances; see protocol_freeze.md. These are
+# not estimated from the held-out test outcomes.
 tolerances:
-  min_core_bt: PENDING
-  cold_frac_220: PENDING
-  r_maxgrad: PENDING
-  axisym: PENDING
-  dav: PENDING
-  eye_contrast: PENDING
-  p01_bt: PENDING
+  min_core_bt: 1.0
+  cold_frac_220: 1.0
+  r_maxgrad: 15.625
+  axisym: 1.0
+  dav: 100.0
+  eye_contrast: 1.0
+  p01_bt: 1.0
 
 feature_metrics:
   enabled: true
-  n_eof: PENDING_FREEZE
-  max_fit_samples: PENDING_FREEZE
+  n_eof: 20
+  max_fit_samples: 512
   fit_seed: 1789
   density_k: 5
   bandwidth_seed: 1789
   dependence_pairs: true
   memorization:
     enabled: true
-    n_regions: PENDING_FREEZE
+    n_regions: 8
     n_resamples: 1000
     min_real_blocks: 5
 
 tc_admissibility: true
-sensitivity_results: PENDING_PRECOMPUTED_TRAIN_OR_RESERVED_REAL_LANES_JSON
+sensitivity_results: ../../outputs/tropical_cyclone_bt/controls/sensitivity_lanes.json
 
 evaluation:
-  n_eval: PENDING
-  n_resamples: 200
+  n_eval: null
+  n_resamples: 2000
   bootstrap_resamples: 1000
   sensitivity_resamples: 200
   alpha: 0.05
@@ -74,10 +73,68 @@ evaluation:
   shift_grid_size: 33
   reference_stability_tolerance: 0.25
   transform_batch_size: 128
-  simultaneous_family: PENDING_FREEZE_EXACT_STRATUM_METRIC_KEYS
+  simultaneous_family:
+    - global:w1:min_core_bt
+    - global:w1:cold_frac_220
+    - global:w1:r_maxgrad
+    - global:w1:axisym
+    - global:w1:dav
+    - global:w1:eye_contrast
+    - global:w1:p01_bt
+    - 0:w1:min_core_bt
+    - 0:w1:cold_frac_220
+    - 0:w1:r_maxgrad
+    - 0:w1:axisym
+    - 0:w1:dav
+    - 0:w1:eye_contrast
+    - 0:w1:p01_bt
+    - 1:w1:min_core_bt
+    - 1:w1:cold_frac_220
+    - 1:w1:r_maxgrad
+    - 1:w1:axisym
+    - 1:w1:dav
+    - 1:w1:eye_contrast
+    - 1:w1:p01_bt
+    - 2:w1:min_core_bt
+    - 2:w1:cold_frac_220
+    - 2:w1:r_maxgrad
+    - 2:w1:axisym
+    - 2:w1:dav
+    - 2:w1:eye_contrast
+    - 2:w1:p01_bt
+    - 3:w1:min_core_bt
+    - 3:w1:cold_frac_220
+    - 3:w1:r_maxgrad
+    - 3:w1:axisym
+    - 3:w1:dav
+    - 3:w1:eye_contrast
+    - 3:w1:p01_bt
+    - 4:w1:min_core_bt
+    - 4:w1:cold_frac_220
+    - 4:w1:r_maxgrad
+    - 4:w1:axisym
+    - 4:w1:dav
+    - 4:w1:eye_contrast
+    - 4:w1:p01_bt
+    - 5:w1:min_core_bt
+    - 5:w1:cold_frac_220
+    - 5:w1:r_maxgrad
+    - 5:w1:axisym
+    - 5:w1:dav
+    - 5:w1:eye_contrast
+    - 5:w1:p01_bt
+    - C4_plus:w1:min_core_bt
+    - C4_plus:w1:cold_frac_220
+    - C4_plus:w1:r_maxgrad
+    - C4_plus:w1:axisym
+    - C4_plus:w1:dav
+    - C4_plus:w1:eye_contrast
+    - C4_plus:w1:p01_bt
   include_partitions: true
 
 conditional: true
+conditional_groups:
+  C4_plus: [4, 5]
 outputs:
   json: ../../outputs/tropical_cyclone_bt/gauge_track1/evaluation.json
   html: ../../outputs/tropical_cyclone_bt/gauge_track1/evaluation.html
