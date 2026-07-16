@@ -70,6 +70,32 @@ registered discrete/nonregular functionals. It requires the block-balanced
 estimand and a declared finite support. Otherwise GAUGE shows the reference
 result and a clustered-bootstrap diagnostic but withholds an equivalence claim.
 
+## Paper-facing output
+
+The complete statistical report is designed to sit underneath a much smaller
+results package. Conditional applications can render an interpretation-first
+profile, exact native-unit table, complete class matrix, and browser landing
+page directly from the frozen JSON:
+
+```python
+spec = gauge.PaperBundleSpec(
+    title="Generated field evaluation",
+    model_label="primary model",
+    metrics=("w1:domain_mean",),
+    native_strata=("low", "middle", "high"),
+    priority_strata=("upper_tail",),
+    metric_labels={"w1:domain_mean": "Domain mean · W1"},
+)
+report.paper_bundle("paper_results", spec)
+```
+
+When there are at most eight native strata, the primary profile displays every
+one. With larger condition sets it displays the native-stratum median and range,
+labels the largest observed gap, and retains every preregistered priority stratum.
+The appendix matrix always contains every class. The reference gap is a compact
+detectability coordinate—0 is the real-vs-real median and 1 the pointwise 95%
+boundary—not an aggregate score or a substitute for native-unit inference.
+
 ## Command line
 
 ```bash
@@ -88,8 +114,10 @@ The tropical-cyclone case study is tracked separately under
 [`case_studies/tropical_cyclone_bt`](case_studies/tropical_cyclone_bt).
 Its preregistered training-only controls run with
 `python case_studies/tropical_cyclone_bt/run_track1_controls.py`. The frozen
-Track-1 result bundle, tables, and manuscript figures are in
-[`final_results`](case_studies/tropical_cyclone_bt/final_results).
+machine report is in
+[`final_results`](case_studies/tropical_cyclone_bt/final_results); the concise
+results-section and appendix bundle an ordinary GAUGE user would report is in
+[`paper_results`](case_studies/tropical_cyclone_bt/paper_results).
 
 For conditional generators, GAUGE treats the condition distribution as part of
 the estimand. If real and generated label proportions differ, global rows are

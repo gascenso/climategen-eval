@@ -4,6 +4,7 @@ from .data import Dataset
 from .evaluation import evaluate
 from . import adapters, downstream, features, lanes, memorization, metrics
 from .report import EvaluationReport
+from .presentation import PaperBundleSpec, ReferenceControl
 from .types import (
     DetectionStatus,
     EvaluationConfig,
@@ -23,7 +24,9 @@ __all__ = [
     "FunctionalSpec",
     "MetricKind",
     "MetricSpec",
+    "PaperBundleSpec",
     "PracticalStatus",
+    "ReferenceControl",
     "SamplingEstimand",
     "SensitivityStatus",
     "evaluate",

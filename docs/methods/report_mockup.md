@@ -1,7 +1,7 @@
-# GAUGE evaluation-card mockup
+# GAUGE paper-bundle mockup
 
-This is the interpretation contract for the generated HTML/PDF card. The final
-layout may change, but the information hierarchy and wording may not.
+This is the interpretation contract for the generated paper-facing bundle. The
+final layout may change, but the information hierarchy and wording may not.
 
 All values below are fictional layout examples, not TC results and not candidate
 tolerances. They must not be used to choose case-study thresholds.
@@ -27,6 +27,7 @@ Every card also prints:
 - the sensitivity perturbation and severity response for each intended metric;
 - links to the versioned JSON report and frozen preregistration.
 
-The secondary standardized profile labels its x-axis “detectability, not
-severity,” shows raw units beside each point, and never presents an average
-score.
+The reference-calibrated gap profile is the primary paper-facing summary. It
+labels its x-axis “detectability, not physical severity,” links each point to
+its raw native-unit result, and never presents an average score. The complete
+native-unit card remains part of the bundle for audit and interpretation.

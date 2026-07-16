@@ -283,3 +283,22 @@ th{{background:#eef2f5}}tr.section th{{background:#dfeaf1;text-transform:upperca
         fig.savefig(output, dpi=180)
         plt.close(fig)
         return output
+
+    def paper_bundle(
+        self,
+        output_dir: str | Path,
+        spec: Any,
+        *,
+        controls: Sequence[Any] = (),
+    ) -> dict[str, Path]:
+        """Render an interpretation-first main-text and appendix bundle.
+
+        ``spec`` is a :class:`gauge_climate.PaperBundleSpec`; ``controls`` may
+        contain :class:`gauge_climate.ReferenceControl` objects. The loose type
+        annotations keep this module free of a circular import while the public
+        presentation module performs full validation.
+        """
+
+        from .presentation import render_paper_bundle
+
+        return render_paper_bundle(self, output_dir, spec, controls=controls)

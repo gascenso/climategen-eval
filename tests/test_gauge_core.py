@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -351,6 +352,95 @@ def test_report_round_trip_and_render():
         assert loaded.to_dict() == report.to_dict()
         assert (root / "report.html").stat().st_size > 100
         assert (root / "profile.png").stat().st_size > 100
+
+
+def test_paper_bundle_preserves_native_strata_and_renders_controls():
+    train, real, generated = _datasets()
+    real = gauge.Dataset(
+        real.fields,
+        blocks=real.blocks,
+        labels=np.repeat([0, 1], len(real.fields) // 2),
+    )
+    generated = gauge.Dataset(
+        generated.fields,
+        labels=np.repeat([0, 1], len(generated.fields) // 2),
+    )
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(n_eval=70),
+        conditional=True,
+    )
+    spec = gauge.PaperBundleSpec(
+        title="Toy conditional evaluation",
+        model_label="toy generator",
+        metrics=("w1:value",),
+        native_strata=("0", "1"),
+        metric_labels={"w1:value": "Value distribution"},
+        stratum_labels={"0": "low", "1": "high"},
+    )
+    controls = (
+        gauge.ReferenceControl("w1:value", "shift control", 3.0),
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        artifacts = report.paper_bundle(directory, spec, controls=controls)
+        assert set(artifacts) == {
+            "profile_pdf",
+            "profile_png",
+            "matrix_pdf",
+            "matrix_png",
+            "selected_table",
+            "all_table",
+            "index",
+        }
+        assert all(path.stat().st_size > 100 for path in artifacts.values())
+        table = artifacts["selected_table"].read_bytes()
+        assert b"\r\n" not in table
+        assert b"low" in table and b"high" in table
+
+
+def test_paper_bundle_compresses_large_k_only_in_main_profile():
+    train, real, generated = _datasets()
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    source = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(),
+    )
+    base = source.cells[0]
+    cells = tuple(
+        replace(
+            base,
+            stratum=str(index),
+            reference_position=0.2 * index,
+            reference_position_low=0.2 * index - 0.1,
+            reference_position_high=0.2 * index + 0.1,
+        )
+        for index in range(10)
+    )
+    report = gauge.EvaluationReport(metadata=source.metadata, cells=cells)
+    spec = gauge.PaperBundleSpec(
+        title="Large-K evaluation",
+        model_label="toy generator",
+        metrics=("w1:value",),
+        native_strata=tuple(str(index) for index in range(10)),
+        max_visible_native_strata=8,
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        artifacts = report.paper_bundle(directory, spec)
+        assert all(path.stat().st_size > 100 for path in artifacts.values())
+        table = artifacts["selected_table"].read_text(encoding="utf-8")
+        assert ",0,0," in table and ",9,9," in table
+        assert sum(1 for line in table.splitlines() if line) == 11
 
 
 def test_config_hash_captures_metric_contract():

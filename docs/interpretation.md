@@ -35,9 +35,27 @@ Canonical combinations:
 | no departure | underpowered | “No departure was detected, but the design was insufficiently sensitive at the tolerance.” |
 
 Never write “indistinguishable,” “equivalent,” or “physically realistic” from a
-reference-envelope overlap alone. The standardized reference-position plot is a
-secondary detectability diagnostic and cannot compare physical severity across
-metrics or sample sizes.
+reference-envelope overlap alone. The reference-calibrated gap can be the
+primary *presentation* coordinate while remaining a detectability diagnostic:
+
+```text
+gap = (model discrepancy - real-reference median) /
+      (pointwise 95% reference boundary - real-reference median)
+```
+
+Thus gap 0 is the median real-vs-real discrepancy and gap 1 is the pointwise
+boundary. It cannot compare physical severity across metrics or sample sizes,
+must not be averaged into a model score, and never replaces the native-unit
+interval for practical conclusions.
+
+For conditional generators, the default paper profile never substitutes an
+unmatched global mixture for class fidelity. If `K <= 8`, show every native
+class and every preregistered priority aggregate. For larger `K`, show the
+native-class median/range, label the largest observed gap, retain all priority
+strata, and put the exact `K`-column matrix in the appendix. “Largest observed”
+is descriptive unless worst-class inference was preregistered. The complete
+native-unit table must remain available regardless of how the main figure is
+compressed.
 
 In the copying result, a positive generated-minus-real nearest-to-training
 effect means generated queries are farther from training than held-out real

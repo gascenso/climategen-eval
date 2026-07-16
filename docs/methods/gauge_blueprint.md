@@ -124,16 +124,21 @@ count is reported, and none may be changed after inspecting model results.
 
 Non-functional metrics receive no tolerance verdict unless the user supplies a scientifically meaningful discrepancy scale and a validated inference procedure for it.
 
-### 2.4 Standardized reference position and raw effect
+### 2.4 Reference-calibrated gap and raw effect
 
-For diagnostic plotting only:
+The primary presentation coordinate is:
 
 ```
 reference_position = (model_median - reference_q50) /
                      (reference_q(1-alpha) - reference_q50)
 ```
 
-Position 1 marks the pointwise reference boundary. This dimensionless value describes detectability at this `N`, not physical severity. It is never averaged across metrics, compared across sample sizes, or used as an equivalence test. Every position is displayed beside the raw effect and confidence interval; functional W1 remains in the functional's physical units.
+Position 1 marks the pointwise reference boundary. This dimensionless value is
+the main graphical summary but remains a diagnostic: it describes detectability
+at this `N`, not physical severity. It is never averaged across metrics,
+compared across sample sizes, or used as an equivalence test. Every position is
+backed by a table containing the raw effect and confidence interval; functional
+W1 remains in the functional's physical units.
 
 ### 2.5 Shift sensitivity
 
@@ -166,9 +171,23 @@ Each metric declares which perturbation it should detect and the scientifically 
 
 When labels exist, metrics are computed for predeclared strata and optionally globally. The condition distribution is part of the estimand. If the real and generated label proportions differ, an as-provided global row tests dataset composition and is never called conditional-generator fidelity; a global fidelity claim requires a predeclared common mixture. A stratum with fewer than 10 eligible blocks per half is reported `UNDERPOWERED`; scientifically justified pooled strata must be declared before results are inspected. Conditional ensemble calibration defers to established probabilistic verification where applicable.
 
+The reporting layer scales with the number of conditions. For `K <= 8`, the
+main reference-gap profile shows every native stratum plus preregistered
+priority aggregates. For larger `K`, it shows the native-stratum median and
+range, labels the largest observed gap, and retains all priority strata; the
+exact class-by-metric matrix is automatically placed in the appendix. This
+compression changes no cell, estimand, or uncertainty calculation. The largest
+observed class is descriptive unless a worst-class claim was preregistered.
+
 ### 2.9 Track-1 displays
 
-The primary one-page card groups rows by physical fidelity, conditional fidelity, diversity/memorization, and admissibility. Functional rows show W1 and its interval in native units, the real-reference envelope, the tolerance, the detection conclusion, and the practical conclusion. A secondary profile uses standardized reference position on a symlog axis, prints `N_eval`, block counts, estimand, `K`, and seed, and explicitly labels the axis "detectability, not severity." No aggregate model score is produced.
+The primary paper-facing bundle contains: (1) one polished reference-gap profile
+with native conditions, priority strata, uncertainty, and predeclared positive
+controls; (2) one lossless native-unit table; (3) selected distribution or curve
+drill-downs; and (4) a complete appendix matrix. The detailed card, sensitivity
+curves, calibration results, provenance, warnings, and machine JSON remain
+available underneath but need not be reproduced in every application paper. No
+aggregate model score is produced.
 
 ---
 
@@ -242,7 +261,7 @@ Withholding at block level is mandatory: selecting a storm removes every frame f
 >
 > **Step 8 — Downstream value (when the model provides data).** Run the count-matched eight-arm ladder: no augmentation, class weights, copy, copy+invariances, generated, generated+invariances, restored real, restored real+invariances. Select block holdouts before generator training. Headline generated+invariances versus copy+invariances; treat restored real as empirical headroom, not a bound.
 >
-> **Step 9 — Report.** The one-page evaluation card, secondary standardized profile, ladder figure, and machine-readable report. Every number carries its sampling reference, uncertainty, estimand, N, and permitted interpretation. No aggregate model score is produced.
+> **Step 9 — Report.** The reference-calibrated profile, native-unit table, selected scientific drilldowns, complete conditional appendix matrix, ladder figure, and machine-readable report. Every number carries its sampling reference, uncertainty, estimand, N, and permitted interpretation. No aggregate model score is produced.
 
 ---
 
@@ -302,7 +321,14 @@ report = gauge_climate.evaluate(
     sensitivity_results=precomputed_sensitivity_lanes,
     conditional=True,
 )
-report.figure_reference_profile(path="fig_reference_position.pdf")
+presentation = gauge_climate.PaperBundleSpec(
+    title="Generated-field evaluation",
+    model_label="primary model",
+    metrics=tuple(metric.id for metric in registered_main_metrics),
+    native_strata=tuple(predeclared_native_strata),
+    priority_strata=tuple(predeclared_priority_strata),
+)
+report.paper_bundle("paper_results", presentation)
 report.to_json("evaluation_card.json")
 
 ladder = gauge_climate.downstream.Ladder(
@@ -428,7 +454,13 @@ Any aggregate crossing multiple criteria must be generated by the survey scripts
 
 **Track 1 ↔ Track 2 linkage (write with care).** The tracks answer different questions—realism and value—and neither result implies the other. Any proposed link between a detected intrinsic departure and a downstream effect requires a dedicated intervention or mediation analysis; it must not be inferred post hoc from coincident case-study results.
 
-**Headline figures.** F1: hardened survey dot-matrix. F2: one-page Track-1 evaluation card. F3: standardized reference-position profile with sensitivity lanes. F4: Track-2 ladder headlining `A5−A3`, with `A4−A2` as the source-only contrast and `A7−A3` as empirical headroom. F5: per-category status heatmap. Appendix: reference calibration, construction comparisons, and resolution-vs-N curves.
+**Headline figures.** F1: hardened survey dot-matrix. F2: Track-1
+reference-calibrated profile showing every TC class, C4+, and positive controls.
+F3: selected tail-class physical and structural drill-downs. F4: Track-2 ladder
+headlining `A5−A3`, with `A4−A2` as the source-only contrast and `A7−A3` as
+empirical headroom. Appendix: exact conditional matrix, all native-class
+distributions, reference calibration, construction comparisons, and
+resolution-vs-N curves.
 
 ---
 
