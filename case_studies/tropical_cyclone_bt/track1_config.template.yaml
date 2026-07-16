@@ -49,9 +49,11 @@ feature_metrics:
   fit_seed: 1789
   density_k: 5
   bandwidth_seed: 1789
+  max_samples_per_draw: 256
   dependence_pairs: true
   memorization:
     enabled: true
+    match_labels: true
     require_copyist_control: true
     n_regions: 8
     n_resamples: 1000
@@ -63,6 +65,7 @@ sensitivity_results: control_results/sensitivity_lanes.json
 evaluation:
   n_eval: null
   n_resamples: 2000
+  diagnostic_resamples: 200
   bootstrap_resamples: 1000
   sensitivity_resamples: 200
   alpha: 0.05

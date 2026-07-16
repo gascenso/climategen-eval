@@ -21,11 +21,10 @@ are TS and Categories 1–5; TD is not claimed.
 - [`preregistration.yaml`](preregistration.yaml) freezes tolerances,
   perturbation severities and sampling, three Track-2 storms, transforms,
   endpoints, and task margins without examining final GAUGE test outcomes.
-  The training-only sensitivity and copyist controls have passed their response
-  contracts. The training-only TC statistical calibration also passes its
-  reference-engine gates, but shows that 50 of 56 registered cells cannot resolve
-  the current practical tolerances at the declared sample sizes. Final evaluation
-  remains prohibited pending statistical review of the direct W1 inference.
+  The training-only sensitivity/copyist controls and TC statistical calibration
+  pass their registered gates. A perfect-generator control is directly placed
+  within tolerance in 16/56 cells; 12/56 attain at least 80% shift-detection
+  power at the exact tolerance. These are design properties, not model scores.
 - Local generated banks are copied or hardlinked from the selected
   `baseline_ztsnr` run. The release audit fails until archived artifacts with
   URLs and SHA-256 checksums replace this local-only provenance.
@@ -91,11 +90,37 @@ PYTHONPATH=src python case_studies/tropical_cyclone_bt/run_track1_calibration.py
 
 The versioned [calibration artifact](calibration_results/track1_statistics.json)
 passes all registered reference-mechanics gates without reading test fields.
-Only 6 of 56 stratum-functional cells attain 80% shift-detection resolution at
-or below their practical tolerance. This is a power diagnosis, not a failed null
-calibration and not permission to relax tolerances. The final run remains locked
-until the direct W1 interval and the intended `UNDERPOWERED` interpretation have
-received independent statistical review.
+Twelve of 56 stratum-functional cells attain at least 80% shift-detection power
+at their exact practical tolerance. This is a training-only design-sensitivity
+diagnosis, not a model score, a failed null calibration, or permission to relax
+tolerances. Separately, the validated whole-block W1 interval places the
+training-only pseudo-generator within tolerance in 16 of 56 cells; the discrete
+maximum-gradient-radius functional retains the finite-sample DKW fallback. All
+registered gates now pass and the frozen Track-1 run is authorized.
+
+## Frozen Track-1 result
+
+The completed machine report, CSV table, integrity manifest, and paper-ready
+figures are archived in [`final_results/`](final_results/). The first output
+audit exposed an estimand distinction already present in the frozen manifests:
+the generated bank is balanced at 1,000 fields per class, whereas the real test
+archive has its natural intensity mixture. Global rows are therefore retained
+as supplied-bank composition checks; native-class and C4+ rows answer
+conditional-generator fidelity.
+
+In the first completed audit, all 49 native-class/C4+ scalar-functional cells
+had no pointwise or simultaneous departure detected. All seven pointwise
+functional detections occurred in the global composition row. Across the full
+original 56-cell family, practical statuses were 13 within tolerance, 7 above
+tolerance, 13 inconclusive, and 23 underpowered. This stricter layer is not
+replaced by non-detection. Memorization is tested within joint intensity-class
+and training-fitted feature-region cells; “farther from training” is never
+treated as proof of physical invalidity.
+
+Forty-four secondary cells in the first completed audit, mostly pairwise
+Spearman entries, carry a split-half Monte Carlo-stability warning at the frozen
+200-draw diagnostic budget. They remain in the machine report with daggers and
+are not headline claims; no primary functional cell has this warning.
 
 ## Track 2
 

@@ -100,20 +100,26 @@ for k in 1..K:
 outputs:
     real-reference envelope {reference_k}
     paired model-reference distribution {model_k, reference_k}
-    stored block partitions and draw provenance
+    deterministic plan seed, complete-plan SHA-256, preview, and draw provenance
 ```
 
 Hard error if either half has fewer than 10 eligible blocks; warning below 30. `N_eval` may not exceed the generated pool. A split-half Monte Carlo stability diagnostic compares reference boundaries from the first and second halves of the registered draws; instability requires increasing `K` before a final run, never changing the conclusion rule. Conditional strata are formed through whole-block eligibility and splitting so that one storm can never appear on both sides.
+
+`K` is declared by result role: functional W1 and all cells in a simultaneous
+family use the primary `n_resamples`; secondary diagnostics without an
+equivalence claim may use a smaller `diagnostic_resamples` budget. Quadratic set
+metrics may use a deterministic matched sample cap per draw. Every effective
+count is reported, and none may be changed after inspecting model results.
 
 ### 2.3 Two conclusions, not one verdict
 
 **Detection conclusion.** A model is `DEPARTURE_DETECTED` when its statistic lies beyond the calibrated one-sided real-reference boundary at the declared `N`; otherwise it is `NO_DEPARTURE_DETECTED`. The latter means only that this evaluation did not detect a departure. It is not evidence that the population distributions are equal. Joint claims require an explicit preregistered family of exact `stratum:metric` keys; the default empty family makes no joint claim. Version 0.1 uses cell-wise Bonferroni reference boundaries, which remain valid when conditional strata do not admit a common block partition. Their finite-Monte-Carlo order statistic requires `K ≥ family_size / α − 1`; otherwise the joint conclusion is withheld. A less conservative max-statistic method may be registered only when every cell genuinely shares resampling units and draws.
 
-**Practical conclusion for functionals.** Classical bootstrap intervals for empirical Wasserstein distances can fail, especially near equality, and are not the inferential default. Under the default block-balanced estimand, select one frame uniformly from each independent real block and construct a finite-sample W1 interval from simultaneous DKW quantile bands (Manole, Balakrishnan & Wasserman, 2022). Untrimmed W1 requires a declared finite functional support; otherwise report a trimmed W1 interval or withhold equivalence. Clustered bootstrap intervals remain explicitly labeled diagnostics until their coverage is validated for the declared data-generating regime. With predeclared tolerance `δ_app`:
+**Practical conclusion for functionals.** Classical bootstrap intervals for empirical Wasserstein distances can fail, especially near equality, and are not the inferential default. Under the block-balanced estimand, GAUGE uses the one-dimensional identity `W1(F,G)=∫|F-G|` to form influence values for whole real blocks and independent generated fields, then reports a two-sided Welch--Satterthwaite t interval. Every frame informs its storm's CDF without being counted as an independent storm. This interval targets the regular nonzero tolerance boundary; bounded support, independent population blocks, independent generated fields, and negligible population-CDF equality sets at the boundary are declared assumptions. Discrete/nonregular functionals fall back to finite-sample DKW quantile bands. Without a valid registered method, GAUGE withholds equivalence. With predeclared tolerance `δ_app`:
 
 1. `WITHIN_TOLERANCE` if the one-sided upper confidence bound is below `δ_app`;
 2. `EXCEEDS_TOLERANCE` if the lower confidence bound is above `δ_app`;
-3. `UNDERPOWERED` if the interval overlaps `δ_app` and the predeclared sensitivity check cannot resolve a shift of that size;
+3. `UNDERPOWERED` if the interval overlaps `δ_app` and its uncertainty margin alone is at least `δ_app`, or the stratum fails the minimum-block requirement;
 4. `INCONCLUSIVE` otherwise.
 
 Non-functional metrics receive no tolerance verdict unless the user supplies a scientifically meaningful discrepancy scale and a validated inference procedure for it.
@@ -131,7 +137,7 @@ Position 1 marks the pointwise reference boundary. This dimensionless value desc
 
 ### 2.5 Shift sensitivity
 
-For each `functional_w1`, report the smallest uniform shift detected with 80% probability by the reference procedure. This quantity is named `shift_resolution` because the result is perturbation-specific; it does not validate sensitivity to variance, tail, or dependence errors and does not turn non-detection into equivalence. Other metrics use predeclared perturbation families with severity sweeps.
+For each `functional_w1`, report the smallest evaluated uniform shift detected with 80% probability by the reference procedure. Every declared application tolerance is inserted as an exact sweep point, and power at that tolerance is reported directly rather than inferred from the nearest plotting-grid value. This quantity is named `shift_resolution` because the result is perturbation-specific; it does not validate sensitivity to variance, tail, or dependence errors and does not turn non-detection into equivalence. Other metrics use predeclared perturbation families with severity sweeps.
 
 ### 2.6 Reference and corruption lanes
 
@@ -150,7 +156,7 @@ Each metric declares which perturbation it should detect and the scientifically 
 
 ### 2.7 Q3/Q4 specifics
 
-**Memorization — localized, block-aware three-sample test.** Fit the feature space and spatial partition on training data only. Within each occupied feature-space region, compare generated-to-training nearest-neighbor distances with held-out-real-to-training distances. Uncertainty resamples generated queries and whole held-out blocks; region-wise results use simultaneous or multiplicity-adjusted intervals. Generated samples significantly closer in any supported region imply localized copying; significantly farther imply a local off-manifold failure. A global summary is secondary because copying and underfitting in different regions can cancel. `COPYIST` must trigger the test.
+**Memorization — localized, block-aware three-sample test.** Fit the feature space and spatial partition on training data only. Within each occupied feature-space region, compare generated-to-training nearest-neighbor distances with held-out-real-to-training distances. When query labels exist, form joint label-by-region cells so a condition-mixture mismatch cannot masquerade as copying or separation. Uncertainty resamples generated queries and whole held-out blocks; all supported cells use simultaneous or multiplicity-adjusted intervals. Generated samples significantly closer imply localized copying. Significantly farther means only farther from training than held-out real queries; it can indicate underfitting or distribution shift and is not, by itself, proof of physical inadmissibility. A global summary is secondary because opposing local effects can cancel. `COPYIST` must trigger the test.
 
 **Admissibility.** Distinguish physical laws from preprocessing or sensor support. Report hard-constraint violation rates directly. Report soft training-envelope exceedance beside held-out-real exceedance with a dependence-matched reference. A bound enforced identically by the output activation is labeled a construction guarantee, not empirical evidence of learned physics.
 
@@ -158,7 +164,7 @@ Each metric declares which perturbation it should detect and the scientifically 
 
 ### 2.8 Conditional evaluation
 
-When labels exist, metrics are computed globally and for predeclared strata. A stratum with fewer than 10 eligible blocks per half is reported `UNDERPOWERED`; scientifically justified pooled strata must be declared before results are inspected. Conditional ensemble calibration defers to established probabilistic verification where applicable.
+When labels exist, metrics are computed for predeclared strata and optionally globally. The condition distribution is part of the estimand. If the real and generated label proportions differ, an as-provided global row tests dataset composition and is never called conditional-generator fidelity; a global fidelity claim requires a predeclared common mixture. A stratum with fewer than 10 eligible blocks per half is reported `UNDERPOWERED`; scientifically justified pooled strata must be declared before results are inspected. Conditional ensemble calibration defers to established probabilistic verification where applicable.
 
 ### 2.9 Track-1 displays
 
@@ -222,7 +228,7 @@ Withholding at block level is mandatory: selecting a storm removes every frame f
 >
 > **Step 1 — Declare the estimand and build the real-reference envelope.** Choose block-balanced or frame-weighted sampling. Simulate a perfect generator and its real comparator from disjoint block halves using the same estimand, sample size, and partitions used for the model comparison.
 >
-> **Step 2 — Separate detection from practical relevance.** Report `DEPARTURE_DETECTED` or `NO_DEPARTURE_DETECTED` relative to the reference envelope. For functional W1, compare the validated dependence-aware confidence bound directly with `δ_app` to report `WITHIN_TOLERANCE`, `EXCEEDS_TOLERANCE`, `INCONCLUSIVE`, or `UNDERPOWERED`. In v0.1 the formal block-balanced bound uses one frame per independent block and simultaneous DKW bands; the whole-block bootstrap is diagnostic. Non-detection is not equivalence.
+> **Step 2 — Separate detection from practical relevance.** Report `DEPARTURE_DETECTED` or `NO_DEPARTURE_DETECTED` relative to the reference envelope. For regular bounded scalar W1, compare the validated whole-block influence interval directly with `δ_app` to report `WITHIN_TOLERANCE`, `EXCEEDS_TOLERANCE`, `INCONCLUSIVE`, or `UNDERPOWERED`. Discrete/nonregular functionals use the conservative DKW fallback; the percentile bootstrap remains diagnostic. Non-detection is not equivalence.
 >
 > **Step 3 — Marginal realism (Q1).** Per-functional W1 in native units; radial-profile and radial-PSD curves with real-reference envelopes; the tail functional explicitly.
 >
@@ -416,7 +422,7 @@ Any aggregate crossing multiple criteria must be generated by the survey scripts
 
 **Models.** Evaluate the existing baseline and physics-informed diffusion variants under the same frozen protocol, while designating one primary model before the final test run. Additional model families are optional and are de-scoped before compromising the preregistered comparisons. Reference lanes follow §2.6.
 
-**Track 1 (must be rerun under the frozen protocol).** Evaluate per-functional W1, radial profile, radial PSD, feature MMD², coverage/density/diversity, localized memorization, admissibility, and Spearman closure globally and per predeclared category. Existing exploratory runs may motivate diagnostics but do not establish paper results because they use a different reference engine and test-fit feature construction.
+**Track 1 (frozen result completed 2026-07-16).** The primary `baseline_ztsnr` run evaluates functional W1, radial profile, radial PSD, feature MMD², coverage/density/diversity, label-matched localized memorization, admissibility, and Spearman closure. In the first completed audit, all 49 native-class/C4+ functional cells had no pointwise or simultaneous departure detected; all seven pointwise detections occurred in the deliberately class-balanced generated bank versus natural-test-mixture global composition check. Practical conclusions remain mixed and stricter: across the original 56 functional cells, 13 were within tolerance, 7 exceeded it, 13 were inconclusive, and 23 underpowered. The superseding archived report retains every global result and corrects only the query-mixture handling for memorization. Secondary rows with unstable 200-draw boundaries are daggered and are not headline conclusions.
 
 **Track 2 (pending, preregistered design).** Primary task: Vmax regression; secondary task: intensity-category classification. Select three storm-level Cat 4–5 holdouts before training and remove every frame belonging to each selected storm. Train one restricted generator per holdout, generate at continuous wind conditions drawn from the permitted training distribution, and run A0–A7 with five paired downstream seeds. Freeze the primary metric and `δ_task` before training. Headline `A5−A3`; show `A7−A3` as restored-real headroom. Classification cannot replace regression after results are observed.
 

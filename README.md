@@ -64,10 +64,11 @@ The report has two separate conclusions:
   below the predeclared physical tolerance. Other outcomes are
   `EXCEEDS_TOLERANCE`, `INCONCLUSIVE`, or `UNDERPOWERED`.
 
-Finite-sample tolerance inference in v0.1 requires the block-balanced estimand
-and a declared finite support for the scalar functional. Otherwise GAUGE shows
-the reference result and a clustered-bootstrap diagnostic but withholds an
-equivalence claim.
+Tolerance inference in v0.1 uses a validated whole-block influence interval for
+regular bounded scalar W1 and a conservative finite-sample fallback for
+registered discrete/nonregular functionals. It requires the block-balanced
+estimand and a declared finite support. Otherwise GAUGE shows the reference
+result and a clustered-bootstrap diagnostic but withholds an equivalence claim.
 
 ## Command line
 
@@ -86,8 +87,14 @@ statistical qualifications are in [the blueprint](docs/methods/gauge_blueprint.m
 The tropical-cyclone case study is tracked separately under
 [`case_studies/tropical_cyclone_bt`](case_studies/tropical_cyclone_bt).
 Its preregistered training-only controls run with
-`python case_studies/tropical_cyclone_bt/run_track1_controls.py`; final test
-inference remains locked until those controls and TC-specific calibration pass.
+`python case_studies/tropical_cyclone_bt/run_track1_controls.py`. The frozen
+Track-1 result bundle, tables, and manuscript figures are in
+[`final_results`](case_studies/tropical_cyclone_bt/final_results).
+
+For conditional generators, GAUGE treats the condition distribution as part of
+the estimand. If real and generated label proportions differ, global rows are
+explicitly labeled as supplied-dataset composition checks; conditional-fidelity
+claims must come from matched, preregistered strata or a declared mixture rule.
 
 ## Development state
 

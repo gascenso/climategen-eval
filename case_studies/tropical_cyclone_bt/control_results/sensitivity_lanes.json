@@ -8,11 +8,11 @@
     "wind_averaging_period": "1-minute",
     "real_train_manifest": "data/tropical_cyclone_bt/real_train/manifest.json",
     "real_train_manifest_sha256": "f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a",
-    "preregistration_sha256": "fa8f629d95b96648eceaf107ad73979f6d75290e870521ad76564eb7dc680c0f",
+    "preregistration_sha256": "349dc3975faa9321c8075c25f5034393cba5cf04b8ac883d5078320b33375a09",
     "sensitivity_contract_sha256": "00c55ec1d83d7e14914508e4ae2ebb6d83170fab218685e4876231a2c37e6010",
-    "track1_config_sha256": "8153ee5f395887df3a4b4ce23e3bc2a688c36d3b912933823772545c388e79f4",
+    "track1_config_sha256": "650de576c33e68bcc183a704aba473902b61c7ac92bfc62407a53503cf1926e1",
     "runner_sha256": "75af2ccfa1bc419cd2c6a88124b8b890fbc900e3f050a78fa0eb8a864199caa0",
-    "gauge_source_sha256": "ab02977e60c4045e9dd8e2431b40d8a23837efeb8cc6b07f0b9265f8675a1b22",
+    "gauge_source_sha256": "519d84b50db679fd0c874486d3c8d46eab5573b8c6eba34468de8bac05a56110",
     "design": {
       "seed": 1789,
       "control_block_count": 80,
@@ -112,44 +112,44 @@
     "source_index_sha256": "5ca6dd941826dbd87a2c8b7ae94577cfb5ee219b8654de3f509d937146520870",
     "reference_envelopes": {
       "w1:min_core_bt": {
-        "q50": 1.7336738204956057,
-        "boundary": 3.39045821762085,
+        "q50": 1.699505569458008,
+        "boundary": 3.4523539939880346,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:p01_bt": {
-        "q50": 1.7807842121124269,
-        "boundary": 3.720290454444884,
+        "q50": 1.71229433517456,
+        "boundary": 3.5778681757736215,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:r_maxgrad": {
-        "q50": 13.000000000000002,
-        "boundary": 26.182031249999987,
+        "q50": 12.671875000000002,
+        "boundary": 25.046874999999986,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:axisym": {
-        "q50": 0.7347288951147217,
-        "boundary": 1.62459393958324,
+        "q50": 0.7371343900932041,
+        "boundary": 1.5652811488063154,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:dav": {
-        "q50": 50.94482039772957,
-        "boundary": 94.48561155572746,
+        "q50": 49.14968384116035,
+        "boundary": 107.23494673075798,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "radial_profile_mae": {
-        "q50": 1.8121780805591001,
-        "boundary": 5.1748211544062945,
+        "q50": 1.947605145126217,
+        "boundary": 5.29905757767293,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "radial_log_psd_mse": {
-        "q50": 0.001116369409811596,
-        "boundary": 0.003181282905085041,
+        "q50": 0.001153887870675567,
+        "boundary": 0.002903565856539427,
         "quantile": 0.95,
         "n_resamples": 500
       }
@@ -184,7 +184,7 @@
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 3.39045821762085,
+        "reference_boundary": 3.4523539939880346,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -202,7 +202,7 @@
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 3.720290454444884,
+        "reference_boundary": 3.5778681757736215,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -239,7 +239,7 @@
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 0.003181282905085041,
+        "reference_boundary": 0.002903565856539427,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -256,7 +256,7 @@
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 26.182031249999987,
+        "reference_boundary": 25.046874999999986,
         "reaches_reference_boundary": false,
         "resolution_status": "BELOW_REFERENCE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -294,7 +294,7 @@
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 5.1748211544062945,
+        "reference_boundary": 5.29905757767293,
         "reaches_reference_boundary": false,
         "resolution_status": "BELOW_REFERENCE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -311,7 +311,7 @@
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": false,
         "response_contract_passed": true,
-        "reference_boundary": 26.182031249999987,
+        "reference_boundary": 25.046874999999986,
         "reaches_reference_boundary": false,
         "resolution_status": "BELOW_REFERENCE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -333,21 +333,21 @@
     "metrics": {
       "w1:axisym": {
         "value": 2.580784781523734,
-        "reference_boundary": 1.62459393958324,
+        "reference_boundary": 1.5652811488063154,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
       },
       "w1:dav": {
         "value": 211.40677420316055,
-        "reference_boundary": 94.48561155572746,
+        "reference_boundary": 107.23494673075798,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
       },
       "radial_profile_mae": {
         "value": 32.632273793519445,
-        "reference_boundary": 5.1748211544062945,
+        "reference_boundary": 5.29905757767293,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
@@ -368,11 +368,17 @@
     "result": {
       "status": "COPYING_DETECTED",
       "effect_definition": "median generated-to-train NN minus median real-to-train NN",
-      "multiplicity": "Bonferroni simultaneous intervals across supported regions",
+      "status_semantics": {
+        "COPYING_DETECTED": "generated queries are significantly closer to training",
+        "OFF_MANIFOLD": "legacy schema label: generated queries are significantly farther from training; this does not establish physical inadmissibility",
+        "INCONCLUSIVE": "the simultaneous interval crosses zero"
+      },
+      "multiplicity": "Bonferroni simultaneous intervals across supported query-stratum-by-region cells",
       "alpha": 0.05,
       "regions": [
         {
           "region": 0,
+          "stratum": null,
           "n_generated": 202,
           "n_real": 181,
           "n_real_blocks": 25,
@@ -383,6 +389,7 @@
         },
         {
           "region": 1,
+          "stratum": null,
           "n_generated": 194,
           "n_real": 187,
           "n_real_blocks": 24,
@@ -393,6 +400,7 @@
         },
         {
           "region": 2,
+          "stratum": null,
           "n_generated": 19,
           "n_real": 47,
           "n_real_blocks": 8,
@@ -403,6 +411,7 @@
         },
         {
           "region": 3,
+          "stratum": null,
           "n_generated": 226,
           "n_real": 174,
           "n_real_blocks": 19,
@@ -413,6 +422,7 @@
         },
         {
           "region": 4,
+          "stratum": null,
           "n_generated": 90,
           "n_real": 73,
           "n_real_blocks": 20,
@@ -423,6 +433,7 @@
         },
         {
           "region": 6,
+          "stratum": null,
           "n_generated": 121,
           "n_real": 148,
           "n_real_blocks": 17,
@@ -433,6 +444,7 @@
         },
         {
           "region": 7,
+          "stratum": null,
           "n_generated": 139,
           "n_real": 184,
           "n_real_blocks": 28,
@@ -443,6 +455,8 @@
         }
       ],
       "n_regions": 8,
+      "n_supported_cells": 7,
+      "query_stratification": "none",
       "seed": 1789,
       "feature_provenance": {
         "schema": "gauge_climate.feature_space.v1",

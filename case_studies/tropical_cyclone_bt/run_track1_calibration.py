@@ -25,6 +25,7 @@ if str(SRC) not in sys.path:
 from gauge_climate.adapters import tc_bt  # noqa: E402
 from gauge_climate.adapters.tc_data import load_real_archive  # noqa: E402
 from gauge_climate.inference import (  # noqa: E402
+    cluster_w1_influence_interval,
     dkw_w1_interval,
     shift_resolution,
     simultaneous_reference_boundaries,
@@ -435,14 +436,18 @@ def run(protocol_path: Path, *, transform_cache: Path | None = None) -> dict[str
             second = float(np.quantile(evaluated.reference_values[midpoint:], 1.0 - config.alpha))
             reference_scale = max(boundary - evaluated.reference_q50, np.finfo(float).eps)
             stability = abs(first - second) / reference_scale
+            tolerance = float(protocol["tolerances"][functional.id])
             resolution, shifts, powers = shift_resolution(
                 real_values=functional_values,
                 plan=plan,
                 reference_boundary=boundary,
                 target_power=config.shift_power,
                 grid_size=config.shift_grid_size,
+                required_shifts=np.asarray([tolerance], dtype=np.float64),
                 max_draws=config.sensitivity_resamples,
             )
+            tolerance_index = int(np.flatnonzero(shifts == tolerance)[0])
+            tolerance_power = float(powers[tolerance_index])
             if functional.support is None:
                 raise ValueError(f"Functional {functional.id} lacks finite support.")
             dkw = dkw_w1_interval(
@@ -454,7 +459,21 @@ def run(protocol_path: Path, *, transform_cache: Path | None = None) -> dict[str
                 alpha=config.alpha,
                 seed=_derive_seed(seed, f"dkw:{stratum}:{functional.id}"),
             )
-            tolerance = float(protocol["tolerances"][functional.id])
+            if (
+                functional.provenance.get("practical_inference")
+                == "detection_only_discrete_functional"
+            ):
+                direct = dkw
+            else:
+                direct = cluster_w1_influence_interval(
+                    pseudo_values,
+                    functional_values,
+                    local_blocks,
+                    n_eval=n_eval,
+                    alpha=config.alpha,
+                    seed=_derive_seed(seed, f"direct:{stratum}:{functional.id}"),
+                    fallback_support=functional.support,
+                )
             key = f"{stratum}:w1:{functional.id}"
             cell = {
                 "key": key,
@@ -477,14 +496,23 @@ def run(protocol_path: Path, *, transform_cache: Path | None = None) -> dict[str
                     "low": dkw.low,
                     "high": dkw.high,
                 },
+                "direct_equality_interval": {
+                    "method": direct.method,
+                    "estimate": direct.estimate,
+                    "low": direct.low,
+                    "high": direct.high,
+                    "standard_error": direct.standard_error,
+                    "degrees_of_freedom": direct.degrees_of_freedom,
+                    "cdf_zero_fraction": direct.cdf_zero_fraction,
+                    "within_tolerance": bool(direct.high < tolerance),
+                },
                 "tolerance": tolerance,
                 "shift_resolution": resolution,
+                "detection_probability_at_tolerance": tolerance_power,
                 "resolution_to_tolerance_ratio": (
                     None if resolution is None else float(resolution / tolerance)
                 ),
-                "tolerance_resolution_adequate": bool(
-                    resolution is not None and resolution <= tolerance
-                ),
+                "tolerance_resolution_adequate": bool(tolerance_power >= config.shift_power),
                 "shift_grid": shifts.tolist(),
                 "shift_detection_probability": powers.tolist(),
             }
@@ -524,6 +552,12 @@ def run(protocol_path: Path, *, transform_cache: Path | None = None) -> dict[str
         ),
         "dkw_equality_lower_bound_zero": all(
             np.isclose(cell["dkw_equality_interval"]["low"], 0.0) for cell in cells
+        ),
+        "finite_direct_equality_intervals": all(
+            np.isfinite(cell["direct_equality_interval"]["estimate"])
+            and np.isfinite(cell["direct_equality_interval"]["low"])
+            and np.isfinite(cell["direct_equality_interval"]["high"])
+            for cell in cells
         ),
         "finite_simultaneous_boundaries": bool(np.all(np.isfinite(simultaneous))),
         "registered_pseudo_generator_no_simultaneous_detection": not bool(
@@ -583,6 +617,12 @@ def run(protocol_path: Path, *, transform_cache: Path | None = None) -> dict[str
         "summary": {
             "adequate_tolerance_resolution_cells": int(
                 sum(cell["tolerance_resolution_adequate"] for cell in cells)
+            ),
+            "direct_equality_within_tolerance_cells": int(
+                sum(
+                    cell["direct_equality_interval"]["within_tolerance"]
+                    for cell in cells
+                )
             ),
             "total_cells": len(cells),
             "maximum_reference_stability_ratio": float(

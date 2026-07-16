@@ -29,8 +29,10 @@ The tolerances are protocol materiality/resolution thresholds, not estimates
 from the held-out outcomes: 1 K for BT-like functionals and RMS asymmetry;
 1 percentage point for cold-cloud fraction; one 500/32 = 15.625 km radial bin
 for maximum-gradient radius; and 100 deg² for deviation-angle variance. GAUGE
-must report `UNDERPOWERED` when its shift resolution is coarser than a declared
-tolerance and must not reinterpret non-detection as equivalence.
+reports `UNDERPOWERED` when confidence uncertainty alone is at least as large
+as the declared tolerance or a stratum fails the minimum-block rule. Shift
+resolution is reported separately and never substitutes for direct inference;
+non-detection is not reinterpreted as equivalence.
 
 The joint primary detection family contains the seven scalar physical
 functionals across global, six native-class, and C4+ strata (56 cells). Curve,
@@ -82,22 +84,43 @@ physically inadmissible.
 
 ## Track-1 calibration result
 
-The frozen training-only calibration uses 2,000 reference resamples per stratum,
-200 reference draws per shift-resolution curve, 80% target power, and the exact
+The frozen training-only calibration uses 2,000 primary reference resamples per
+stratum, 200 reference draws per shift-resolution curve, 80% target power, and the exact
 registered evaluation sizes. It reads no test fields or functional values.
 Published test-stratum block counts are used only to choose conservative numbers
 of training storms. Every pseudo-generator pool is count-matched and storm-
 disjoint from its real-reference pool.
 
+The final runner retains all 2,000 draws for functional W1 and the preregistered
+simultaneous family. Secondary curve, feature-space, dependence, and admissibility
+diagnostics use 200 draws; quadratic feature-set metrics use deterministic matched
+subsamples of 256 fields per side per draw. Each cell reports these effective
+counts. Complete partition plans are deterministic and recorded by seed and
+SHA-256 with a three-draw preview, avoiding an unusably large JSON expansion.
+This computational amendment followed an aborted invocation that produced no
+metric or report output and changes no primary estimand or decision rule.
+
+The first completed final-output audit exposed a separate target-mixture issue
+already visible in the frozen manifests: generated data contain exactly 1,000
+fields per class, while the real test archive follows its natural, strongly
+imbalanced intensity distribution. All global rows are retained as supplied-bank
+composition checks, but conditional-model fidelity is concluded only from the
+native-class and predeclared C4+ rows. The same mixture cannot be allowed to
+confound memorization, so the superseding final run tests copying within joint
+intensity-class-by-feature-region cells and controls multiplicity across all
+supported cells. The original completed report and its SHA-256 are retained;
+no physical metric or conclusion rule was changed after seeing its values.
+
 All reference-mechanics gates pass, including whole-block partition invariants,
 reference-boundary stability, finite pointwise and simultaneous thresholds, and
-zero detections for the registered pseudo-generator. However, only 6 of 56
-stratum-functional cells resolve shifts at or below the practical tolerance.
-The remaining 50 cells are underpowered for practical-equivalence language at
-the current N. This finding cannot be used to loosen a tolerance. Independent
-statistical review must either accept the preregistered `UNDERPOWERED` reporting
-or approve and validate a more powerful dependence-aware direct W1 interval
-before the final test run.
+zero detections for the registered pseudo-generator. Power is evaluated at the
+exact tolerance in every cell: 12 of 56 attain at least 80% shift-detection
+power and 44 do not. This is training-only design sensitivity, not a model
+score. The original all-DKW practical interval was valid but vacuous for this
+case study. Before accessing generated test outcomes, it was replaced for
+regular bounded scalar functionals by the validated whole-block influence
+interval described above; the discrete maximum-gradient radius retains DKW.
+Tolerances, models, strata, sample sizes, and detection rules were unchanged.
 
 ## Track 2
 

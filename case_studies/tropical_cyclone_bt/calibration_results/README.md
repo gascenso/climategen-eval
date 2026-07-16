@@ -20,15 +20,24 @@ pseudo-generator causes no pointwise or simultaneous detections, and all shift
 resolution calculations are finite. This validates the mechanics of the frozen
 reference experiment; it does not establish practical equivalence power.
 
-Only 6 of the 56 registered stratum-functional cells have 80% shift-detection
-resolution at or below the preregistered practical tolerance. They are global
-DAV; TS DAV and eye contrast; C1 axisymmetry and DAV; and C2 axisymmetry. The
-other 50 cells cannot establish within-tolerance performance at their declared
-sample sizes with the current inference. The final analysis must preserve
-`UNDERPOWERED` as a possible conclusion and must not describe a non-detection in
-those cells as practical equivalence.
+Power is evaluated at every exact preregistered tolerance rather than inferred
+from the nearest generic sweep point. Twelve of the 56 registered
+stratum-functional cells attain at least 80% shift-detection power there. They
+are global axisymmetry, DAV, eye contrast, and radius of maximum gradient; TS
+axisymmetry, DAV, and eye contrast; C1 axisymmetry and DAV; C2 axisymmetry; C4
+axisymmetry; and C4+ axisymmetry. The other 44 cells lack that declared
+detection sensitivity. This is a property of the evaluation design and
+perturbation lane, not the diffusion model and not an equivalence result.
 
-The distribution-free DKW bounds are retained as conservative direct W1 bounds.
-An independent statistical review must decide whether GAUGE should additionally
-register and validate a more powerful dependence-aware direct interval before
-the final test run. Tolerances cannot be relaxed in response to this artifact.
+For regular bounded functionals, the validated whole-block influence interval
+places the training-only pseudo-generator within tolerance in 16 of 56 cells:
+all eight axisymmetry cells, five DAV cells, two eye-contrast cells, and global
+minimum-core BT. The discrete maximum-gradient-radius functional retains the
+finite-sample DKW fallback. The remaining cells legitimately retain
+`INCONCLUSIVE` or `UNDERPOWERED` as possible final outcomes; no tolerance was
+relaxed in response to this artifact.
+
+These 56 cells must not be cross-tabulated with the legacy tc-diffusion
+"AT FLOOR" total. The legacy total was a model-versus-real finite-N detection
+screen over a different set of metrics and strata; this artifact is a
+training-only power and reference-mechanics calibration with no model samples.

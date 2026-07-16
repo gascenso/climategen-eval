@@ -1,6 +1,6 @@
 schema: gauge_climate.tc_bt_preregistration.v1
-status: METHODS_FROZEN_INFERENCE_REVIEW_AND_ARTIFACTS_PENDING
-final_test_run_permitted: false
+status: FROZEN
+final_test_run_permitted: true
 
 scope:
   field: storm-centered infrared brightness temperature
@@ -82,7 +82,15 @@ feature_space:
   eof_components: 20
   eof_fit_sample_count: 512
   mmd_bandwidth_rule: training_only_median_distance
+  set_metric_samples_per_reference_draw: 256
+  set_metric_sampling: deterministic_matched_without_replacement
   memorization_regions: 8
+  memorization_query_strata: intensity_class_by_feature_region
+
+reference_computation:
+  primary_functional_and_simultaneous_family_resamples: 2000
+  secondary_diagnostic_resamples: 200
+  complete_partition_record: deterministic_seed_plus_sha256_and_three_draw_preview
 
 sensitivity_lanes:
   status: FROZEN
@@ -159,9 +167,71 @@ freeze_record:
   frozen_at_utc: "2026-07-15T19:57:32Z"
   base_commit: b765b73
   binding: git_commit_containing_this_record
-  approvers: []
+  approvers: [project_owner]
+  final_track1_authorized_at_utc: "2026-07-16T06:29:36Z"
   rationale_document: case_studies/tropical_cyclone_bt/protocol_freeze.md
   amendments:
+    - date: "2026-07-16"
+      stage: after_first_final_output_audit_before_superseding_final_run
+      change: >-
+        Mark global rows as as-provided label-mixture composition checks whenever
+        real and generated label proportions differ; retain every global result but
+        do not present it as conditional-generator fidelity. Stratify the localized
+        copying test jointly by intensity class and training-fitted feature region,
+        with one Bonferroni family across all supported cells.
+      reason: >-
+        The frozen manifests show a natural real test mixture (3,942 TS through 85
+        C5 frames) and a deliberately balanced generated bank (1,000 per class).
+        The first completed output, SHA-256
+        ff84f5e07de8658ea71faaf3486ee2134f837c352fd04f0d64db8c8d283cf572,
+        made the implication visible: all seven functional pointwise detections
+        were global while all 49 conditional/C4+ cells were non-detections. This
+        is a target-distribution distinction, not permission to discard results.
+        The same known label-mixture mismatch could confound generated-to-training
+        versus real-to-training distances inside broad feature regions, so copying
+        queries are now label-matched. The superseded run already detected no
+        copying; this amendment was therefore not chosen to reverse an adverse
+        copying conclusion. No functional, tolerance, stratum, reference draw,
+        curve, feature metric, or physical conclusion is changed. The compressed
+        superseded report is retained in the final artifact bundle.
+    - date: "2026-07-16"
+      stage: after_aborted_no_output_final_attempt_before_final_test_results
+      change: >-
+        Retain 2,000 reference draws for every functional-W1 cell and the complete
+        simultaneous family; use 200 reference draws for secondary curve,
+        feature-space, dependence, and admissibility diagnostics; cap quadratic
+        feature-set metrics at deterministic matched samples of 256 per side per
+        draw; cache training features; and record each complete deterministic
+        partition plan by seed, SHA-256 digest, and a three-draw preview rather
+        than serializing every index.
+      reason: >-
+        The first authorized runner invocation was stopped before producing any
+        report or metric outcome after profiling exposed redundant quadratic work
+        and a potentially enormous JSON partition manifest. These computational
+        changes preserve the frozen primary statistics, tolerances, strata,
+        generated bank, test set, model, and conclusion rules. Secondary metrics
+        have no equivalence verdict and now report their effective draw and sample
+        counts explicitly. The compact record is exactly reproducible from the
+        frozen inputs, seed, and configuration and is integrity-checked by SHA-256.
+    - date: "2026-07-16"
+      stage: after_training_only_calibration_before_final_test
+      change: >-
+        Replace the all-DKW practical W1 interval for regular bounded scalar
+        functionals with a two-sided 95% whole-block influence-function interval;
+        retain DKW for the discrete maximum-gradient-radius functional. Determine
+        UNDERPOWERED from direct confidence uncertainty rather than detection-shift
+        sensitivity, which remains a separate diagnostic.
+      reason: >-
+        Training-only calibration proved that the all-DKW interval could not place
+        even a perfect-generator control within any declared tolerance. The
+        replacement uses all frames to estimate each storm CDF without treating
+        frames as independent storms and passed pre-outcome boundary simulations
+        for shifts, crossing CDFs, tail contamination, thin strata, and unequal
+        cluster sizes. No tolerance, model, stratum, or test outcome was changed.
+        Legacy tc-diffusion detection summaries were already known, but the
+        replacement method and its gates were selected exclusively with
+        training-only controls and synthetic boundary experiments before the
+        GAUGE final run.
     - date: "2026-07-15"
       stage: before_final_test_and_before_generated_outcomes
       change: >-
