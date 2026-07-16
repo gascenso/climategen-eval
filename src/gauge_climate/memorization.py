@@ -12,6 +12,7 @@ from .types import SamplingEstimand
 @dataclass(frozen=True)
 class RegionCopyingResult:
     region: int
+    stratum: str | None
     n_generated: int
     n_real: int
     n_real_blocks: int
@@ -55,6 +56,8 @@ def localized_copying_test(
     real_features: np.ndarray,
     generated_features: np.ndarray,
     real_blocks: np.ndarray,
+    real_strata: np.ndarray | None = None,
+    generated_strata: np.ndarray | None = None,
     n_regions: int = 8,
     n_resamples: int = 1000,
     alpha: float = 0.05,
@@ -67,8 +70,10 @@ def localized_copying_test(
 
     The effect is median(generated distance) - median(real distance). Negative
     values indicate generated queries lie closer to training data. Confidence
-    intervals resample generated queries and whole held-out blocks. A
-    Bonferroni simultaneous interval is used across supported regions.
+    intervals resample generated queries and whole held-out blocks. When query
+    strata are supplied, comparisons are made within joint stratum-by-region
+    cells so a label-mixture mismatch cannot masquerade as copying or separation.
+    A Bonferroni simultaneous interval is used across all supported cells.
     """
 
     train = np.asarray(train_features, dtype=np.float64)
@@ -82,6 +87,27 @@ def localized_copying_test(
         raise ValueError("Copying test feature dimensions differ.")
     if real.shape[0] != blocks.size:
         raise ValueError("real_features and real_blocks must align.")
+    if (real_strata is None) != (generated_strata is None):
+        raise ValueError("real_strata and generated_strata must be supplied together.")
+    real_stratum_values: np.ndarray | None = None
+    generated_stratum_values: np.ndarray | None = None
+    strata: list[str | None] = [None]
+    if real_strata is not None and generated_strata is not None:
+        real_stratum_values = np.asarray(
+            [str(value) for value in np.asarray(real_strata)], dtype=object
+        )
+        generated_stratum_values = np.asarray(
+            [str(value) for value in np.asarray(generated_strata)], dtype=object
+        )
+        if real_stratum_values.shape != (real.shape[0],):
+            raise ValueError("real_strata and real_features must align.")
+        if generated_stratum_values.shape != (generated.shape[0],):
+            raise ValueError("generated_strata and generated_features must align.")
+        real_support = set(real_stratum_values.tolist())
+        generated_support = set(generated_stratum_values.tolist())
+        if real_support != generated_support:
+            raise ValueError("Real and generated copying-query strata have different support.")
+        strata = sorted(real_support)
     rng = np.random.default_rng(seed)
     centers = _fit_kmeans(train, min(n_regions, train.shape[0]), rng)
     train_regions = np.argmin(((train[:, None, :] - centers[None, :, :]) ** 2).sum(axis=2), axis=1)
@@ -92,27 +118,40 @@ def localized_copying_test(
     tree = cKDTree(train)
     real_dist = np.asarray(tree.query(real, k=1)[0], dtype=np.float64)
     generated_dist = np.asarray(tree.query(generated, k=1)[0], dtype=np.float64)
-    supported = []
+    supported: list[tuple[int, str | None]] = []
     for region in range(centers.shape[0]):
-        real_mask = real_regions == region
-        generated_mask = generated_regions == region
-        block_count = np.unique(blocks[real_mask]).size
-        if real_mask.sum() and generated_mask.sum() and block_count >= min_real_blocks:
-            supported.append(region)
+        for stratum in strata:
+            real_mask = real_regions == region
+            generated_mask = generated_regions == region
+            if stratum is not None:
+                assert real_stratum_values is not None
+                assert generated_stratum_values is not None
+                real_mask &= real_stratum_values == stratum
+                generated_mask &= generated_stratum_values == stratum
+            block_count = np.unique(blocks[real_mask]).size
+            if real_mask.sum() and generated_mask.sum() and block_count >= min_real_blocks:
+                supported.append((region, stratum))
     if not supported:
         return {
             "status": "UNDERPOWERED",
             "reason": "No feature-space region has enough real blocks and both query types.",
             "regions": [],
             "n_regions": int(centers.shape[0]),
+            "n_supported_cells": 0,
+            "query_stratification": "none" if strata == [None] else "supplied_labels",
             "feature_provenance": dict(feature_provenance or {}),
             "estimand": estimand.value,
         }
     simultaneous_alpha = alpha / len(supported)
     region_results: list[RegionCopyingResult] = []
-    for region in supported:
+    for region, stratum in supported:
         real_mask = real_regions == region
         generated_mask = generated_regions == region
+        if stratum is not None:
+            assert real_stratum_values is not None
+            assert generated_stratum_values is not None
+            real_mask &= real_stratum_values == stratum
+            generated_mask &= generated_stratum_values == stratum
         r_dist = real_dist[real_mask]
         g_dist = generated_dist[generated_mask]
         r_blocks = blocks[real_mask]
@@ -167,6 +206,7 @@ def localized_copying_test(
         region_results.append(
             RegionCopyingResult(
                 region=region,
+                stratum=stratum,
                 n_generated=int(g_dist.size),
                 n_real=int(r_dist.size),
                 n_real_blocks=int(unique_blocks.size),
@@ -185,10 +225,22 @@ def localized_copying_test(
     return {
         "status": overall,
         "effect_definition": "median generated-to-train NN minus median real-to-train NN",
-        "multiplicity": "Bonferroni simultaneous intervals across supported regions",
+        "status_semantics": {
+            "COPYING_DETECTED": "generated queries are significantly closer to training",
+            "OFF_MANIFOLD": (
+                "legacy schema label: generated queries are significantly farther from "
+                "training; this does not establish physical inadmissibility"
+            ),
+            "INCONCLUSIVE": "the simultaneous interval crosses zero",
+        },
+        "multiplicity": (
+            "Bonferroni simultaneous intervals across supported query-stratum-by-region cells"
+        ),
         "alpha": alpha,
         "regions": [result.to_dict() for result in region_results],
         "n_regions": int(centers.shape[0]),
+        "n_supported_cells": len(supported),
+        "query_stratification": "none" if strata == [None] else "supplied_labels",
         "seed": int(seed),
         "feature_provenance": dict(feature_provenance or {}),
         "estimand": estimand.value,

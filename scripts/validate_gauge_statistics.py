@@ -23,6 +23,7 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 from gauge_climate.inference import (  # noqa: E402
+    cluster_w1_influence_interval,
     dkw_w1_interval,
     functional_w1_interval,
     simultaneous_reference_boundaries,
@@ -43,6 +44,26 @@ def _bounded_clustered_sample(rng: np.random.Generator, n_blocks: int, frames: i
     return values, blocks
 
 
+def _normal_clustered_sample(
+    rng: np.random.Generator,
+    n_blocks: int,
+    *,
+    unequal_sizes: bool = False,
+) -> tuple[np.ndarray, np.ndarray, float]:
+    if unequal_sizes:
+        sizes = np.maximum(
+            1, np.rint(np.exp(rng.uniform(0.0, np.log(60.0), size=n_blocks)))
+        ).astype(int)
+    else:
+        sizes = rng.integers(2, 9, size=n_blocks)
+    blocks = np.repeat(np.arange(n_blocks), sizes)
+    block_sd = 0.3
+    frame_sd = 1.0
+    effects = rng.normal(scale=block_sd, size=n_blocks)
+    values = effects.repeat(sizes) + rng.normal(scale=frame_sd, size=blocks.size)
+    return values, blocks, math.sqrt(block_sd**2 + frame_sd**2)
+
+
 def _wilson_interval(successes: int, total: int, z: float = 1.959963984540054) -> tuple[float, float]:
     proportion = successes / total
     denominator = 1.0 + z * z / total
@@ -58,6 +79,9 @@ def run_validation(*, trials: int, resamples: int, seed: int) -> dict:
     simultaneous_false_positives = 0
     simultaneous_resolved = True
     plan_failures = 0
+    influence_boundary_upper_misses = Counter()
+    influence_boundary_lower_misses = Counter()
+    influence_equality_within = Counter()
     detection_hits = Counter({
         "equality": 0,
         "location_shift": 0,
@@ -139,6 +163,113 @@ def run_validation(*, trials: int, resamples: int, seed: int) -> dict:
             seed=seed + 30_000 + trial,
         )
         bootstrap_coverage_hits += int(bootstrap.low <= 0.5 <= bootstrap.high)
+
+        # Practical-equivalence validation is performed at the least-favourable
+        # boundary W1=delta.  The interval is two-sided 95%, so either one-sided
+        # boundary error should be no greater than 5% (and is expected to be
+        # closer to 2.5%).  Location, crossing-CDF variance, tail-mixture, thin,
+        # and severe unequal-block scenarios exercise distinct failure modes.
+        equivalence_delta = 0.4
+        for scenario, n_blocks in (("location_80", 80), ("location_22", 22)):
+            influence_real, influence_blocks, marginal_sd = _normal_clustered_sample(
+                rng, n_blocks
+            )
+            influence_generated = rng.normal(
+                loc=equivalence_delta, scale=marginal_sd, size=1000
+            )
+            influence_interval = cluster_w1_influence_interval(
+                influence_generated,
+                influence_real,
+                influence_blocks,
+                n_eval=1000,
+                alpha=0.05,
+                seed=seed + 31_000 + trial + n_blocks,
+                fallback_support=(-8.0, 8.0),
+            )
+            influence_boundary_upper_misses[scenario] += int(
+                influence_interval.high < equivalence_delta
+            )
+            influence_boundary_lower_misses[scenario] += int(
+                influence_interval.low > equivalence_delta
+            )
+            equal_generated = rng.normal(scale=marginal_sd, size=1000)
+            equal_interval = cluster_w1_influence_interval(
+                equal_generated,
+                influence_real,
+                influence_blocks,
+                n_eval=1000,
+                alpha=0.05,
+                seed=seed + 32_000 + trial + n_blocks,
+                fallback_support=(-8.0, 8.0),
+            )
+            influence_equality_within[scenario] += int(
+                equal_interval.high < equivalence_delta
+            )
+
+        variance_real, variance_blocks, marginal_sd = _normal_clustered_sample(rng, 80)
+        normal_absolute_mean = math.sqrt(2.0 / math.pi)
+        variance_generated = rng.normal(
+            scale=marginal_sd + equivalence_delta / normal_absolute_mean,
+            size=1000,
+        )
+        variance_interval = cluster_w1_influence_interval(
+            variance_generated,
+            variance_real,
+            variance_blocks,
+            n_eval=1000,
+            alpha=0.05,
+            seed=seed + 33_000 + trial,
+            fallback_support=(-10.0, 10.0),
+        )
+        influence_boundary_upper_misses["variance_crossing_80"] += int(
+            variance_interval.high < equivalence_delta
+        )
+        influence_boundary_lower_misses["variance_crossing_80"] += int(
+            variance_interval.low > equivalence_delta
+        )
+
+        tail_real, tail_blocks, marginal_sd = _normal_clustered_sample(rng, 80)
+        tail_probability = 0.2
+        tail_shift = equivalence_delta / tail_probability
+        tail_generated = rng.normal(scale=marginal_sd, size=1000)
+        tail_generated += (rng.random(1000) < tail_probability) * tail_shift
+        tail_interval = cluster_w1_influence_interval(
+            tail_generated,
+            tail_real,
+            tail_blocks,
+            n_eval=1000,
+            alpha=0.05,
+            seed=seed + 34_000 + trial,
+            fallback_support=(-8.0, 10.0),
+        )
+        influence_boundary_upper_misses["tail_mixture_80"] += int(
+            tail_interval.high < equivalence_delta
+        )
+        influence_boundary_lower_misses["tail_mixture_80"] += int(
+            tail_interval.low > equivalence_delta
+        )
+
+        unequal_real, unequal_influence_blocks, marginal_sd = _normal_clustered_sample(
+            rng, 80, unequal_sizes=True
+        )
+        unequal_influence_generated = rng.normal(
+            loc=equivalence_delta, scale=marginal_sd, size=1000
+        )
+        unequal_influence_interval = cluster_w1_influence_interval(
+            unequal_influence_generated,
+            unequal_real,
+            unequal_influence_blocks,
+            n_eval=1000,
+            alpha=0.05,
+            seed=seed + 35_000 + trial,
+            fallback_support=(-8.0, 8.0),
+        )
+        influence_boundary_upper_misses["unequal_blocks_80"] += int(
+            unequal_influence_interval.high < equivalence_delta
+        )
+        influence_boundary_lower_misses["unequal_blocks_80"] += int(
+            unequal_influence_interval.low > equivalence_delta
+        )
 
         sizes = np.maximum(
             1, np.rint(np.exp(rng.uniform(0.0, np.log(60.0), size=40)))
@@ -276,6 +407,25 @@ def run_validation(*, trials: int, resamples: int, seed: int) -> dict:
     reference_intervals = {
         key: list(_wilson_interval(value, trials)) for key, value in detection_hits.items()
     }
+    influence_names = tuple(influence_boundary_upper_misses)
+    influence_upper_rates = {
+        name: influence_boundary_upper_misses[name] / trials for name in influence_names
+    }
+    influence_lower_rates = {
+        name: influence_boundary_lower_misses[name] / trials for name in influence_names
+    }
+    influence_upper_intervals = {
+        name: list(_wilson_interval(influence_boundary_upper_misses[name], trials))
+        for name in influence_names
+    }
+    influence_lower_intervals = {
+        name: list(_wilson_interval(influence_boundary_lower_misses[name], trials))
+        for name in influence_names
+    }
+    influence_equality_rates = {
+        name: influence_equality_within[name] / trials
+        for name in influence_equality_within
+    }
     gate = {
         "dkw_coverage_at_least_nominal_with_mc_uncertainty": coverage_wilson[0] >= 0.95,
         "dkw_false_positive_at_most_alpha_with_mc_uncertainty": false_positive_wilson[1]
@@ -301,6 +451,14 @@ def run_validation(*, trials: int, resamples: int, seed: int) -> dict:
         <= 0.05,
         "simultaneous_reference_calibration": simultaneous_resolved
         and simultaneous_wilson[0] <= 0.05 <= simultaneous_wilson[1],
+        "cluster_w1_boundary_upper_error_at_most_alpha": all(
+            rate <= 0.05 for rate in influence_upper_rates.values()
+        ),
+        "cluster_w1_boundary_lower_error_at_most_alpha": all(
+            rate <= 0.05 for rate in influence_lower_rates.values()
+        ),
+        "cluster_w1_equality_power_80_blocks": influence_equality_rates["location_80"]
+        >= 0.80,
     }
     return {
         "schema": "gauge_climate.statistical_validation.v1",
@@ -321,6 +479,17 @@ def run_validation(*, trials: int, resamples: int, seed: int) -> dict:
                 "coverage": bootstrap_coverage,
                 "release_gate": False,
                 "reason": "Classical bootstrap coverage is not guaranteed for empirical W1.",
+            },
+            "cluster_w1_influence_interval": {
+                "method": "integrated-CDF influence values with whole-block real variance and Welch-Satterthwaite t interval",
+                "bound_type": "two-sided 95%; practical equivalence uses the upper endpoint",
+                "boundary_true_w1": equivalence_delta,
+                "upper_below_boundary_rate": influence_upper_rates,
+                "upper_below_boundary_wilson_95": influence_upper_intervals,
+                "lower_above_boundary_rate": influence_lower_rates,
+                "lower_above_boundary_wilson_95": influence_lower_intervals,
+                "perfect_generator_within_tolerance_rate": influence_equality_rates,
+                "discrete_functionals": "finite-sample DKW fallback; not covered by this gate",
             },
             "unequal_block_reference_plan": {"invariant_failures": plan_failures},
             "simultaneous_reference": {

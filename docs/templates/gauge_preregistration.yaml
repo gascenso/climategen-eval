@@ -25,6 +25,7 @@ track1:
   n_eval_justification: "REPLACE: intended consumption size"
   alpha: 0.05
   n_reference_resamples: 200
+  n_secondary_diagnostic_resamples: 200
   seed: 1789
   min_blocks_per_half: 10
   joint_claim: false
@@ -53,6 +54,7 @@ track1:
     fit_sample_rule: "REPLACE"
     scaling: "training mean and standard deviation"
     kernel_bandwidth_rule: "training-only median heuristic"
+    set_metric_samples_per_draw: 256
 
   metrics:
     required: [functional_w1, feature_mmd2, density, coverage, diversity]
@@ -60,6 +62,7 @@ track1:
     admissibility_constraints: []
     dependence_entries: "all off-diagonal Spearman entries"
     memorization_regions: 8
+    memorization_query_strata: "REPLACE labels, or none with justification"
 
   sensitivity_lanes:
     - id: copyist
@@ -75,6 +78,7 @@ track1:
   conditional:
     enabled: false
     strata: []
+    global_condition_mixture: "skip | as_provided_composition_check | REPLACE common mixture"
     predeclared_pooled_strata: []
     thin_stratum_action: UNDERPOWERED
 

@@ -4,6 +4,7 @@ import numpy as np
 
 from gauge_climate.inference import (
     Interval,
+    cluster_w1_influence_interval,
     dkw_w1_interval,
     practical_status,
     shift_resolution,
@@ -53,6 +54,59 @@ def test_dkw_interval_rejects_values_outside_declared_support():
         raise AssertionError("Expected a support violation.")
 
 
+def test_cluster_w1_influence_interval_is_invariant_to_within_block_duplication():
+    rng = np.random.default_rng(91)
+    blocks = np.repeat(np.arange(40), 3)
+    real = rng.normal(size=blocks.size)
+    generated = rng.normal(loc=0.3, size=160)
+    first = cluster_w1_influence_interval(
+        generated,
+        real,
+        blocks,
+        n_eval=120,
+        alpha=0.05,
+        seed=4,
+        fallback_support=(-5.0, 5.0),
+    )
+    second = cluster_w1_influence_interval(
+        generated,
+        np.repeat(real, 2),
+        np.repeat(blocks, 2),
+        n_eval=120,
+        alpha=0.05,
+        seed=4,
+        fallback_support=(-5.0, 5.0),
+    )
+
+    assert first.method == "cluster_w1_influence_t"
+    assert np.isclose(first.estimate, second.estimate)
+    assert np.isclose(first.standard_error, second.standard_error)
+    assert np.isclose(first.low, second.low)
+    assert np.isclose(first.high, second.high)
+
+
+def test_cluster_w1_influence_interval_contains_clear_location_shift():
+    rng = np.random.default_rng(92)
+    block_effects = rng.normal(scale=0.25, size=120)
+    blocks = np.repeat(np.arange(120), 4)
+    real = block_effects.repeat(4) + rng.normal(size=blocks.size)
+    shift = 0.4
+    generated = rng.normal(scale=np.sqrt(1.0 + 0.25**2), size=800) + shift
+    interval = cluster_w1_influence_interval(
+        generated,
+        real,
+        blocks,
+        n_eval=600,
+        alpha=0.05,
+        seed=5,
+        fallback_support=(-5.0, 5.0),
+    )
+
+    assert interval.low <= shift <= interval.high
+    assert interval.standard_error is not None and interval.standard_error > 0.0
+    assert interval.degrees_of_freedom is not None
+
+
 def test_tolerance_statuses_cover_within_exceeds_boundary_and_underpowered():
     def interval(low, high):
         return Interval((low + high) / 2, low, high, np.asarray([]))
@@ -67,7 +121,7 @@ def test_tolerance_statuses_cover_within_exceeds_boundary_and_underpowered():
     )
     boundary = practical_status(interval(0.4, 0.6), tolerance=0.5, shift_resolution=0.1)
     assert boundary == (PracticalStatus.INCONCLUSIVE, SensitivityStatus.ADEQUATE)
-    underpowered = practical_status(interval(0.4, 0.6), tolerance=0.5, shift_resolution=0.8)
+    underpowered = practical_status(interval(0.0, 1.2), tolerance=0.5, shift_resolution=0.8)
     assert underpowered == (PracticalStatus.UNDERPOWERED, SensitivityStatus.INADEQUATE)
 
 
@@ -126,3 +180,37 @@ def test_shift_resolution_max_draws_limits_distance_evaluations(monkeypatch):
         max_draws=5,
     )
     assert calls == 8 * 5
+
+
+def test_shift_resolution_evaluates_required_shift_exactly():
+    draw = ReferenceDraw(
+        pseudo_indices=np.arange(10),
+        real_indices=np.arange(10, 20),
+        generated_indices=np.arange(10),
+        blocks_a=tuple(f"a{i}" for i in range(10)),
+        blocks_b=tuple(f"b{i}" for i in range(10)),
+        frame_count_a=10,
+        frame_count_b=10,
+    )
+    plan = ReferencePlan(
+        draws=tuple(draw for _ in range(8)),
+        n_eval=10,
+        estimand=SamplingEstimand.BLOCK_BALANCED,
+        seed=17,
+        n_blocks=20,
+    )
+    tolerance = 0.123456789
+
+    _, shifts, powers = shift_resolution(
+        real_values=np.linspace(0.0, 1.0, 20),
+        plan=plan,
+        reference_boundary=0.1,
+        target_power=0.8,
+        grid_size=5,
+        required_shifts=np.asarray([tolerance]),
+        max_draws=4,
+    )
+
+    matches = np.flatnonzero(shifts == tolerance)
+    assert matches.size == 1
+    assert np.isfinite(powers[int(matches[0])])

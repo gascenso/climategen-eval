@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,7 +28,8 @@ class ReferencePlan:
     seed: int
     n_blocks: int
 
-    def partition_manifest(self) -> list[dict[str, Any]]:
+    def partition_manifest(self, *, limit: int | None = None) -> list[dict[str, Any]]:
+        draws = self.draws if limit is None else self.draws[:limit]
         return [
             {
                 "blocks_a": list(draw.blocks_a),
@@ -38,8 +40,29 @@ class ReferencePlan:
                 "real_indices": draw.real_indices.tolist(),
                 "generated_indices": draw.generated_indices.tolist(),
             }
-            for draw in self.draws
+            for draw in draws
         ]
+
+    def provenance_hash(self) -> str:
+        """Hash the complete plan without expanding it into a large JSON object."""
+
+        digest = hashlib.sha256()
+        digest.update(str(self.seed).encode("utf-8"))
+        digest.update(str(self.n_eval).encode("utf-8"))
+        digest.update(self.estimand.value.encode("utf-8"))
+        digest.update(str(self.n_blocks).encode("utf-8"))
+        for draw in self.draws:
+            for blocks in (draw.blocks_a, draw.blocks_b):
+                for block in blocks:
+                    encoded = block.encode("utf-8")
+                    digest.update(len(encoded).to_bytes(8, "little"))
+                    digest.update(encoded)
+            digest.update(np.asarray(draw.pseudo_indices, dtype="<i8").tobytes())
+            digest.update(np.asarray(draw.real_indices, dtype="<i8").tobytes())
+            digest.update(np.asarray(draw.generated_indices, dtype="<i8").tobytes())
+            digest.update(int(draw.frame_count_a).to_bytes(8, "little"))
+            digest.update(int(draw.frame_count_b).to_bytes(8, "little"))
+        return digest.hexdigest()
 
 
 @dataclass(frozen=True)
@@ -136,6 +159,12 @@ def build_reference_plan(
         block: int(np.sum(block_strings[real_indices] == block))
         for block in eligible_blocks
     }
+    # When the declared evaluation size is the complete generated bank, every
+    # draw uses exactly the same generated set. Reuse one immutable index array
+    # instead of storing thousands of scientifically irrelevant permutations.
+    full_generated_indices = (
+        np.arange(n_generated, dtype=np.int64) if n_eval == n_generated else None
+    )
     draws: list[ReferenceDraw] = []
     for _ in range(config.n_resamples):
         # For the frame-weighted estimand, select the best of several random
@@ -179,7 +208,11 @@ def build_reference_plan(
             estimand=config.estimand,
             rng=rng,
         )
-        generated = rng.choice(n_generated, size=n_eval, replace=False).astype(np.int64)
+        generated = (
+            full_generated_indices
+            if full_generated_indices is not None
+            else rng.choice(n_generated, size=n_eval, replace=False).astype(np.int64)
+        )
         draws.append(
             ReferenceDraw(
                 pseudo_indices=pseudo,

@@ -9,7 +9,7 @@ Choose metrics from the scientific claims, not from a universal checklist.
 | Dependence among physical summaries is preserved | multivariate functional transform + Spearman closure | matrix discrepancy and interpretable pairwise diagnostics | claiming multivariate fidelity from marginal W1 alone |
 | Spatial/scale structure is preserved | domain adapter curve metric | declared coordinates, preprocessing, masks, and curve distance | treating a radial PSD as universal |
 | Samples are admissible | hard/soft domain predicate | raw generated rate and reference-calibrated rate departure | hiding invalid samples before evaluation |
-| The model is not copying training samples | train-fit feature space + localized copying test | partitioned effects, simultaneous intervals, copyist control | only comparing global nearest-neighbor histograms |
+| The model is not copying training samples | train-fit feature space + localized copying test | label-matched region effects, simultaneous intervals, copyist control | only comparing global nearest-neighbor histograms or confounding query-label mixtures |
 | Samples improve a downstream task | eight-arm matched ladder | paired generated-vs-copy contrasts and predeclared task margin | comparing augmentation only with no augmentation |
 
 W1 is a common currency only for scalar, physically interpretable functionals.

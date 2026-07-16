@@ -156,6 +156,7 @@ class EvaluationConfig:
 
     n_eval: int | None = None
     n_resamples: int = 200
+    diagnostic_resamples: int | None = None
     bootstrap_resamples: int = 500
     sensitivity_resamples: int = 100
     alpha: float = 0.05
@@ -178,6 +179,13 @@ class EvaluationConfig:
             raise ValueError("n_eval must be greater than one.")
         if self.n_resamples < 20:
             raise ValueError("n_resamples must be at least 20.")
+        if self.diagnostic_resamples is None:
+            object.__setattr__(self, "diagnostic_resamples", min(self.n_resamples, 200))
+        assert self.diagnostic_resamples is not None
+        if self.diagnostic_resamples < 20:
+            raise ValueError("diagnostic_resamples must be at least 20.")
+        if self.diagnostic_resamples > self.n_resamples:
+            raise ValueError("diagnostic_resamples cannot exceed n_resamples.")
         if self.bootstrap_resamples < 20:
             raise ValueError("bootstrap_resamples must be at least 20.")
         if self.sensitivity_resamples < 20:

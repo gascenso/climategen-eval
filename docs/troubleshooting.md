@@ -8,13 +8,19 @@
   inspecting model results.
 - **Functional outside support:** correct or justify the physical support before
   running. GAUGE refuses to clip values silently.
-- **No practical verdict:** v0.1 finite-sample W1 tolerance inference needs a
-  bounded scalar functional and the block-balanced estimand. The reference
-  result remains usable for detection; clustered bootstrap output is diagnostic.
+- **No practical verdict:** v0.1 W1 tolerance inference needs a bounded scalar
+  functional, the block-balanced estimand, and enough independent blocks.
+  Discrete/nonregular functionals use the conservative DKW fallback. The
+  reference result remains usable for detection; percentile-bootstrap output is
+  diagnostic only.
 - **Lazy archive exceeds memory:** lower `transform_batch_size`; for train-fit
   EOF features, also lower the preregistered `max_fit_samples` or feature-space
   batch size. `max_materialize_bytes` guards explicit `Dataset.as_numpy()` calls;
   the evaluation engine and TC sample-bank adapter process fields in batches.
+- **Secondary metrics are slow:** freeze a smaller `diagnostic_resamples` budget
+  and, for quadratic feature-set metrics, a matched `max_samples_per_draw` cap.
+  Do not reduce `n_resamples` for functional W1 or a registered simultaneous
+  family after seeing outcomes; all effective counts must remain in provenance.
 - **Positive control fails:** do not interpret that metric. Revisit preprocessing,
   severity, feature fitting, and valid input domain.
 - **Different labels in real/generated data:** conditional support must match.

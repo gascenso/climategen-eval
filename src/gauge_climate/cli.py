@@ -201,11 +201,15 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
             batch_size=int(feature_node.get("batch_size", 128)),
             fit_source="train",
         )
+        train_features = feature_space.transform(train_fields)
         metrics.extend(
             feature_space.registered_metrics(
-                train_fields,
+                train_features=train_features,
                 density_k=int(feature_node.get("density_k", 5)),
                 bandwidth_seed=int(feature_node.get("bandwidth_seed", config.seed)),
+                max_samples_per_draw=int(
+                    feature_node.get("max_samples_per_draw", 256)
+                ),
             )
         )
         dependence_requested = bool(feature_node.get("dependence_pairs", len(functionals) >= 2))
@@ -226,11 +230,22 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
         if bool(copying.get("enabled", True)):
             if real.blocks is None:
                 raise ValueError("Memorization inference requires held-out real block ids.")
+            match_labels = bool(copying.get("match_labels", True))
+            if match_labels and (real.labels is None or generated.labels is None):
+                raise ValueError(
+                    "Label-matched memorization requires labels on real and generated data; "
+                    "set feature_metrics.memorization.match_labels=false only for a "
+                    "scientifically unconditional query population."
+                )
             memorization_result = localized_copying_test(
-                train_features=feature_space.transform(train_fields),
+                train_features=train_features,
                 real_features=feature_space.transform(real_fields),
                 generated_features=feature_space.transform(generated_fields),
                 real_blocks=np.asarray(real.blocks),
+                real_strata=None if not match_labels else np.asarray(real.labels),
+                generated_strata=(
+                    None if not match_labels else np.asarray(generated.labels)
+                ),
                 n_regions=int(copying.get("n_regions", 8)),
                 n_resamples=int(copying.get("n_resamples", 1000)),
                 alpha=config.alpha,

@@ -120,6 +120,26 @@ def test_reference_plan_keeps_halves_disjoint_and_whole():
         assert len(draw.pseudo_indices) == len(draw.real_indices) == len(draw.generated_indices) == 80
 
 
+def test_reference_plan_has_compact_reproducible_provenance():
+    blocks = np.repeat(np.arange(30), 3)
+    kwargs = dict(
+        real_indices=np.arange(blocks.size),
+        real_blocks=blocks,
+        n_generated=80,
+        config=_config(n_eval=80),
+    )
+    first = build_reference_plan(**kwargs, seed=9)
+    second = build_reference_plan(**kwargs, seed=9)
+    changed = build_reference_plan(**kwargs, seed=10)
+    assert first.provenance_hash() == second.provenance_hash()
+    assert first.provenance_hash() != changed.provenance_hash()
+    assert len(first.partition_manifest(limit=3)) == 3
+    assert all(
+        draw.generated_indices is first.draws[0].generated_indices
+        for draw in first.draws
+    )
+
+
 def test_perfect_generator_has_two_separate_conclusions():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(
@@ -144,7 +164,8 @@ def test_perfect_generator_has_two_separate_conclusions():
         gauge.PracticalStatus.INCONCLUSIVE,
         gauge.PracticalStatus.UNDERPOWERED,
     }
-    assert cell.provenance["inference_method"] == "finite_sample_dkw_quantile_band"
+    assert cell.provenance["inference_method"] == "cluster_w1_influence_t"
+    assert cell.provenance["interval_bound_type"] == "two_sided_1_minus_alpha"
     assert cell.reference_position is not None
 
 
@@ -282,6 +303,33 @@ def test_predeclared_conditional_aggregate_is_an_explicit_report_stratum():
     }
 
 
+def test_global_conditional_mixture_mismatch_is_explicitly_audited():
+    train, real, generated = _datasets()
+    real_labels = np.zeros(real.n_samples, dtype=int)
+    real_labels[: real.n_samples // 4] = 1
+    generated_labels = np.tile([0, 1], generated.n_samples // 2)
+    real = gauge.Dataset(real.fields, blocks=real.blocks, labels=real_labels)
+    generated = gauge.Dataset(generated.fields, labels=generated_labels)
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(n_eval=50),
+        conditional=True,
+    )
+    audit = report.metadata["analysis"]["global_label_mixture"]
+    assert audit["policy"] == "as_provided"
+    assert audit["matched"] is False
+    assert audit["total_variation_distance"] > 0
+    assert "composition checks" in report.warnings[0]
+    global_cell = next(cell for cell in report.cells if cell.stratum == "global")
+    assert global_cell.provenance["global_label_mixture_policy"] == "as_provided"
+
+
 def test_report_round_trip_and_render():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(
@@ -386,3 +434,39 @@ def test_curve_diagnostic_is_serialized_and_renderable():
         path = Path(directory) / "curve.pdf"
         report.figure_curve("toy_curve", "global", path)
         assert path.stat().st_size > 100
+
+
+def test_secondary_metrics_use_declared_diagnostic_resample_budget():
+    train, real, generated = _datasets()
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    diagnostic = gauge.MetricSpec(
+        id="mean_departure",
+        transform=lambda fields: fields[:, 0],
+        estimator=lambda generated_values, real_values: abs(
+            float(np.mean(generated_values) - np.mean(real_values))
+        ),
+        kind=gauge.MetricKind.SET,
+        units="unit",
+        description="toy secondary diagnostic",
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        metrics=[diagnostic],
+        config=_config(diagnostic_resamples=20),
+    )
+    by_metric = {cell.metric: cell for cell in report.cells}
+    assert by_metric["w1:value"].provenance["reference_resamples_used"] == 40
+    assert by_metric["mean_departure"].provenance["reference_resamples_used"] == 20
+    assert (
+        by_metric["mean_departure"].provenance["reference_resample_role"]
+        == "secondary_diagnostic"
+    )
+    partition = report.partitions["global"]
+    assert partition["draw_count"] == 40
+    assert len(partition["preview"]) == 3
+    assert len(partition["manifest_sha256"]) == 64

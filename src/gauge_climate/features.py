@@ -160,10 +160,12 @@ class TrainFittedFeatureSpace:
 
     def registered_metrics(
         self,
-        train_fields: Any,
+        train_fields: Any | None = None,
         *,
+        train_features: np.ndarray | None = None,
         density_k: int = 5,
         bandwidth_seed: int = 1789,
+        max_samples_per_draw: int = 256,
     ):
         """Build core feature metrics with every fit choice learned on train."""
 
@@ -175,12 +177,24 @@ class TrainFittedFeatureSpace:
             mmd_metric,
         )
 
-        train_features = self.transform(train_fields)
+        if train_features is None:
+            if train_fields is None:
+                raise ValueError("Provide train_fields or precomputed train_features.")
+            train_features = self.transform(train_fields)
+        train_features = np.asarray(train_features, dtype=np.float64)
+        if train_features.ndim != 2 or train_features.shape[0] < 2:
+            raise ValueError("train_features must have shape (N >= 2, features).")
+        if not np.all(np.isfinite(train_features)):
+            raise ValueError("train_features contain NaN or infinite values.")
+        if max_samples_per_draw <= density_k or max_samples_per_draw < 2:
+            raise ValueError("max_samples_per_draw must be greater than density_k.")
         bandwidth = median_bandwidth(train_features, seed=bandwidth_seed)
         provenance = {
             "feature_space_hash": self.provenance_hash,
             "fit_source": self.fit_source,
             "bandwidth_fit_source": "train",
+            "reference_draw_max_samples_per_side": int(max_samples_per_draw),
+            "reference_draw_subsampling": "deterministic_matched_without_replacement",
         }
         feature_transform = self.transform
         metrics = (
@@ -189,10 +203,47 @@ class TrainFittedFeatureSpace:
             coverage_metric(feature_transform, k=density_k),
             diversity_metric(feature_transform),
         )
-        # Dataclasses are frozen; construct copies with merged provenance.
+        # These set diagnostics are quadratic in the draw size. Evaluate them on
+        # deterministic, matched finite subsets so their effective sample size is
+        # explicit and the public runner remains tractable on realistic archives.
         from dataclasses import replace
 
-        return tuple(
-            replace(metric, provenance={**dict(metric.provenance), **provenance})
-            for metric in metrics
-        )
+        registered = []
+        for index, metric in enumerate(metrics):
+            metric_seed = int((bandwidth_seed + 1009 * (index + 1)) % (2**32 - 1))
+            base_estimator = metric.estimator
+
+            def limited_estimator(
+                generated: np.ndarray,
+                real: np.ndarray,
+                *,
+                estimator=base_estimator,
+                seed=metric_seed,
+            ) -> float:
+                generated = np.asarray(generated)
+                real = np.asarray(real)
+                rng = np.random.default_rng(seed)
+                if generated.shape[0] > max_samples_per_draw:
+                    generated = generated[
+                        rng.choice(
+                            generated.shape[0], max_samples_per_draw, replace=False
+                        )
+                    ]
+                if real.shape[0] > max_samples_per_draw:
+                    real = real[
+                        rng.choice(real.shape[0], max_samples_per_draw, replace=False)
+                    ]
+                return float(estimator(generated, real))
+
+            registered.append(
+                replace(
+                    metric,
+                    estimator=limited_estimator,
+                    provenance={
+                        **dict(metric.provenance),
+                        **provenance,
+                        "reference_draw_subsample_seed": metric_seed,
+                    },
+                )
+            )
+        return tuple(registered)

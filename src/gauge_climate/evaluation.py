@@ -4,6 +4,7 @@ import hashlib
 import json
 import platform
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
@@ -12,6 +13,7 @@ import scipy
 from .data import Dataset, normalized_blocks, validate_generated, validate_split
 from .inference import (
     Interval,
+    cluster_w1_influence_interval,
     dkw_w1_interval,
     detection_status,
     functional_w1_interval,
@@ -318,6 +320,8 @@ def evaluate(
         str(name): tuple(values)
         for name, values in (conditional_groups or {}).items()
     }
+    label_mixture_audit: dict[str, Any] | None = None
+    label_mixture_warning: str | None = None
     if conditional or normalized_conditional_groups:
         if real.labels is None or generated.labels is None:
             raise ValueError("Conditional evaluation requires labels on real and generated data.")
@@ -328,6 +332,37 @@ def evaluate(
         missing = sorted(str(value) for value in real_labels ^ generated_labels)
         if missing:
             raise ValueError(f"Conditional label support differs: {', '.join(missing)}")
+        ordered_labels = sorted(real_labels, key=str)
+        real_label_counts = np.asarray(
+            [np.sum(real_label_array == label) for label in ordered_labels], dtype=float
+        )
+        generated_label_counts = np.asarray(
+            [np.sum(generated_label_array == label) for label in ordered_labels],
+            dtype=float,
+        )
+        real_label_proportions = real_label_counts / real_label_counts.sum()
+        generated_label_proportions = generated_label_counts / generated_label_counts.sum()
+        label_mixture_tv = float(
+            0.5 * np.sum(np.abs(real_label_proportions - generated_label_proportions))
+        )
+        label_mixture_audit = {
+            "policy": "as_provided",
+            "labels": [_jsonable(label) for label in ordered_labels],
+            "real_counts": real_label_counts.astype(int).tolist(),
+            "generated_counts": generated_label_counts.astype(int).tolist(),
+            "total_variation_distance": label_mixture_tv,
+            "matched": bool(np.isclose(label_mixture_tv, 0.0)),
+            "interpretation": (
+                "When mixtures differ, global rows test the supplied dataset "
+                "composition and must not be called conditional-model fidelity."
+            ),
+        }
+        if not label_mixture_audit["matched"]:
+            label_mixture_warning = (
+                "Global real/generated label mixtures differ "
+                f"(total-variation distance={label_mixture_tv:.3g}); global rows are "
+                "as-provided composition checks, not conditional-fidelity conclusions."
+            )
         if conditional:
             groups.extend(
                 (
@@ -362,6 +397,8 @@ def evaluate(
             occupied_names.add(name)
 
     warnings: list[str] = []
+    if label_mixture_warning is not None:
+        warnings.append(label_mixture_warning)
     cells: list[CellReport] = []
     reference_arrays: list[np.ndarray] = []
     reference_cell_indices: list[int] = []
@@ -413,9 +450,28 @@ def evaluate(
             partitions[group_name] = {
                 "seed": plan_seed,
                 "algorithm": "gauge-matched-reference-v1",
-                "partitions": plan.partition_manifest(),
+                "draw_count": len(plan.draws),
+                "n_eval": plan.n_eval,
+                "n_blocks": plan.n_blocks,
+                "estimand": plan.estimand.value,
+                "manifest_sha256": plan.provenance_hash(),
+                "preview": plan.partition_manifest(limit=3),
+                "regeneration": (
+                    "The complete plan is reproduced deterministically from the "
+                    "reported seed, configuration, and ordered input manifests."
+                ),
             }
         for metric in metric_list:
+            cell_key = f"{group_name}:{metric.id}"
+            primary_reference = (
+                metric.kind is MetricKind.FUNCTIONAL_W1
+                or cell_key in config.simultaneous_family
+            )
+            metric_plan = (
+                plan
+                if primary_reference
+                else replace(plan, draws=plan.draws[: config.diagnostic_resamples])
+            )
             real_values, all_generated_values = transformed[metric.id]
             generated_values = all_generated_values[generated_idx]
             try:
@@ -423,7 +479,7 @@ def evaluate(
                     metric,
                     real_values=real_values,
                     generated_values=generated_values,
-                    plan=plan,
+                    plan=metric_plan,
                 )
             except MetricNotEvaluable as exc:
                 warning = f"{group_name}:{metric.id} not evaluated: {exc}"
@@ -447,12 +503,15 @@ def evaluate(
                         f"Curve metric {metric.id!r} must transform to shape (N, bins)."
                     )
                 reference_curves = np.stack(
-                    [np.mean(real_values[draw.real_indices], axis=0) for draw in plan.draws]
+                    [
+                        np.mean(real_values[draw.real_indices], axis=0)
+                        for draw in metric_plan.draws
+                    ]
                 )
                 generated_curves = np.stack(
                     [
                         np.mean(generated_values[draw.generated_indices], axis=0)
-                        for draw in plan.draws
+                        for draw in metric_plan.draws
                     ]
                 )
                 diagnostics[f"{group_name}:{metric.id}"] = {
@@ -497,9 +556,13 @@ def evaluate(
             stability_ratio = abs(first_boundary - second_boundary) / reference_scale
             stability_warning = None
             if stability_ratio > config.reference_stability_tolerance:
+                resample_parameter = (
+                    "n_resamples" if primary_reference else "diagnostic_resamples"
+                )
                 stability_warning = (
                     f"Reference boundary split-half instability={stability_ratio:.3g} "
-                    f"exceeds {config.reference_stability_tolerance:.3g}; increase n_resamples."
+                    f"exceeds {config.reference_stability_tolerance:.3g}; increase "
+                    f"{resample_parameter}."
                 )
             inference_method = "reference_resampling_interval"
             interval_warning = None
@@ -511,16 +574,30 @@ def evaluate(
                     and metric.functional is not None
                     and metric.functional.support is not None
                 ):
-                    interval = dkw_w1_interval(
-                        generated_values,
-                        real_values[real_idx],
-                        real_blocks[real_idx],
-                        n_eval=plan.n_eval,
-                        support=metric.functional.support,
-                        alpha=config.alpha,
-                        seed=interval_seed,
-                    )
-                    inference_method = "finite_sample_dkw_quantile_band"
+                    if (
+                        metric.functional.provenance.get("practical_inference")
+                        == "detection_only_discrete_functional"
+                    ):
+                        interval = dkw_w1_interval(
+                            generated_values,
+                            real_values[real_idx],
+                            real_blocks[real_idx],
+                            n_eval=plan.n_eval,
+                            support=metric.functional.support,
+                            alpha=config.alpha,
+                            seed=interval_seed,
+                        )
+                    else:
+                        interval = cluster_w1_influence_interval(
+                            generated_values,
+                            real_values[real_idx],
+                            real_blocks[real_idx],
+                            n_eval=plan.n_eval,
+                            alpha=config.alpha,
+                            seed=interval_seed,
+                            fallback_support=metric.functional.support,
+                        )
+                    inference_method = interval.method
                 else:
                     interval = functional_w1_interval(
                         generated_values,
@@ -542,13 +619,23 @@ def evaluate(
                     reference_boundary=reference_boundary,
                     target_power=config.shift_power,
                     grid_size=config.shift_grid_size,
+                    required_shifts=(
+                        None
+                        if metric.tolerance is None
+                        else np.asarray([metric.tolerance], dtype=np.float64)
+                    ),
                     max_draws=config.sensitivity_resamples,
                 )
+                tolerance_power = None
+                if metric.tolerance is not None:
+                    tolerance_index = int(np.flatnonzero(shifts == metric.tolerance)[0])
+                    tolerance_power = float(powers[tolerance_index])
                 sensitivity_payload[f"{group_name}:{metric.id}"] = {
                     "perturbation": "uniform_functional_shift",
                     "target_power": config.shift_power,
                     "n_resamples": min(config.sensitivity_resamples, len(plan.draws)),
                     "shift_resolution": resolution,
+                    "detection_probability_at_tolerance": tolerance_power,
                     "shifts": shifts.tolist(),
                     "detection_probability": powers.tolist(),
                 }
@@ -612,11 +699,28 @@ def evaluate(
                 "inference_method": inference_method,
                 "reference_model_median": model_reference_value,
                 "reference_plan_seed": plan_seed,
+                "reference_resamples_used": len(metric_plan.draws),
+                "reference_resample_role": (
+                    "primary" if primary_reference else "secondary_diagnostic"
+                ),
                 "reference_stability_ratio": stability_ratio,
                 "reference_stability_tolerance": config.reference_stability_tolerance,
                 "model_reference_q025": model_position_low,
                 "model_reference_q975": model_position_high,
+                "interval_bound_type": "two_sided_1_minus_alpha",
+                "interval_standard_error": interval.standard_error,
+                "interval_degrees_of_freedom": interval.degrees_of_freedom,
+                "interval_cdf_zero_fraction": interval.cdf_zero_fraction,
             }
+            if group_name == "global" and label_mixture_audit is not None:
+                metric_provenance.update(
+                    {
+                        "global_label_mixture_policy": label_mixture_audit["policy"],
+                        "global_label_mixture_total_variation": label_mixture_audit[
+                            "total_variation_distance"
+                        ],
+                    }
+                )
             if metric.kind is MetricKind.RATE:
                 metric_provenance.update(
                     {
@@ -676,7 +780,6 @@ def evaluate(
                 warnings=tuple(cell_warnings),
                 provenance=metric_provenance,
             )
-            cell_key = f"{group_name}:{metric.id}"
             if cell_key in config.simultaneous_family:
                 reference_cell_indices.append(len(cells))
                 reference_arrays.append(reference.reference_values)
@@ -756,6 +859,7 @@ def evaluate(
             name: list(values)
             for name, values in normalized_conditional_groups.items()
         },
+        "global_label_mixture": label_mixture_audit,
     }
     hash_value = _config_hash(config, metric_manifests, analysis_design)
     metadata = {

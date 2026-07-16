@@ -308,7 +308,13 @@ def functionals(config: TCBTConfig = TCBTConfig()) -> tuple[FunctionalSpec, ...]
             support=(0.0, config.max_profile_radius_km),
             direction_negative="gradient radius inward",
             direction_positive="gradient radius outward",
-            provenance=shared,
+            provenance={
+                **shared,
+                "discrete_support_step_km": (
+                    config.max_profile_radius_km / config.profile_bins
+                ),
+                "practical_inference": "detection_only_discrete_functional",
+            },
         ),
         FunctionalSpec(
             "axisym",

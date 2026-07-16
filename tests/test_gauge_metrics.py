@@ -81,6 +81,30 @@ def test_train_fitted_features_are_deterministic():
         "feature_diversity_departure",
     }
     assert all(metric.provenance["fit_source"] == "train" for metric in registered)
+    assert all(
+        metric.provenance["reference_draw_max_samples_per_side"] == 256
+        for metric in registered
+    )
+
+
+def test_registered_feature_metrics_accept_cached_training_features_and_cap_draws():
+    rng = np.random.default_rng(52)
+    fields = rng.normal(size=(80, 4, 4))
+    functional = FunctionalSpec("mean", lambda x: x.mean(axis=(1, 2)), "K", "mean")
+    fitted = TrainFittedFeatureSpace.fit(fields, [functional], n_eof=3, seed=11)
+    train_features = fitted.transform(fields)
+    registered = fitted.registered_metrics(
+        train_features=train_features,
+        density_k=3,
+        max_samples_per_draw=16,
+    )
+    generated = train_features[:50] + 0.1
+    real = train_features[20:70]
+    assert all(np.isfinite(metric.estimator(generated, real)) for metric in registered)
+    assert all(
+        metric.provenance["reference_draw_max_samples_per_side"] == 16
+        for metric in registered
+    )
 
 
 def test_train_fitted_features_do_not_materialize_lazy_archive():
@@ -148,6 +172,34 @@ def test_copyist_positive_control_triggers_localized_test():
         seed=7,
     )
     assert result["status"] == "COPYING_DETECTED"
+
+
+def test_copying_test_matches_queries_within_supplied_strata():
+    rng = np.random.default_rng(31)
+    train = rng.normal(size=(160, 4))
+    real = rng.normal(size=(120, 4))
+    blocks = np.repeat(np.arange(40), 3)
+    real_strata = np.repeat(["common", "rare"], [90, 30])
+    generated_strata = np.repeat(["common", "rare"], [40, 80])
+    generated = rng.normal(size=(120, 4))
+    generated[:40] = train[:40]
+    result = localized_copying_test(
+        train_features=train,
+        real_features=real,
+        generated_features=generated,
+        real_blocks=blocks,
+        real_strata=real_strata,
+        generated_strata=generated_strata,
+        n_regions=1,
+        n_resamples=200,
+        min_real_blocks=3,
+        seed=9,
+    )
+    assert result["query_stratification"] == "supplied_labels"
+    assert result["n_supported_cells"] == 2
+    assert {item["stratum"] for item in result["regions"]} == {"common", "rare"}
+    common = next(item for item in result["regions"] if item["stratum"] == "common")
+    assert common["status"] == "COPYING_DETECTED"
 
 
 def test_localized_test_flags_clear_off_manifold_generation():
