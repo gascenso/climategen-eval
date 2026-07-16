@@ -122,6 +122,31 @@ Spearman entries, carry a split-half Monte Carlo-stability warning at the frozen
 200-draw diagnostic budget. They remain in the machine report with daggers and
 are not headline claims; no primary functional cell has this warning.
 
+## Paper-facing Track-1 bundle
+
+[`paper_results/`](paper_results/) is the recommended entry point for reading or
+reporting the case study. It separates a small main-text package from a complete
+appendix:
+
+- one reference-calibrated profile containing all TS/C1--C5 results, the
+  preregistered C4+ tail, and training-only positive controls;
+- C4+ physical-distribution and spatial-structure drill-downs;
+- a compact memorization/admissibility safeguard panel;
+- a complete class-by-metric matrix and lossless native-unit CSV tables;
+- per-metric appendix figures containing all six native-class distributions.
+
+The unmatched global composition result remains in the machine audit and full
+table but is deliberately absent from the conditional-fidelity figure. Rebuild
+the bundle from the frozen report with:
+
+```bash
+PYTHONPATH=src python scripts/render_tc_track1_paper.py \
+  case_studies/tropical_cyclone_bt/final_results/evaluation.json \
+  --config case_studies/tropical_cyclone_bt/track1_config.template.yaml \
+  --controls case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json \
+  --output-dir case_studies/tropical_cyclone_bt/paper_results
+```
+
 ## Track 2
 
 Vmax regression is primary and category classification secondary. Three

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>TC Track-1 GAUGE results</title>
+<style>
+:root{--ink:#213138;--muted:#607078;--wash:#f3f7f8;--accent:#246a73}
+body{font-family:Inter,system-ui,sans-serif;max-width:1180px;margin:0 auto;padding:2.5rem 2rem;color:var(--ink)}
+h1{font-size:2.15rem;margin-bottom:.35rem}h2{margin-top:2.6rem;border-bottom:1px solid #dbe3e6;padding-bottom:.45rem}
+.lede{font-size:1.08rem;color:var(--muted);max-width:900px}.key{background:var(--wash);border-left:4px solid var(--accent);padding:1rem 1.2rem;border-radius:3px}
+img{display:block;width:100%;height:auto;border:1px solid #e2e8ea;margin-top:1rem}section p{color:var(--muted)}
+a{color:var(--accent)}code{background:var(--wash);padding:.1rem .25rem}
+</style></head><body>
+<h1>Tropical-cyclone Track-1 evaluation</h1>
+<p class="lede">This is the interpretation-first GAUGE output intended for a paper results section. The complete machine report, class matrix, numerical tables, and diagnostic drill-downs remain available underneath it.</p>
+<div class="key"><strong>Gap key:</strong> 0 is the median real–real discrepancy and 1 is the pointwise 95% real-reference boundary. Lower is closer. Gap units express detectability at this N, not physical severity; a result below 1 is not automatically equivalent.</div>
+<section><h2>1. Reference-calibrated intrinsic profile</h2><img src="main/figure_1_reference_gap_profile.png" alt="1. Reference-calibrated intrinsic profile"><p>All six native intensity classes, the preregistered C4+ tail aggregate, and training-only positive controls on one scale.</p></section><section><h2>2. Tail physical distributions</h2><img src="main/figure_2_tail_physical_distributions.png" alt="2. Tail physical distributions"><p>Block-balanced C4+ empirical distributions for every scalar physical functional.</p></section><section><h2>3. Tail spatial structure</h2><img src="main/figure_3_tail_spatial_structure.png" alt="3. Tail spatial structure"><p>Radial-profile and power-spectrum drill-downs for the priority C4+ stratum.</p></section><section><h2>4. Generation safeguards</h2><img src="main/figure_4_generation_safeguards.png" alt="4. Generation safeguards"><p>A compact copying audit and preprocessing-boundary diagnostic.</p></section>
+<h2>Tables and appendix</h2>
+<ul><li><a href="main/table_1_priority_tail_values.md">Human-readable C4+ metric table</a></li>
+<li><a href="main/table_1_priority_tail_values.csv">C4+ metric table (CSV)</a></li>
+<li><a href="main/table_1_native_metric_values.csv">Every displayed class and metric (CSV)</a></li>
+<li><a href="appendix/figure_A1_conditional_gap_matrix.pdf">Complete conditional matrix (PDF)</a></li>
+<li><a href="appendix/table_A1_complete_evaluation.csv">Every report cell (CSV)</a></li>
+<li><a href="appendix/functional_distributions/">Native-class distribution figures</a></li>
+<li><a href="README.md">Reporting guide and permitted language</a></li></ul>
+<p>Frozen configuration hash: <code>9d4bdd409257157f</code>.</p>
+</body></html>
