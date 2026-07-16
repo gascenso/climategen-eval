@@ -12,6 +12,7 @@ class TCBTConfig:
     field_shape: tuple[int, int] | None = None
     bt_min_k: float = 170.0
     bt_max_k: float = 325.0
+    clip_to_analysis_range: bool = True
     pixel_size_km: float = 8.0
     core_radius_km: float = 100.0
     organization_radius_km: float = 300.0
@@ -53,10 +54,48 @@ def _validate(fields: np.ndarray, config: TCBTConfig | None = None) -> np.ndarra
             raise ValueError(
                 f"TC-BT fields have shape {fields.shape[-2:]}, expected {config.field_shape}."
             )
+    if config is not None and config.clip_to_analysis_range:
+        fields = np.clip(fields, config.bt_min_k, config.bt_max_k)
     return fields
 
 
-def _radius(shape: tuple[int, int], pixel_size_km: float, *, center_shift=(0, 0)) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+class PreprocessedFields:
+    """Lazy TC analysis view with the generator-training BT clipping contract."""
+
+    def __init__(self, fields: object, config: TCBTConfig):
+        shape = getattr(fields, "shape", None)
+        if shape is None or len(shape) != 3:
+            raise ValueError("TC preprocessing expects a field source shaped (N,H,W).")
+        if config.field_shape is not None and tuple(shape[1:]) != config.field_shape:
+            raise ValueError("TC preprocessing source shape differs from adapter config.")
+        self._fields = fields
+        self._config = config
+        self.shape = tuple(int(value) for value in shape)
+        self.dtype = np.dtype(getattr(fields, "dtype", np.float32))
+
+    def __len__(self) -> int:
+        return self.shape[0]
+
+    def __getitem__(self, key: object) -> np.ndarray:
+        values = np.asarray(self._fields[key])
+        if not self._config.clip_to_analysis_range:
+            return values
+        return np.clip(values, self._config.bt_min_k, self._config.bt_max_k).astype(
+            values.dtype, copy=False
+        )
+
+    def __array__(self, dtype: np.dtype | None = None, copy: bool | None = None) -> np.ndarray:
+        values = np.asarray(self._fields)
+        if self._config.clip_to_analysis_range:
+            values = np.clip(values, self._config.bt_min_k, self._config.bt_max_k)
+        if dtype is not None:
+            values = values.astype(dtype, copy=False)
+        return values.copy() if copy else values
+
+
+def _radius(
+    shape: tuple[int, int], pixel_size_km: float, *, center_shift=(0, 0)
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     h, w = shape
     y, x = np.mgrid[0:h, 0:w]
     cy = (h - 1) / 2.0 + float(center_shift[0])
@@ -81,9 +120,7 @@ def radial_profiles(fields: np.ndarray, config: TCBTConfig = TCBTConfig()) -> np
     return output
 
 
-def _psd_geometry(
-    shape: tuple[int, int], config: TCBTConfig
-) -> tuple[np.ndarray, np.ndarray]:
+def _psd_geometry(shape: tuple[int, int], config: TCBTConfig) -> tuple[np.ndarray, np.ndarray]:
     """Return nonempty radial bins near log-spaced physical targets.
 
     A naïve geometric sequence can place boundaries between sparse low-frequency
@@ -165,21 +202,13 @@ def radial_log_psd(fields: np.ndarray, config: TCBTConfig = TCBTConfig()) -> np.
 def _dav_one(image: np.ndarray, config: TCBTConfig) -> float:
     h, w = image.shape
     p = np.pad(np.asarray(image, dtype=np.float64), 1, mode="reflect")
-    gx = (
-        p[:-2, :-2] + 2 * p[1:-1, :-2] + p[2:, :-2]
-        - p[:-2, 2:] - 2 * p[1:-1, 2:] - p[2:, 2:]
-    )
-    gy = (
-        p[:-2, :-2] + 2 * p[:-2, 1:-1] + p[:-2, 2:]
-        - p[2:, :-2] - 2 * p[2:, 1:-1] - p[2:, 2:]
-    )
+    gx = p[:-2, :-2] + 2 * p[1:-1, :-2] + p[2:, :-2] - p[:-2, 2:] - 2 * p[1:-1, 2:] - p[2:, 2:]
+    gy = p[:-2, :-2] + 2 * p[:-2, 1:-1] + p[:-2, 2:] - p[2:, :-2] - 2 * p[2:, 1:-1] - p[2:, 2:]
     half = config.dav_center_region_size // 2
     values = []
     for y_shift in range(-half, half + 1):
         for x_shift in range(-half, half + 1):
-            radius, dx, dy = _radius(
-                (h, w), config.pixel_size_km, center_shift=(y_shift, x_shift)
-            )
+            radius, dx, dy = _radius((h, w), config.pixel_size_km, center_shift=(y_shift, x_shift))
             radius_px = np.maximum(radius / config.pixel_size_km, 1e-12)
             radial_x = dx / radius_px
             radial_y = dy / radius_px
@@ -206,8 +235,10 @@ def functionals(config: TCBTConfig = TCBTConfig()) -> tuple[FunctionalSpec, ...]
     def radius_max_gradient(fields: np.ndarray) -> np.ndarray:
         profiles = radial_profiles(fields, config)
         centers = (
-            np.arange(config.profile_bins, dtype=np.float64) + 0.5
-        ) * config.max_profile_radius_km / config.profile_bins
+            (np.arange(config.profile_bins, dtype=np.float64) + 0.5)
+            * config.max_profile_radius_km
+            / config.profile_bins
+        )
         gradient = np.gradient(profiles, centers, axis=1)
         return centers[np.argmax(np.abs(gradient), axis=1)]
 

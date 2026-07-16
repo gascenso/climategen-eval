@@ -6,8 +6,11 @@ from gauge_climate.inference import (
     Interval,
     dkw_w1_interval,
     practical_status,
+    shift_resolution,
     simultaneous_reference_boundaries,
 )
+from gauge_climate.reference import ReferenceDraw, ReferencePlan
+from gauge_climate.types import SamplingEstimand
 from gauge_climate.types import PracticalStatus, SensitivityStatus
 
 
@@ -17,11 +20,7 @@ def test_dkw_interval_contains_known_bounded_shift():
     block_effect = rng.uniform(-0.2, 0.2, size=120)
     real = block_effect.repeat(3) + rng.uniform(-0.8, 0.8, size=blocks.size)
     shift = 0.4
-    generated = (
-        rng.uniform(-0.2, 0.2, size=300)
-        + rng.uniform(-0.8, 0.8, size=300)
-        + shift
-    )
+    generated = rng.uniform(-0.2, 0.2, size=300) + rng.uniform(-0.8, 0.8, size=300) + shift
     interval = dkw_w1_interval(
         generated,
         real,
@@ -66,13 +65,9 @@ def test_tolerance_statuses_cover_within_exceeds_boundary_and_underpowered():
         practical_status(interval(0.6, 0.8), tolerance=0.5, shift_resolution=0.1)[0]
         is PracticalStatus.EXCEEDS_TOLERANCE
     )
-    boundary = practical_status(
-        interval(0.4, 0.6), tolerance=0.5, shift_resolution=0.1
-    )
+    boundary = practical_status(interval(0.4, 0.6), tolerance=0.5, shift_resolution=0.1)
     assert boundary == (PracticalStatus.INCONCLUSIVE, SensitivityStatus.ADEQUATE)
-    underpowered = practical_status(
-        interval(0.4, 0.6), tolerance=0.5, shift_resolution=0.8
-    )
+    underpowered = practical_status(interval(0.4, 0.6), tolerance=0.5, shift_resolution=0.8)
     assert underpowered == (PracticalStatus.UNDERPOWERED, SensitivityStatus.INADEQUATE)
 
 
@@ -95,3 +90,39 @@ def test_simultaneous_reference_boundary_withholds_a_degenerate_cell():
     boundaries = simultaneous_reference_boundaries(references, alpha=0.05)
     assert np.isnan(boundaries[0])
     assert np.isfinite(boundaries[1])
+
+
+def test_shift_resolution_max_draws_limits_distance_evaluations(monkeypatch):
+    draw = ReferenceDraw(
+        pseudo_indices=np.arange(10),
+        real_indices=np.arange(10, 20),
+        generated_indices=np.arange(10),
+        blocks_a=tuple(f"a{i}" for i in range(10)),
+        blocks_b=tuple(f"b{i}" for i in range(10)),
+        frame_count_a=10,
+        frame_count_b=10,
+    )
+    plan = ReferencePlan(
+        draws=tuple(draw for _ in range(30)),
+        n_eval=10,
+        estimand=SamplingEstimand.BLOCK_BALANCED,
+        seed=17,
+        n_blocks=20,
+    )
+    calls = 0
+
+    def counted_w1(left, right):
+        nonlocal calls
+        calls += 1
+        return float(abs(np.mean(left) - np.mean(right)))
+
+    monkeypatch.setattr("gauge_climate.inference.wasserstein_1d", counted_w1)
+    shift_resolution(
+        real_values=np.linspace(0.0, 1.0, 20),
+        plan=plan,
+        reference_boundary=0.1,
+        target_power=0.8,
+        grid_size=8,
+        max_draws=5,
+    )
+    assert calls == 8 * 5

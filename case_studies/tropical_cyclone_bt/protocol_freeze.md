@@ -10,6 +10,10 @@ affected result labeled exploratory.
 
 - All intensity labels and continuous targets are IBTrACS `USA_WIND` one-minute
   sustained winds. Mixed-period `WMO_WIND` is prohibited.
+- Raw Kelvin archives remain checksum-preserved, but every GAUGE analysis view is
+  clipped lazily to 170--325 K before metrics or train-fitted features. These are
+  the generator-training 0.05th/99.95th-percentile preprocessing limits, not
+  claims about the physically possible BT range.
 - Train, validation, and test partitions are storm-disjoint. The existing
   corrected test split is retained unchanged.
 - Track 1 targets the block-balanced distribution: sample a storm uniformly,
@@ -66,6 +70,35 @@ radial wavenumbers nearest the log-spaced targets and uses geometric-midpoint
 boundaries. This retains 24 ordered bins in physical cycles/km while guaranteeing
 that every bin is defined.
 
+Amendment after a training-only calibration failure, before final test or
+generated outcomes: the raw archive spans approximately 117--348 K, whereas the
+generator training pipeline clips real fields to 170--325 K before normalization.
+GAUGE had incorrectly treated those preprocessing quantiles as raw support while
+feeding unclipped real fields to metrics and EOFs. All analysis inputs now use a
+lazy 170--325 K clipped view, exactly matching the learned field representation;
+raw files and checksums remain unchanged. Boundary saturation is reported as a
+diagnostic rather than calling raw values outside the preprocessing quantiles
+physically inadmissible.
+
+## Track-1 calibration result
+
+The frozen training-only calibration uses 2,000 reference resamples per stratum,
+200 reference draws per shift-resolution curve, 80% target power, and the exact
+registered evaluation sizes. It reads no test fields or functional values.
+Published test-stratum block counts are used only to choose conservative numbers
+of training storms. Every pseudo-generator pool is count-matched and storm-
+disjoint from its real-reference pool.
+
+All reference-mechanics gates pass, including whole-block partition invariants,
+reference-boundary stability, finite pointwise and simultaneous thresholds, and
+zero detections for the registered pseudo-generator. However, only 6 of 56
+stratum-functional cells resolve shifts at or below the practical tolerance.
+The remaining 50 cells are underpowered for practical-equivalence language at
+the current N. This finding cannot be used to loosen a tolerance. Independent
+statistical review must either accept the preregistered `UNDERPOWERED` reporting
+or approve and validate a more powerful dependence-aware direct W1 interval
+before the final test run.
+
 ## Track 2
 
 Three whole-storm holdouts were selected uniformly with seed 1789 from 97 storms
@@ -98,8 +131,9 @@ two pixels, applied only to added rows.
 
 ## Gates still blocking final inference
 
-- Complete and independently review the TC-specific statistical calibration;
-  the frozen training-only sensitivity and copyist controls have passed.
+- Independently review the completed TC-specific statistical calibration and
+  resolve the direct-W1 power limitation before the final test run; the frozen
+  training-only sensitivity and copyist controls have passed.
 - Produce three restricted generator fits and their checksum-bound provenance.
 - Archive permission-cleared real/generated artifacts.
 - Preserve this record in Git history and record any amendments.

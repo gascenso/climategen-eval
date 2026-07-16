@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from gauge_climate.adapters.tc_bt import TCBTConfig, curve_metrics, functionals
+from gauge_climate.adapters.tc_bt import (
+    PreprocessedFields,
+    TCBTConfig,
+    curve_metrics,
+    functionals,
+)
 
 
 def _fields():
@@ -62,3 +67,15 @@ def test_registered_256_grid_has_24_nonempty_psd_bins():
     assert values.shape == (2, 24)
     assert np.all(np.isfinite(values))
     assert np.all(np.diff(coordinates) > 0)
+
+
+def test_tc_preprocessed_view_clips_lazily_to_training_representation():
+    raw = np.full((2, 4, 4), 250.0, dtype=np.float32)
+    raw[0, 0, :4] = [150.0, 200.0, 300.0, 340.0]
+    view = PreprocessedFields(raw, TCBTConfig(field_shape=(4, 4)))
+    assert view.shape == raw.shape
+    assert view.dtype == raw.dtype
+    assert np.array_equal(view[0, 0], [170.0, 200.0, 300.0, 325.0])
+    # The provenance archive is not modified by the lazy analysis view.
+    assert raw[0, 0, 0] == 150.0
+    assert raw[0, 0, 3] == 340.0

@@ -18,6 +18,7 @@ adapter_options:
   field_shape: [256, 256]
   bt_min_k: 170.0
   bt_max_k: 325.0
+  clip_to_analysis_range: true
   pixel_size_km: 8.0
   core_radius_km: 100.0
   organization_radius_km: 300.0

@@ -10,6 +10,10 @@ are TS and Categories 1–5; TD is not claimed.
   profiles, and a fully specified Hann-windowed physical-wavenumber PSD.
 - Existing sample banks and exploratory outputs predate the frozen GAUGE
   reference/inference engine. They are development inputs, not paper results.
+- Raw real archives are retained byte-for-byte, while the TC adapter exposes a
+  lazy 170--325 K clipped analysis view matching `tc-diffusion` training
+  preprocessing. These quantiles are not mislabeled as physical validity limits;
+  boundary saturation is reported separately.
 - Every intensity label and continuous Vmax target must come from IBTrACS
   `USA_WIND`, whose averaging period is one minute. `WMO_WIND` is prohibited
   because it mixes agency-specific averaging periods. Preparation fails closed
@@ -18,8 +22,10 @@ are TS and Categories 1–5; TD is not claimed.
   perturbation severities and sampling, three Track-2 storms, transforms,
   endpoints, and task margins without examining final GAUGE test outcomes.
   The training-only sensitivity and copyist controls have passed their response
-  contracts; final evaluation remains prohibited until TC-specific statistical
-  calibration is completed and reviewed.
+  contracts. The training-only TC statistical calibration also passes its
+  reference-engine gates, but shows that 50 of 56 registered cells cannot resolve
+  the current practical tolerances at the declared sample sizes. Final evaluation
+  remains prohibited pending statistical review of the direct W1 inference.
 - Local generated banks are copied or hardlinked from the selected
   `baseline_ztsnr` run. The release audit fails until archived artifacts with
   URLs and SHA-256 checksums replace this local-only provenance.
@@ -76,6 +82,20 @@ The versioned [control artifact](control_results/sensitivity_lanes.json) passes
 all five response contracts without using test fields. Its resolution fields
 remain part of the result: small center jitter and gradient-radius response to
 the frozen blur sweep do not clear the real-reference boundary at N=1,000.
+
+Run the frozen training-only statistical calibration with:
+
+```bash
+PYTHONPATH=src python case_studies/tropical_cyclone_bt/run_track1_calibration.py
+```
+
+The versioned [calibration artifact](calibration_results/track1_statistics.json)
+passes all registered reference-mechanics gates without reading test fields.
+Only 6 of 56 stratum-functional cells attain 80% shift-detection resolution at
+or below their practical tolerance. This is a power diagnosis, not a failed null
+calibration and not permission to relax tolerances. The final run remains locked
+until the direct W1 interval and the intended `UNDERPOWERED` interpretation have
+received independent statistical review.
 
 ## Track 2
 
@@ -141,7 +161,7 @@ python scripts/audit_release_gates.py
 python case_studies/tropical_cyclone_bt/plan_track2_holdouts.py --help
 ```
 
-The first command is expected to fail until the scientific controls and artifact
-gates are genuinely complete. The literature survey is currently a separate
-workstream; add `--include-survey` only for the full manuscript audit. Do not
-bypass failed software/TC gates for a release.
+The first command is expected to fail until the remaining scientific-review and
+artifact gates are genuinely complete. The literature survey is currently a
+separate workstream; add `--include-survey` only for the full manuscript audit.
+Do not bypass failed software/TC gates for a release.

@@ -51,6 +51,17 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _source_tree_sha256(root: Path) -> str:
+    """Hash the complete importable GAUGE source tree, including file names."""
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*.py")):
+        digest.update(path.relative_to(root).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _display_path(path: Path) -> str:
     resolved = path.resolve()
     try:
@@ -61,6 +72,11 @@ def _display_path(path: Path) -> str:
 
 def _array_hash(values: np.ndarray) -> str:
     return hashlib.sha256(np.asarray(values).tobytes()).hexdigest()
+
+
+def _mapping_hash(values: Mapping[str, Any]) -> str:
+    encoded = json.dumps(values, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _stable_blocks(values: np.ndarray) -> np.ndarray:
@@ -129,9 +145,7 @@ def _reference_boundaries(
     boundaries = {}
     summaries = {}
     for metric in metrics:
-        values = _batch_transform(
-            metric, fields, pool_indices, batch_size=batch_size
-        )
+        values = _batch_transform(metric, fields, pool_indices, batch_size=batch_size)
         discrepancies = np.asarray(
             [
                 metric.estimator(values[draw.pseudo_indices], values[draw.real_indices])
@@ -229,6 +243,8 @@ def _copyist_control(
     min_real_blocks: int,
     seed: int,
     batch_size: int,
+    bt_min_k: float,
+    bt_max_k: float,
 ) -> dict[str, Any]:
     rng = np.random.default_rng(seed)
     group_a_blocks = _stable_blocks(np.asarray(blocks)[group_a_indices])
@@ -251,8 +267,8 @@ def _copyist_control(
     )
     train_indices = group_a_indices[train_local]
     real_indices = group_b_indices[real_local]
-    train_fields = _materialize(fields, train_indices)
-    real_fields = _materialize(fields, real_indices)
+    train_fields = np.clip(_materialize(fields, train_indices), bt_min_k, bt_max_k)
+    real_fields = np.clip(_materialize(fields, real_indices), bt_min_k, bt_max_k)
     generated_fields = copyist(train_fields, n=n_control, seed=seed + 1)
     feature_space = TrainFittedFeatureSpace.fit(
         train_fields,
@@ -398,18 +414,12 @@ def main() -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=(
-            ROOT
-            / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json"
-        ),
+        default=(ROOT / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json"),
     )
     parser.add_argument(
         "--figure",
         type=Path,
-        default=(
-            ROOT
-            / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.pdf"
-        ),
+        default=(ROOT / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.pdf"),
     )
     args = parser.parse_args()
 
@@ -494,7 +504,11 @@ def main() -> int:
         rng=np.random.default_rng(seed + 1),
     )
     source_indices = pool_indices[source_local]
-    source_fields = _materialize(real_train.fields, source_indices)
+    source_fields = np.clip(
+        _materialize(real_train.fields, source_indices),
+        adapter_config.bt_min_k,
+        adapter_config.bt_max_k,
+    )
 
     warm = additive_shift_lane(
         severities=controls["warm_shift"]["kelvin"],
@@ -565,11 +579,11 @@ def main() -> int:
         max_fit_samples=int(design["feature_fit_samples"]),
         n_regions=int(track1["feature_metrics"]["memorization"]["n_regions"]),
         n_resamples=int(design["copyist_resamples"]),
-        min_real_blocks=int(
-            track1["feature_metrics"]["memorization"]["min_real_blocks"]
-        ),
+        min_real_blocks=int(track1["feature_metrics"]["memorization"]["min_real_blocks"]),
         seed=seed,
         batch_size=int(design["batch_size"]),
+        bt_min_k=adapter_config.bt_min_k,
+        bt_max_k=adapter_config.bt_max_k,
     )
     lanes = {
         "warm_shift": warm_result,
@@ -586,14 +600,14 @@ def main() -> int:
             "scientific_use": "training-only preregistered positive controls",
             "test_fields_used": False,
             "wind_source": real_train.metadata.get("wind_source"),
-            "wind_averaging_period": real_train.metadata.get(
-                "wind_averaging_period"
-            ),
+            "wind_averaging_period": real_train.metadata.get("wind_averaging_period"),
             "real_train_manifest": _display_path(args.real_train_manifest),
             "real_train_manifest_sha256": _sha256(args.real_train_manifest.resolve()),
             "preregistration_sha256": _sha256(args.preregistration.resolve()),
+            "sensitivity_contract_sha256": _mapping_hash(sensitivity),
             "track1_config_sha256": _sha256(args.track1_config.resolve()),
             "runner_sha256": _sha256(Path(__file__).resolve()),
+            "gauge_source_sha256": _source_tree_sha256(ROOT / "src/gauge_climate"),
             "design": dict(design),
             "selected_blocks": selected_blocks.tolist(),
             "source_index_sha256": _array_hash(source_indices),

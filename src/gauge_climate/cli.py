@@ -44,15 +44,10 @@ def _load_array(config_path: Path, value: str | None, *, mmap: bool = True):
 def _dataset(config_path: Path, node: dict[str, Any], name: str) -> Dataset:
     if not isinstance(node, dict):
         raise ValueError(f"data.{name} must be a mapping.")
-    sources = [
-        key
-        for key in ("fields", "tc_real_manifest", "tc_sample_bank")
-        if key in node
-    ]
+    sources = [key for key in ("fields", "tc_real_manifest", "tc_sample_bank") if key in node]
     if len(sources) != 1:
         raise ValueError(
-            f"data.{name} must provide exactly one of fields, tc_real_manifest, "
-            "or tc_sample_bank."
+            f"data.{name} must provide exactly one of fields, tc_real_manifest, or tc_sample_bank."
         )
     target = str(node.get("target", "category"))
     if sources[0] == "tc_real_manifest":
@@ -133,6 +128,49 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
     if functional_node == "tc_bt" or payload.get("adapter") == "tc_bt":
         adapter_options = payload.get("adapter_options", {})
         adapter_config = tc_bt.TCBTConfig(**adapter_options)
+        preprocessing = (
+            {
+                "operation": "clip",
+                "lower_k": adapter_config.bt_min_k,
+                "upper_k": adapter_config.bt_max_k,
+                "reason": "match generator-training field representation",
+            }
+            if adapter_config.clip_to_analysis_range
+            else {"operation": "none"}
+        )
+        train = Dataset(
+            tc_bt.PreprocessedFields(train.fields, adapter_config),
+            blocks=train.blocks,
+            labels=train.labels,
+            sample_ids=train.sample_ids,
+            name=train.name,
+            units=train.units,
+            allow_nan=train.allow_nan,
+            metadata={**train.metadata, "analysis_preprocessing": preprocessing},
+        )
+        real = Dataset(
+            tc_bt.PreprocessedFields(real.fields, adapter_config),
+            blocks=real.blocks,
+            labels=real.labels,
+            sample_ids=real.sample_ids,
+            name=real.name,
+            units=real.units,
+            allow_nan=real.allow_nan,
+            metadata={**real.metadata, "analysis_preprocessing": preprocessing},
+        )
+        generated = Dataset(
+            tc_bt.PreprocessedFields(generated.fields, adapter_config),
+            blocks=generated.blocks,
+            labels=generated.labels,
+            sample_ids=generated.sample_ids,
+            name=generated.name,
+            units=generated.units,
+            allow_nan=generated.allow_nan,
+            metadata={
+                **generated.metadata,
+                "analysis_preprocessing": preprocessing,
+            },
+        )
         functionals = tc_bt.functionals(adapter_config)
         metrics = list(tc_bt.curve_metrics(adapter_config))
     else:
@@ -142,9 +180,7 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
         adapter_config = None
         metrics = []
     config = EvaluationConfig(**payload.get("evaluation", {}))
-    tolerances = {
-        str(key): float(value) for key, value in payload.get("tolerances", {}).items()
-    }
+    tolerances = {str(key): float(value) for key, value in payload.get("tolerances", {}).items()}
     feature_node = payload.get("feature_metrics", {})
     if feature_node is None:
         feature_node = {}
@@ -172,18 +208,14 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
                 bandwidth_seed=int(feature_node.get("bandwidth_seed", config.seed)),
             )
         )
-        dependence_requested = bool(
-            feature_node.get("dependence_pairs", len(functionals) >= 2)
-        )
+        dependence_requested = bool(feature_node.get("dependence_pairs", len(functionals) >= 2))
         if dependence_requested:
             if len(functionals) < 2:
                 raise ValueError("Dependence pairs require at least two functionals.")
             names = [functional.id for functional in functionals]
 
             def functional_matrix(fields):
-                return np.column_stack(
-                    [functional.transform(fields) for functional in functionals]
-                )
+                return np.column_stack([functional.transform(fields) for functional in functionals])
 
             metrics.extend(spearman_pair_metrics(functional_matrix, names))
         copying = feature_node.get("memorization", {})
@@ -210,15 +242,22 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
     if adapter_config is not None and bool(payload.get("tc_admissibility", True)):
         lower, upper = adapter_config.bt_min_k, adapter_config.bt_max_k
 
-        def bt_violation(fields):
+        def boundary_saturation(fields):
             axes = tuple(range(1, fields.ndim))
-            return np.any((fields < lower) | (fields > upper), axis=axes)
+            return np.any(
+                np.isclose(fields, lower, rtol=0.0, atol=1e-6)
+                | np.isclose(fields, upper, rtol=0.0, atol=1e-6),
+                axis=axes,
+            )
 
         metrics.append(
             admissibility_metric(
-                bt_violation,
-                id="hard_bt_support_violation",
-                description=f"Departure in per-sample BT support violations outside [{lower}, {upper}] K.",
+                boundary_saturation,
+                id="preprocessing_boundary_saturation",
+                description=(
+                    "Departure in the fraction of samples touching the frozen "
+                    f"analysis clip boundaries [{lower}, {upper}] K."
+                ),
             )
         )
     sensitivity_results = None
@@ -291,8 +330,7 @@ def command_validate(args: argparse.Namespace) -> int:
         "valid": True,
         "split": split,
         "field_scans": [
-            dataset.validate_fields(batch_size=batch_size)
-            for dataset in (train, real, generated)
+            dataset.validate_fields(batch_size=batch_size) for dataset in (train, real, generated)
         ],
         "n_functionals": len(functionals),
         "n_metrics": len(metrics),

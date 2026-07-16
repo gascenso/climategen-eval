@@ -176,9 +176,7 @@ def functional_w1_interval(
     )
     boot = np.empty(n_resamples, dtype=np.float64)
     for index in range(n_resamples):
-        generated_boot = fixed_generated[
-            rng.choice(n_eval, size=n_eval, replace=True)
-        ]
+        generated_boot = fixed_generated[rng.choice(n_eval, size=n_eval, replace=True)]
         weights = _cluster_bootstrap_weights(real_blocks, estimand, rng)
         boot[index] = wasserstein_1d(generated_boot, real, y_weights=weights)
     tail = (1.0 - confidence) / 2.0
@@ -237,11 +235,20 @@ def shift_resolution(
         return None, np.asarray([], dtype=np.float64), np.asarray([], dtype=np.float64)
     shifts = np.linspace(0.0, 4.0 * spread, grid_size)
     powers = np.empty(shifts.size, dtype=np.float64)
-    draws = plan.draws
-    if not draws:
+    all_draws = plan.draws
+    if not all_draws:
         raise ValueError("At least one sensitivity draw is required.")
-    bootstrap_replicates = len(draws) if max_draws is None else int(max_draws)
     rng = np.random.default_rng(plan.seed + 7919)
+    if max_draws is None:
+        draws = all_draws
+    else:
+        requested = int(max_draws)
+        if requested < 1:
+            raise ValueError("max_draws must be positive when supplied.")
+        count = min(requested, len(all_draws))
+        selected = np.sort(rng.choice(len(all_draws), size=count, replace=False))
+        draws = tuple(all_draws[int(index)] for index in selected)
+    bootstrap_replicates = len(draws)
     for shift_index, shift in enumerate(shifts):
         draw_values = np.asarray(
             [
@@ -266,9 +273,7 @@ def shift_resolution(
     return resolution, shifts, powers
 
 
-def simultaneous_reference_boundaries(
-    reference_matrix: np.ndarray, *, alpha: float
-) -> np.ndarray:
+def simultaneous_reference_boundaries(reference_matrix: np.ndarray, *, alpha: float) -> np.ndarray:
     """Bonferroni reference-position boundaries for a registered cell family.
 
     Conditional strata need not admit a scientifically valid shared block
@@ -300,9 +305,5 @@ def simultaneous_reference_boundaries(
         pointwise = float(np.quantile(values, 1.0 - alpha))
         simultaneous = float(np.sort(values)[rank - 1])
         width = pointwise - q50
-        boundaries[index] = (
-            np.nan
-            if width <= np.finfo(float).eps
-            else (simultaneous - q50) / width
-        )
+        boundaries[index] = np.nan if width <= np.finfo(float).eps else (simultaneous - q50) / width
     return boundaries

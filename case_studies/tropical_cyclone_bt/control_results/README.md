@@ -7,10 +7,13 @@ from the corrected training archive with:
 PYTHONPATH=src python case_studies/tropical_cyclone_bt/run_track1_controls.py
 ```
 
-The JSON artifact records the exact input and runner hashes, selected training
-blocks, real-reference summaries, response-contract results, resolution at the
-maximum registered severity, and the localized copyist result. No validation,
-test, or generated-model fields enter these controls.
+The JSON artifact records the canonical frozen sensitivity-contract hash, full
+input-file, runner, and importable-source-tree hashes, selected training blocks,
+real-reference summaries, response-contract results, resolution at the maximum
+registered severity, and the localized copyist result. The release gate compares
+the contract hash so an unrelated preregistration status change does not
+invalidate the controls. No validation, test, or generated-model fields enter
+these controls.
 
 Passing a sweep means the registered metric has the required severity trend.
 Crossing the real-reference boundary is reported separately as finite-sample

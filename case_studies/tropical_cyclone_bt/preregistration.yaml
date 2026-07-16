@@ -1,5 +1,5 @@
 schema: gauge_climate.tc_bt_preregistration.v1
-status: METHODS_FROZEN_TC_CALIBRATION_AND_ARTIFACTS_PENDING
+status: METHODS_FROZEN_INFERENCE_REVIEW_AND_ARTIFACTS_PENDING
 final_test_run_permitted: false
 
 scope:
@@ -7,6 +7,15 @@ scope:
   sample_shape: [256, 256]
   channels: 1
   field_units: K
+  analysis_preprocessing:
+    operation: clip
+    range_k: [170.0, 325.0]
+    fit_source: generator_training_config
+    raw_archives_preserved: true
+    rationale: >-
+      The generator was trained on real fields clipped to the 0.05th and 99.95th
+      percentile limits before normalization. GAUGE evaluates the same declared
+      field representation while retaining raw archives for provenance.
   pixel_size_km: 8.0
   classes: [TS, C1, C2, C3, C4, C5]
   excluded_class_claims: [TD]
@@ -174,3 +183,14 @@ freeze_record:
         below natural storm-to-storm variability for deliberately small blur and
         centering perturbations. Conflating response validity with detectability
         would discard responsive metrics instead of reporting their resolution.
+    - date: "2026-07-15"
+      stage: after_training_only_calibration_failure_before_final_test
+      change: >-
+        Apply the generator-training 170--325 K clipping lazily to real and
+        generated analysis fields before every functional, curve, feature-space,
+        dependence, and memorization calculation; retain raw archives unchanged.
+      reason: >-
+        The training-only calibration exposed that 170--325 K were preprocessing
+        quantiles rather than raw physical extrema. The generator training code
+        clips real fields to this interval, while GAUGE had evaluated raw fields,
+        invalidating declared finite supports and creating a representation mismatch.

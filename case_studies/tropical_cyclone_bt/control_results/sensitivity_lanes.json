@@ -8,9 +8,11 @@
     "wind_averaging_period": "1-minute",
     "real_train_manifest": "data/tropical_cyclone_bt/real_train/manifest.json",
     "real_train_manifest_sha256": "f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a",
-    "preregistration_sha256": "c6ece1dce0903bb202c8622a62ae10a0d00b9cb145588e2e2b0a72d56211a494",
-    "track1_config_sha256": "d9361dd87416736d9d74427a2d6bd2bd90945fd7036346982f2955055c9e9b83",
-    "runner_sha256": "945bf6f15c20d547851d2b835b4f3e0d4b95dfb0ba2df4c960f15c1f5c16bd09",
+    "preregistration_sha256": "fa8f629d95b96648eceaf107ad73979f6d75290e870521ad76564eb7dc680c0f",
+    "sensitivity_contract_sha256": "00c55ec1d83d7e14914508e4ae2ebb6d83170fab218685e4876231a2c37e6010",
+    "track1_config_sha256": "8153ee5f395887df3a4b4ce23e3bc2a688c36d3b912933823772545c388e79f4",
+    "runner_sha256": "75af2ccfa1bc419cd2c6a88124b8b890fbc900e3f050a78fa0eb8a864199caa0",
+    "gauge_source_sha256": "ab02977e60c4045e9dd8e2431b40d8a23837efeb8cc6b07f0b9265f8675a1b22",
     "design": {
       "seed": 1789,
       "control_block_count": 80,
@@ -146,8 +148,8 @@
         "n_resamples": 500
       },
       "radial_log_psd_mse": {
-        "q50": 0.0011163685670049083,
-        "boundary": 0.0031812840558354655,
+        "q50": 0.001116369409811596,
+        "boundary": 0.003181282905085041,
         "quantile": 0.95,
         "n_resamples": 500
       }
@@ -229,15 +231,15 @@
       "radial_log_psd_mse": {
         "values": [
           0.0,
-          0.029723679406613173,
-          1.0834225544182874,
-          10.604076078070099
+          0.029723679373678782,
+          1.0834225549127952,
+          10.604078098194938
         ],
         "rank_correlation": 1.0,
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 0.0031812840558354655,
+        "reference_boundary": 0.003181282905085041,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -330,21 +332,21 @@
     },
     "metrics": {
       "w1:axisym": {
-        "value": 2.6712483852550823,
+        "value": 2.580784781523734,
         "reference_boundary": 1.62459393958324,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
       },
       "w1:dav": {
-        "value": 218.37095463879677,
+        "value": 211.40677420316055,
         "reference_boundary": 94.48561155572746,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
       },
       "radial_profile_mae": {
-        "value": 32.68544700207302,
+        "value": 32.632273793519445,
         "reference_boundary": 5.1748211544062945,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
@@ -374,9 +376,9 @@
           "n_generated": 202,
           "n_real": 181,
           "n_real_blocks": 25,
-          "effect": -3.801855101524685,
-          "ci_low": -4.262024096178252,
-          "ci_high": -3.35548333120454,
+          "effect": -3.801855281941652,
+          "ci_low": -4.262024284520112,
+          "ci_high": -3.355482473139482,
           "status": "COPYING_DETECTED"
         },
         {
@@ -384,9 +386,9 @@
           "n_generated": 194,
           "n_real": 187,
           "n_real_blocks": 24,
-          "effect": -3.7544970938211373,
-          "ci_low": -4.370692653574955,
-          "ci_high": -3.5509375640346583,
+          "effect": -3.754497041276617,
+          "ci_low": -4.370694209110048,
+          "ci_high": -3.5509377462050518,
           "status": "COPYING_DETECTED"
         },
         {
@@ -394,9 +396,9 @@
           "n_generated": 19,
           "n_real": 47,
           "n_real_blocks": 8,
-          "effect": -5.053271843277564,
-          "ci_low": -6.304010872114652,
-          "ci_high": -4.041757664550231,
+          "effect": -5.053271144184216,
+          "ci_low": -6.304011418532931,
+          "ci_high": -4.041756812582271,
           "status": "COPYING_DETECTED"
         },
         {
@@ -404,9 +406,9 @@
           "n_generated": 226,
           "n_real": 174,
           "n_real_blocks": 19,
-          "effect": -4.136460675778578,
-          "ci_low": -4.6520673595411015,
-          "ci_high": -3.6073430851517445,
+          "effect": -4.136461069962177,
+          "ci_low": -4.6520674029624915,
+          "ci_high": -3.607343107900816,
           "status": "COPYING_DETECTED"
         },
         {
@@ -414,9 +416,9 @@
           "n_generated": 90,
           "n_real": 73,
           "n_real_blocks": 20,
-          "effect": -4.331695565337112,
-          "ci_low": -4.60324891164131,
-          "ci_high": -3.9314246975216913,
+          "effect": -4.331695482382204,
+          "ci_low": -4.603249338691152,
+          "ci_high": -3.9314251280570485,
           "status": "COPYING_DETECTED"
         },
         {
@@ -424,9 +426,9 @@
           "n_generated": 121,
           "n_real": 148,
           "n_real_blocks": 17,
-          "effect": -3.6952036243962665,
-          "ci_low": -3.954909218117728,
-          "ci_high": -3.2667042891353506,
+          "effect": -3.6952044792895555,
+          "ci_low": -3.9549092261656504,
+          "ci_high": -3.2667041457170534,
           "status": "COPYING_DETECTED"
         },
         {
@@ -434,9 +436,9 @@
           "n_generated": 139,
           "n_real": 184,
           "n_real_blocks": 28,
-          "effect": -3.7012136522942223,
-          "ci_low": -3.8830451548775162,
-          "ci_high": -3.2801398045919887,
+          "effect": -3.7012148640789713,
+          "ci_low": -3.883045593447631,
+          "ci_high": -3.2801991558507977,
           "status": "COPYING_DETECTED"
         }
       ],
@@ -445,7 +447,7 @@
       "feature_provenance": {
         "schema": "gauge_climate.feature_space.v1",
         "fit_source": "train",
-        "source_fingerprint": "844d0600b5c4f022",
+        "source_fingerprint": "ff1718475979cc13",
         "sample_shape": [
           256,
           256
@@ -974,7 +976,7 @@
           "p01_bt"
         ],
         "n_eof": 20,
-        "provenance_hash": "446acf2b0c58a64f"
+        "provenance_hash": "265bcdf4680610f8"
       },
       "estimand": "block_balanced",
       "train_region_counts": [

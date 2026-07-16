@@ -27,6 +27,16 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _source_tree_sha256(root: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*.py")):
+        digest.update(path.relative_to(root).as_posix().encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
 def _verify_checksum_manifest(
     manifest_path: Path, *, files_root: Path, mapping_key: str
 ) -> list[str]:
@@ -58,14 +68,8 @@ def main() -> int:
         failures.append("TC preregistration is not frozen for a final test run.")
     if "PENDING" in json.dumps(prereg):
         failures.append("TC preregistration still contains PENDING fields.")
-    control_path = (
-        ROOT
-        / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json"
-    )
-    control_figure = (
-        ROOT
-        / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.pdf"
-    )
+    control_path = ROOT / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json"
+    control_figure = ROOT / "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.pdf"
     if not control_path.exists():
         failures.append("TC Track-1 control artifact is missing.")
     else:
@@ -79,21 +83,68 @@ def main() -> int:
             "real_train_manifest_sha256": (
                 ROOT / "data/tropical_cyclone_bt/real_train/manifest.json"
             ),
-            "preregistration_sha256": (
-                ROOT / "case_studies/tropical_cyclone_bt/preregistration.yaml"
-            ),
             "track1_config_sha256": (
                 ROOT / "case_studies/tropical_cyclone_bt/track1_config.template.yaml"
             ),
-            "runner_sha256": (
-                ROOT / "case_studies/tropical_cyclone_bt/run_track1_controls.py"
-            ),
+            "runner_sha256": (ROOT / "case_studies/tropical_cyclone_bt/run_track1_controls.py"),
         }
         for key, source in control_sources.items():
             if not source.is_file() or metadata.get(key) != _sha256(source):
                 failures.append(f"TC control provenance mismatch: {key}.")
+        if metadata.get("gauge_source_sha256") != _source_tree_sha256(ROOT / "src/gauge_climate"):
+            failures.append("TC control provenance mismatch: GAUGE source tree.")
+        sensitivity_contract = prereg.get("sensitivity_lanes", {})
+        encoded_contract = json.dumps(
+            sensitivity_contract, sort_keys=True, separators=(",", ":")
+        ).encode()
+        contract_hash = hashlib.sha256(encoded_contract).hexdigest()
+        if metadata.get("sensitivity_contract_sha256") != contract_hash:
+            failures.append("TC control provenance mismatch: sensitivity contract.")
     if not control_figure.is_file():
         failures.append("TC Track-1 control figure is missing.")
+    calibration_path = (
+        ROOT / "case_studies/tropical_cyclone_bt/calibration_results/track1_statistics.json"
+    )
+    calibration_figure = (
+        ROOT / "case_studies/tropical_cyclone_bt/calibration_results/track1_statistics.pdf"
+    )
+    if not calibration_path.is_file():
+        failures.append("TC Track-1 statistical calibration artifact is missing.")
+    else:
+        calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
+        if calibration.get("status") != "PASSED":
+            failures.append("TC Track-1 statistical calibration has not passed.")
+        metadata = calibration.get("_metadata", {})
+        if metadata.get("test_fields_used") is not False:
+            failures.append("TC Track-1 calibration does not attest training-only use.")
+        calibration_sources = {
+            "protocol_sha256": (
+                ROOT / "case_studies/tropical_cyclone_bt/calibration_protocol.yaml"
+            ),
+            "runner_sha256": (ROOT / "case_studies/tropical_cyclone_bt/run_track1_calibration.py"),
+            "real_train_manifest_sha256": (
+                ROOT / "data/tropical_cyclone_bt/real_train/manifest.json"
+            ),
+            "partition_summary_sha256": (
+                ROOT / "case_studies/tropical_cyclone_bt/partition_summary.json"
+            ),
+            "track1_config_sha256": (
+                ROOT / "case_studies/tropical_cyclone_bt/track1_config.template.yaml"
+            ),
+        }
+        for key, source in calibration_sources.items():
+            if not source.is_file() or metadata.get(key) != _sha256(source):
+                failures.append(f"TC calibration provenance mismatch: {key}.")
+        if metadata.get("gauge_source_sha256") != _source_tree_sha256(ROOT / "src/gauge_climate"):
+            failures.append("TC calibration provenance mismatch: GAUGE source tree.")
+        family = calibration.get("family", {})
+        summary = calibration.get("summary", {})
+        if family.get("size") != 56 or summary.get("total_cells") != 56:
+            failures.append("TC calibration does not contain the frozen 56-cell family.")
+        if summary.get("pseudo_reference_overlap_failures") != 0:
+            failures.append("TC calibration pseudo-generator overlaps reference storms.")
+    if not calibration_figure.is_file():
+        failures.append("TC Track-1 statistical calibration figure is missing.")
     artifacts = _yaml(ROOT / "case_studies/tropical_cyclone_bt/artifacts.yaml")
     if not artifacts.get("release_ready"):
         failures.append("TC artifacts are not archived and release-ready.")
@@ -123,9 +174,7 @@ def main() -> int:
         if path.is_symlink() and path.readlink().is_absolute():
             absolute_symlinks.append(str(path.relative_to(ROOT)))
     if absolute_symlinks:
-        failures.append(
-            "Absolute local symlinks remain: " + ", ".join(absolute_symlinks[:8])
-        )
+        failures.append("Absolute local symlinks remain: " + ", ".join(absolute_symlinks[:8]))
     if args.include_survey:
         summary_path = ROOT / "survey/exports/summary.json"
         if not summary_path.exists():
@@ -143,9 +192,7 @@ def main() -> int:
             )
         )
         if survey_manifest.exists():
-            survey_checksums = json.loads(
-                survey_manifest.read_text(encoding="utf-8")
-            )
+            survey_checksums = json.loads(survey_manifest.read_text(encoding="utf-8"))
             survey_source = ROOT / "docs/methods/genAI_climate_eval_survey.xlsx"
             if not survey_source.is_file():
                 failures.append("Survey source workbook is missing.")
