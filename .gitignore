@@ -25,3 +25,6 @@ data/
 outputs/
 runs/
 survey/figures/
+
+# Local design sketch superseded by the generated paper-facing bundle.
+/EXAMPLE_SIMPLER_FRAMEWORK.jpg

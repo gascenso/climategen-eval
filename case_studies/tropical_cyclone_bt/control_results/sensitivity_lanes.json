@@ -8,11 +8,11 @@
     "wind_averaging_period": "1-minute",
     "real_train_manifest": "data/tropical_cyclone_bt/real_train/manifest.json",
     "real_train_manifest_sha256": "f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a",
-    "preregistration_sha256": "349dc3975faa9321c8075c25f5034393cba5cf04b8ac883d5078320b33375a09",
-    "sensitivity_contract_sha256": "00c55ec1d83d7e14914508e4ae2ebb6d83170fab218685e4876231a2c37e6010",
-    "track1_config_sha256": "650de576c33e68bcc183a704aba473902b61c7ac92bfc62407a53503cf1926e1",
-    "runner_sha256": "75af2ccfa1bc419cd2c6a88124b8b890fbc900e3f050a78fa0eb8a864199caa0",
-    "gauge_source_sha256": "519d84b50db679fd0c874486d3c8d46eab5573b8c6eba34468de8bac05a56110",
+    "preregistration_sha256": "63ccc2a9d7e9773609d0c08774d2ca063ad270e72681169bdd2843ed55836553",
+    "sensitivity_contract_sha256": "1aa4592049a6137db209e3a8124cb5d48bc52343d0c763fdb5f590943ebebacf",
+    "track1_config_sha256": "1dcffbb6951a3c7e6d8b65c7642aa51232effa3ef4b6e6dc3d5efb36c4c5377b",
+    "runner_sha256": "2833cb7bd7826b4b1ed8bf523f962dab8b49fecda76d0b9c4d0ff3a9e4146c5d",
+    "gauge_source_sha256": "5416dd7389767e153c00fd81d8a3d2f070b378a10c530844e4207d99cce5ad46",
     "design": {
       "seed": 1789,
       "control_block_count": 80,
@@ -25,7 +25,7 @@
       "feature_fit_samples": 512,
       "copyist_resamples": 1000,
       "batch_size": 64,
-      "phase_power_relative_tolerance": 1e-05
+      "phase_power_relative_threshold": 1e-05
     },
     "selected_blocks": [
       "2002255N26273",
@@ -327,7 +327,7 @@
     "invariant": {
       "id": "per_image_discrete_fourier_power_preserved",
       "maximum_relative_error": 3.235871752479109e-07,
-      "relative_tolerance": 1e-05,
+      "relative_threshold": 1e-05,
       "passed": true
     },
     "metrics": {

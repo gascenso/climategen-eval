@@ -1,4 +1,4 @@
-# TC Track-1 paper-facing results
+# TC GAUGE paper-facing results
 
 This directory is the output an ordinary GAUGE user should start from. The
 statistical machinery remains in the frozen report, while the main directory
@@ -8,18 +8,18 @@ section.
 ## Main-text artifacts
 
 - `main/figure_1_reference_gap_profile.pdf`: primary intrinsic result. Every
-  native class is visible, C4+ is emphasized, and training-only positive
-  controls are open diamonds.
-- `main/figure_2_tail_physical_distributions.pdf`: C4+ empirical distributions
+  native class is visible and training-only positive controls are open diamonds.
+- `main/figure_2_tail_physical_distributions.pdf`: Category 5 empirical distributions
   for all seven physical functionals.
-- `main/figure_3_tail_spatial_structure.pdf`: C4+ radial-profile and spectral
+- `main/figure_3_tail_spatial_structure.pdf`: Category 5 radial-profile and spectral
   drill-downs.
 - `main/figure_4_generation_safeguards.pdf`: compact memorization and
   preprocessing-boundary audit.
 - `main/table_1_native_metric_values.csv`: exact native-unit estimates,
   intervals, reference summaries, gaps, and statuses for every displayed class.
-- `main/table_1_priority_tail_values.md`: compact human-readable C4+ table for
+- `main/table_1_c5_values.md`: compact human-readable Category 5 table for
   direct inspection or manuscript adaptation.
+- `main/table_1_c5_values.csv`: the same Category 5 values in machine-readable form.
 
 `index.html` provides a browser-friendly landing page. The appendix retains the
 complete class matrix, all report cells, every native-class distribution, and
@@ -37,6 +37,6 @@ the extended diagnostics.
 
 Source report: `evaluation.json`
 
-Source report SHA-256: `ae7089d063891ac7e812e6035b66ecc763e9c0fbef9f37e9cdf0f3d670e01b00`
+Source report SHA-256: `162514928163ff8366d4739255233259d40c3e40faed02f7d879626ec0403f45`
 
 Configuration hash: `9d4bdd409257157f`
