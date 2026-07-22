@@ -125,7 +125,6 @@ def _reference_boundaries(
     config = EvaluationConfig(
         n_eval=n_control,
         n_resamples=n_resamples,
-        bootstrap_resamples=20,
         sensitivity_resamples=20,
         alpha=1.0 - quantile,
         confidence=quantile,
@@ -205,7 +204,7 @@ def _phase_power_invariant(
     shuffled: np.ndarray,
     *,
     batch_size: int,
-    relative_tolerance: float,
+    relative_threshold: float,
 ) -> dict[str, Any]:
     maximum = 0.0
     for start in range(0, source.shape[0], batch_size):
@@ -223,8 +222,8 @@ def _phase_power_invariant(
     return {
         "id": "per_image_discrete_fourier_power_preserved",
         "maximum_relative_error": maximum,
-        "relative_tolerance": relative_tolerance,
-        "passed": bool(maximum <= relative_tolerance),
+        "relative_threshold": relative_threshold,
+        "passed": bool(maximum <= relative_threshold),
     }
 
 
@@ -439,7 +438,7 @@ def main() -> int:
         "feature_fit_samples",
         "copyist_resamples",
         "batch_size",
-        "phase_power_relative_tolerance",
+        "phase_power_relative_threshold",
     }
     missing_design = sorted(required_design - set(design))
     if missing_design:
@@ -554,7 +553,7 @@ def main() -> int:
         source_fields,
         shuffled_fields,
         batch_size=int(design["batch_size"]),
-        relative_tolerance=float(design["phase_power_relative_tolerance"]),
+        relative_threshold=float(design["phase_power_relative_threshold"]),
     )
     phase_result = _binary_metric_control(
         control_id="phase_shuffle",

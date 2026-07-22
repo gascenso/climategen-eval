@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the paper-facing TC Track-1 bundle from one frozen GAUGE report."""
+"""Render the paper-facing TC bundle from one frozen GAUGE report."""
 
 from __future__ import annotations
 
@@ -282,10 +282,10 @@ def _functional_distribution_figures(
 
     fig, axes = plt.subplots(2, 4, figsize=(13.5, 6.8))
     fig.subplots_adjust(left=0.07, right=0.99, top=0.86, bottom=0.11, wspace=0.28, hspace=0.38)
-    tail_real = np.isin(real_labels, [4, 5])
-    tail_generated = np.isin(generated_labels, [4, 5])
+    tail_real = real_labels == 5
+    tail_generated = generated_labels == 5
     for ax, functional_id in zip(axes.flat, FUNCTIONAL_IDS, strict=False):
-        cell = cells[("C4_plus", f"w1:{functional_id}")]
+        cell = cells[("5", f"w1:{functional_id}")]
         _ecdf_panel(
             ax,
             real_values[functional_id][tail_real],
@@ -308,7 +308,7 @@ def _functional_distribution_figures(
     handles, labels = axes.flat[0].get_legend_handles_labels()
     axes.flat[-1].legend(handles, labels, loc="center", frameon=False)
     fig.suptitle(
-        "Tail-class physical distributions (C4+)",
+        "Category 5 physical distributions (thin-stratum audit)",
         fontsize=17,
         fontweight="semibold",
         y=0.98,
@@ -380,7 +380,7 @@ def _curve_figures(report: EvaluationReport, output_dir: Path) -> dict[str, Path
     fig, axes = plt.subplots(1, 2, figsize=(11.6, 4.8))
     fig.subplots_adjust(left=0.08, right=0.99, top=0.70, bottom=0.16, wspace=0.24)
     for ax, (metric, label) in zip(axes, metrics, strict=True):
-        diagnostic = report.diagnostics[f"C4_plus:{metric}"]
+        diagnostic = report.diagnostics[f"5:{metric}"]
         x = np.asarray(diagnostic["coordinate_values"])
         ax.fill_between(
             x,
@@ -392,7 +392,7 @@ def _curve_figures(report: EvaluationReport, output_dir: Path) -> dict[str, Path
         )
         ax.plot(x, diagnostic["real_mean"], color="#263238", linewidth=1.7, label="held-out real")
         ax.plot(x, diagnostic["generated_mean"], color="#2b7a78", linewidth=1.7, label="generated")
-        cell = cells[("C4_plus", metric)]
+        cell = cells[("5", metric)]
         ax.set_title(label, fontweight="semibold")
         ax.set_xlabel(diagnostic["coordinate_label"])
         ax.set_ylabel(diagnostic["units"])
@@ -409,7 +409,12 @@ def _curve_figures(report: EvaluationReport, output_dir: Path) -> dict[str, Path
         )
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.84), ncol=3, frameon=False)
-    fig.suptitle("Tail-class spatial structure (C4+)", fontsize=17, fontweight="semibold", y=0.98)
+    fig.suptitle(
+        "Category 5 spatial structure (thin-stratum audit)",
+        fontsize=17,
+        fontweight="semibold",
+        y=0.98,
+    )
     base = output_dir.parent / "main" / "figure_3_tail_spatial_structure"
     fig.savefig(base.with_suffix(".pdf"), bbox_inches="tight", metadata={"CreationDate": None, "ModDate": None})
     fig.savefig(base.with_suffix(".png"), dpi=220, bbox_inches="tight")
@@ -501,7 +506,7 @@ def _copy_audit_artifacts(source: Path, appendix: Path) -> None:
 
 
 def _write_readme(output_dir: Path, report_path: Path, report: EvaluationReport) -> None:
-    text = f"""# TC Track-1 paper-facing results
+    text = f"""# TC GAUGE paper-facing results
 
 This directory is the output an ordinary GAUGE user should start from. The
 statistical machinery remains in the frozen report, while the main directory
@@ -511,18 +516,18 @@ section.
 ## Main-text artifacts
 
 - `main/figure_1_reference_gap_profile.pdf`: primary intrinsic result. Every
-  native class is visible, C4+ is emphasized, and training-only positive
-  controls are open diamonds.
-- `main/figure_2_tail_physical_distributions.pdf`: C4+ empirical distributions
+  native class is visible and training-only positive controls are open diamonds.
+- `main/figure_2_tail_physical_distributions.pdf`: Category 5 empirical distributions
   for all seven physical functionals.
-- `main/figure_3_tail_spatial_structure.pdf`: C4+ radial-profile and spectral
+- `main/figure_3_tail_spatial_structure.pdf`: Category 5 radial-profile and spectral
   drill-downs.
 - `main/figure_4_generation_safeguards.pdf`: compact memorization and
   preprocessing-boundary audit.
 - `main/table_1_native_metric_values.csv`: exact native-unit estimates,
   intervals, reference summaries, gaps, and statuses for every displayed class.
-- `main/table_1_priority_tail_values.md`: compact human-readable C4+ table for
+- `main/table_1_c5_values.md`: compact human-readable Category 5 table for
   direct inspection or manuscript adaptation.
+- `main/table_1_c5_values.csv`: the same Category 5 values in machine-readable form.
 
 `index.html` provides a browser-friendly landing page. The appendix retains the
 complete class matrix, all report cells, every native-class distribution, and
@@ -547,11 +552,11 @@ Configuration hash: `{report.metadata.get('config_hash', 'unknown')}`
     (output_dir / "README.md").write_text(text, encoding="utf-8")
 
 
-def _write_priority_table(output_dir: Path, report: EvaluationReport) -> None:
+def _write_c5_table(output_dir: Path, report: EvaluationReport) -> None:
     cells = {(cell.stratum, cell.metric): cell for cell in report.cells}
     rows = []
     for metric in MAIN_METRICS:
-        cell = cells[("C4_plus", metric)]
+        cell = cells[("5", metric)]
         rows.append(
             {
                 "metric": METRIC_LABELS[metric],
@@ -563,20 +568,19 @@ def _write_priority_table(output_dir: Path, report: EvaluationReport) -> None:
                 "reference_boundary": cell.reference_detection_boundary,
                 "reference_gap": cell.reference_position,
                 "detection": cell.detection_status.value,
-                "practical_status": cell.practical_status.value,
             }
         )
     main = output_dir / "main"
-    csv_path = main / "table_1_priority_tail_values.csv"
+    csv_path = main / "table_1_c5_values.csv"
     with csv_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=tuple(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     markdown = [
-        "# C4+ priority-tail metric values",
+        "# Category 5 metric values (thin stratum)",
         "",
-        "| Metric | Model discrepancy (95% CI) | Real-reference median → boundary | Gap | Detection | Practical |",
-        "|---|---:|---:|---:|---|---|",
+        "| Metric | Model discrepancy (95% resampling interval) | Real-reference median → boundary | Gap | Detection |",
+        "|---|---:|---:|---:|---|",
     ]
     for row in rows:
         estimate = (
@@ -592,16 +596,16 @@ def _write_priority_table(output_dir: Path, report: EvaluationReport) -> None:
         gap = "—" if row["reference_gap"] is None else f"{row['reference_gap']:.2f}"
         markdown.append(
             f"| {row['metric']} | {estimate} | {reference} | {gap} | "
-            f"{row['detection']} | {row['practical_status']} |"
+            f"{row['detection']} |"
         )
     markdown.extend(
         [
             "",
-            "Gap 1 is the pointwise 95% real-reference boundary. Non-functional diagnostics have no fabricated practical-equivalence status.",
+            "Gap 1 is the pointwise 95% real-reference boundary. It is a detectability coordinate, not a universal severity or acceptability scale.",
             "",
         ]
     )
-    (main / "table_1_priority_tail_values.md").write_text(
+    (main / "table_1_c5_values.md").write_text(
         "\n".join(markdown), encoding="utf-8"
     )
 
@@ -611,17 +615,17 @@ def _write_index(output_dir: Path, report: EvaluationReport) -> None:
         (
             "main/figure_1_reference_gap_profile.png",
             "1. Reference-calibrated intrinsic profile",
-            "All six native intensity classes, the preregistered C4+ tail aggregate, and training-only positive controls on one scale.",
+            "All six native intensity classes and training-only positive controls on one scale; no pooled tail can hide C5.",
         ),
         (
             "main/figure_2_tail_physical_distributions.png",
             "2. Tail physical distributions",
-            "Block-balanced C4+ empirical distributions for every scalar physical functional.",
+            "Block-balanced Category 5 empirical distributions for every scalar physical functional; interpret with its thin-stratum uncertainty.",
         ),
         (
             "main/figure_3_tail_spatial_structure.png",
             "3. Tail spatial structure",
-            "Radial-profile and power-spectrum drill-downs for the priority C4+ stratum.",
+            "Category 5 radial-profile and power-spectrum drill-downs with the real-reference envelope.",
         ),
         (
             "main/figure_4_generation_safeguards.png",
@@ -634,7 +638,7 @@ def _write_index(output_dir: Path, report: EvaluationReport) -> None:
         for path, title, caption in figures
     )
     document = f"""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>TC Track-1 GAUGE results</title>
+<html lang="en"><head><meta charset="utf-8"><title>TC GAUGE results</title>
 <style>
 :root{{--ink:#213138;--muted:#607078;--wash:#f3f7f8;--accent:#246a73}}
 body{{font-family:Inter,system-ui,sans-serif;max-width:1180px;margin:0 auto;padding:2.5rem 2rem;color:var(--ink)}}
@@ -643,13 +647,13 @@ h1{{font-size:2.15rem;margin-bottom:.35rem}}h2{{margin-top:2.6rem;border-bottom:
 img{{display:block;width:100%;height:auto;border:1px solid #e2e8ea;margin-top:1rem}}section p{{color:var(--muted)}}
 a{{color:var(--accent)}}code{{background:var(--wash);padding:.1rem .25rem}}
 </style></head><body>
-<h1>Tropical-cyclone Track-1 evaluation</h1>
+<h1>Tropical-cyclone GAUGE evaluation</h1>
 <p class="lede">This is the interpretation-first GAUGE output intended for a paper results section. The complete machine report, class matrix, numerical tables, and diagnostic drill-downs remain available underneath it.</p>
 <div class="key"><strong>Gap key:</strong> 0 is the median real–real discrepancy and 1 is the pointwise 95% real-reference boundary. Lower is closer. Gap units express detectability at this N, not physical severity; a result below 1 is not automatically equivalent.</div>
 {figure_html}
 <h2>Tables and appendix</h2>
-<ul><li><a href="main/table_1_priority_tail_values.md">Human-readable C4+ metric table</a></li>
-<li><a href="main/table_1_priority_tail_values.csv">C4+ metric table (CSV)</a></li>
+<ul><li><a href="main/table_1_c5_values.md">Human-readable Category 5 metric table</a></li>
+<li><a href="main/table_1_c5_values.csv">Category 5 metric table (CSV)</a></li>
 <li><a href="main/table_1_native_metric_values.csv">Every displayed class and metric (CSV)</a></li>
 <li><a href="appendix/figure_A1_conditional_gap_matrix.pdf">Complete conditional matrix (PDF)</a></li>
 <li><a href="appendix/table_A1_complete_evaluation.csv">Every report cell (CSV)</a></li>
@@ -703,9 +707,9 @@ def main() -> int:
         model_label="baseline_ztsnr diffusion model",
         metrics=MAIN_METRICS,
         native_strata=("0", "1", "2", "3", "4", "5"),
-        priority_strata=("C4_plus",),
+        priority_strata=(),
         metric_labels=METRIC_LABELS,
-        stratum_labels={**CLASS_LABELS, "C4_plus": "C4+ priority tail"},
+        stratum_labels=CLASS_LABELS,
     )
     report.paper_bundle(output_dir, spec, controls=_controls(controls_payload))
 
@@ -734,7 +738,7 @@ def main() -> int:
     _curve_figures(report, appendix)
     _safeguard_figure(report, appendix)
     _copy_audit_artifacts(report_path.parent, appendix)
-    _write_priority_table(output_dir, report)
+    _write_c5_table(output_dir, report)
     _write_readme(output_dir, report_path, report)
     _write_index(output_dir, report)
     _write_manifest(output_dir, report_path)

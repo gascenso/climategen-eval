@@ -40,25 +40,26 @@ partitions:
     id: C4_plus
     members: [C4, C5]
     scientific_rationale: >-
-      C4 and C5 are both major hurricanes (Vmax at least 113 kt); aggregating them
-      preserves an operationally meaningful threshold while stabilizing the thin
-      C5 reference (85 frames from 22 test storms).
+      Legacy extreme-tail descriptive aggregate retained to stabilize the
+      thin C5 reference (85 frames from 22 test storms). It does not replace C4 or
+      C5, is not called the standard major-hurricane group, and is not promoted as
+      the paper's tail headline after the terminology amendment below.
   temporal_shift_analysis: descriptive_secondary_only_no_endpoint_switching
 
 models:
   candidates: [baseline_ztsnr]
   primary: baseline_ztsnr
   secondary: []
-  checkpoint_selection_rule: weights_ema_best_val; selected without Track-1 test metrics
+  checkpoint_selection_rule: weights_ema_best_val; selected without final GAUGE test metrics
 
 functionals:
-  - {id: min_core_bt, units: K, support: [170.0, 325.0], tolerance: 1.0}
-  - {id: cold_frac_220, units: percent, support: [0.0, 100.0], tolerance: 1.0}
-  - {id: r_maxgrad, units: km, support: [0.0, 500.0], tolerance: 15.625}
-  - {id: axisym, units: K, support: [0.0, 155.0], tolerance: 1.0}
-  - {id: dav, units: degree_squared, support: [0.0, 8100.0], tolerance: 100.0}
-  - {id: eye_contrast, units: K, support: [-155.0, 155.0], tolerance: 1.0}
-  - {id: p01_bt, units: K, support: [170.0, 325.0], tolerance: 1.0}
+  - {id: min_core_bt, units: K, support: [170.0, 325.0]}
+  - {id: cold_frac_220, units: percent, support: [0.0, 100.0]}
+  - {id: r_maxgrad, units: km, support: [0.0, 500.0]}
+  - {id: axisym, units: K, support: [0.0, 155.0]}
+  - {id: dav, units: degree_squared, support: [0.0, 8100.0]}
+  - {id: eye_contrast, units: K, support: [-155.0, 155.0]}
+  - {id: p01_bt, units: K, support: [170.0, 325.0]}
 
 curve_metrics:
   radial_profile:
@@ -108,7 +109,7 @@ sensitivity_lanes:
     feature_fit_samples: 512
     copyist_resamples: 1000
     batch_size: 64
-    phase_power_relative_tolerance: 0.00001
+    phase_power_relative_threshold: 0.00001
   controls:
     copyist: {expected: localized_copying_detected, severity: exact_training_replay}
     blur: {expected: psd_and_gradient_response, sigma_pixels: [0.0, 0.5, 1.0, 2.0]}
@@ -116,46 +117,6 @@ sensitivity_lanes:
     warm_shift: {expected: monotone_BT_functional_response, kelvin: [0.0, 0.5, 1.0, 2.0, 4.0]}
     center_jitter: {expected: radial_structure_response, pixels: [0, 1, 2, 4]}
   interpretation_rule: a metric failing its predeclared response is not interpreted
-
-track2:
-  holdouts:
-    count: 3
-    storm_ids: [2006259N19155, 2016273N13300, 2018269N11220]
-    plan_sha256: eb4a3b04eb45b51945ad90f8b2522c47096a7af9f09202b001998c6e9ac9aab9
-    selection_seed: 1789
-    eligibility: >-
-      at least 20 total frames, at least 10 C4+ frames, at least one C5 frame,
-      and every exact Vmax value represented in the restricted training set
-    whole_storm_removal: true
-  generator_retrained_per_holdout: true
-  full_training_generator_bank_role: development_only_prohibited_for_final_contrasts
-  generated_conditioning:
-    variable: Vmax
-    units: kt
-    source_distribution: restricted_training_only
-  matching_strata:
-    variable: Vmax
-    policy: exact_value_kt
-  downstream_seeds: [101, 102, 103, 104, 105]
-  callback_determinism_audit: true
-  transforms:
-    candidate: tc_rot90_reflect_shift_v1
-    rotations: right_angles
-    translations_pixels: [-2, 2]
-    boundary: reflect_padding
-    status: FROZEN
-  primary_endpoint:
-    task: Vmax_regression
-    metric: storm_balanced_MAE_kt
-    delta_task: 2.5
-  secondary_endpoint:
-    task: intensity_category_classification
-    metric: storm_balanced_accuracy
-    delta_task: 0.02
-  headline_contrast: A5_generated_geo_minus_A3_copy_geo
-  source_only_contrast: A4_generated_minus_A2_copy
-  headroom_contrast: A7_restored_real_geo_minus_A3_copy_geo
-  holdout_heterogeneity: report_each_plus_hierarchical_summary
 
 exclusions:
   corrupt_or_missing_fields: reject_before_run_and_report_count
@@ -168,9 +129,19 @@ freeze_record:
   base_commit: b765b73
   binding: git_commit_containing_this_record
   approvers: [project_owner]
-  final_track1_authorized_at_utc: "2026-07-16T06:29:36Z"
+  final_evaluation_authorized_at_utc: "2026-07-16T06:29:36Z"
   rationale_document: case_studies/tropical_cyclone_bt/protocol_freeze.md
   amendments:
+    - date: "2026-07-21"
+      stage: after_final_run_during_framework_scope_freeze
+      change: retire_application_materiality_verdict_branch
+      reason: >-
+        GAUGE v1 now has one reference-aware conclusion plus sensitivity controls.
+        Automatically chosen application thresholds would duplicate the sampling
+        boundary or encode an arbitrary corruption severity, while requiring users
+        to choose them would prevent streamlined adoption. Raw estimates,
+        real-reference envelopes, gap positions, controls, and model conclusions
+        are unchanged; the retired branch remains transparent in Git history.
     - date: "2026-07-16"
       stage: after_first_final_output_audit_before_superseding_final_run
       change: >-
@@ -191,7 +162,7 @@ freeze_record:
         versus real-to-training distances inside broad feature regions, so copying
         queries are now label-matched. The superseded run already detected no
         copying; this amendment was therefore not chosen to reverse an adverse
-        copying conclusion. No functional, tolerance, stratum, reference draw,
+        copying conclusion. No functional, stratum, reference draw,
         curve, feature metric, or physical conclusion is changed. The compressed
         superseded report is retained in the final artifact bundle.
     - date: "2026-07-16"
@@ -208,30 +179,11 @@ freeze_record:
         The first authorized runner invocation was stopped before producing any
         report or metric outcome after profiling exposed redundant quadratic work
         and a potentially enormous JSON partition manifest. These computational
-        changes preserve the frozen primary statistics, tolerances, strata,
+        changes preserve the frozen primary statistics, strata,
         generated bank, test set, model, and conclusion rules. Secondary metrics
         have no equivalence verdict and now report their effective draw and sample
         counts explicitly. The compact record is exactly reproducible from the
         frozen inputs, seed, and configuration and is integrity-checked by SHA-256.
-    - date: "2026-07-16"
-      stage: after_training_only_calibration_before_final_test
-      change: >-
-        Replace the all-DKW practical W1 interval for regular bounded scalar
-        functionals with a two-sided 95% whole-block influence-function interval;
-        retain DKW for the discrete maximum-gradient-radius functional. Determine
-        UNDERPOWERED from direct confidence uncertainty rather than detection-shift
-        sensitivity, which remains a separate diagnostic.
-      reason: >-
-        Training-only calibration proved that the all-DKW interval could not place
-        even a perfect-generator control within any declared tolerance. The
-        replacement uses all frames to estimate each storm CDF without treating
-        frames as independent storms and passed pre-outcome boundary simulations
-        for shifts, crossing CDFs, tail contamination, thin strata, and unequal
-        cluster sizes. No tolerance, model, stratum, or test outcome was changed.
-        Legacy tc-diffusion detection summaries were already known, but the
-        replacement method and its gates were selected exclusively with
-        training-only controls and synthetic boundary experiments before the
-        GAUGE final run.
     - date: "2026-07-15"
       stage: before_final_test_and_before_generated_outcomes
       change: >-

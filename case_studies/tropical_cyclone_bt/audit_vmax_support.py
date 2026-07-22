@@ -13,15 +13,10 @@ import numpy as np
 
 
 BANKS = {
-    "track1_test": {
+    "heldout_test": {
         "path": "generated/baseline_ztsnr/test/test_baseline_n1000",
         "reference_split": "test",
-        "role": "Track-1 held-out generation",
-    },
-    "cnn_train": {
-        "path": "generated/baseline_ztsnr/train/aug_guidance_train",
-        "reference_split": "train",
-        "role": "tc-diffusion evaluator synthetic augmentation",
+        "role": "held-out generation",
     },
 }
 
@@ -145,38 +140,6 @@ def main() -> int:
             "reference_manifest_sha256": _sha256(real_manifest_path),
             "classes": class_results,
         }
-        if bank_id == "cnn_train":
-            expected_counts = {
-                class_id: node["generated"]["n"]
-                for class_id, node in class_results.items()
-            }
-            evaluator_runs = []
-            for seed in (42, 43, 44):
-                evidence_path = (
-                    args.data
-                    / "source_manifests"
-                    / f"runs__cm_E3_s{seed}__synthetic_augmentation.json"
-                )
-                evidence = _json(evidence_path)
-                observed_counts = {
-                    str(key): int(value)
-                    for key, value in evidence.get("per_class_used", {}).items()
-                }
-                if evidence.get("bank_name") != bank_manifest.get("bank_name"):
-                    raise ValueError(
-                        f"Evaluator run s{seed} used a different sample bank."
-                    )
-                if observed_counts != expected_counts:
-                    raise ValueError(
-                        f"Evaluator run s{seed} counts differ from the audited bank."
-                    )
-                evaluator_runs.append({
-                    "run": f"cm_E3_s{seed}",
-                    "evidence": str(evidence_path),
-                    "evidence_sha256": _sha256(evidence_path),
-                    "per_class_used": observed_counts,
-                })
-            results[bank_id]["tc_diffusion_evaluator_runs"] = evaluator_runs
     payload = {
         "schema": "gauge_climate.tc_bt_vmax_support_audit.v1",
         "wind_source": "USA_WIND",

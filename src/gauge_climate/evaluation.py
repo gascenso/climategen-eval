@@ -13,11 +13,7 @@ import scipy
 from .data import Dataset, normalized_blocks, validate_generated, validate_split
 from .inference import (
     Interval,
-    cluster_w1_influence_interval,
-    dkw_w1_interval,
     detection_status,
-    functional_w1_interval,
-    practical_status,
     shift_resolution,
     simultaneous_reference_boundaries,
 )
@@ -36,8 +32,6 @@ from .types import (
     FunctionalSpec,
     MetricKind,
     MetricSpec,
-    PracticalStatus,
-    SensitivityStatus,
     _jsonable,
 )
 
@@ -60,7 +54,6 @@ def _metric_manifest(metric: MetricSpec) -> dict[str, Any]:
         "pillar": metric.pillar,
         "units": metric.units,
         "description": metric.description,
-        "tolerance": metric.tolerance,
         "transform": _callable_name(metric.transform),
         "estimator": _callable_name(metric.estimator),
         "functional": None
@@ -143,7 +136,6 @@ def _generic_interval(reference: ReferenceEvaluation, confidence: float) -> Inte
         estimate=float(np.median(reference.model_values)),
         low=float(np.quantile(reference.model_values, tail)),
         high=float(np.quantile(reference.model_values, 1.0 - tail)),
-        bootstrap_values=reference.model_values,
     )
 
 
@@ -208,19 +200,8 @@ def _thin_cell(
         reference_position=None,
         reference_position_low=None,
         reference_position_high=None,
-        tolerance=metric.tolerance,
         shift_resolution=None,
         detection_status=DetectionStatus.NOT_EVALUATED,
-        practical_status=(
-            PracticalStatus.UNDERPOWERED
-            if metric.tolerance is not None
-            else PracticalStatus.NOT_APPLICABLE
-        ),
-        sensitivity_status=(
-            SensitivityStatus.INADEQUATE
-            if metric.tolerance is not None
-            else SensitivityStatus.NOT_APPLICABLE
-        ),
         n_eval=n_eval,
         n_real=n_real,
         n_generated=n_generated,
@@ -239,13 +220,12 @@ def evaluate(
     functionals: Sequence[FunctionalSpec] = (),
     metrics: Sequence[MetricSpec] = (),
     config: EvaluationConfig | None = None,
-    tolerances: Mapping[str, float] | None = None,
     conditional: bool | str = False,
     memorization_result: Mapping[str, Any] | None = None,
     sensitivity_results: Mapping[str, Any] | None = None,
     conditional_groups: Mapping[str, Sequence[Any]] | None = None,
 ) -> EvaluationReport:
-    """Evaluate generated fields using the two-layer GAUGE Track-1 protocol."""
+    """Evaluate generated fields using the reference-aware GAUGE protocol."""
 
     config = EvaluationConfig() if config is None else config
     split_audit = validate_split(train, real)
@@ -253,41 +233,13 @@ def evaluate(
     if real.blocks is None:
         raise ValueError("Held-out real data must provide dependence-block ids.")
     real_blocks = normalized_blocks(real.blocks)
-    requested_tolerances = dict(tolerances or {})
-    metric_list: list[MetricSpec] = []
-    for functional in functionals:
-        tolerance = requested_tolerances.get(functional.id, functional.tolerance)
-        if tolerance != functional.tolerance:
-            functional = FunctionalSpec(
-                id=functional.id,
-                function=functional.function,
-                units=functional.units,
-                description=functional.description,
-                tolerance=tolerance,
-                support=functional.support,
-                tail_referenced=functional.tail_referenced,
-                direction_negative=functional.direction_negative,
-                direction_positive=functional.direction_positive,
-                provenance=functional.provenance,
-            )
-        metric_list.append(functional_w1(functional))
+    metric_list = [functional_w1(functional) for functional in functionals]
     metric_list.extend(metrics)
     if not metric_list:
         raise ValueError("At least one functional or metric is required.")
     ids = [metric.id for metric in metric_list]
     if len(ids) != len(set(ids)):
         raise ValueError("Metric ids must be unique.")
-    unsupported_tolerances = [
-        metric.id
-        for metric in metric_list
-        if metric.kind is not MetricKind.FUNCTIONAL_W1 and metric.tolerance is not None
-    ]
-    if unsupported_tolerances:
-        raise ValueError(
-            "Non-functional tolerance inference is not validated in v0.1; remove "
-            f"tolerances for {unsupported_tolerances} or register a future validated method."
-        )
-
     real_fields = real.fields
     generated_fields = generated.fields
     transformed: dict[str, tuple[np.ndarray, np.ndarray]] = {}
@@ -555,124 +507,38 @@ def evaluate(
             )
             stability_ratio = abs(first_boundary - second_boundary) / reference_scale
             stability_warning = None
-            if stability_ratio > config.reference_stability_tolerance:
+            if stability_ratio > config.reference_stability_threshold:
                 resample_parameter = (
                     "n_resamples" if primary_reference else "diagnostic_resamples"
                 )
                 stability_warning = (
                     f"Reference boundary split-half instability={stability_ratio:.3g} "
-                    f"exceeds {config.reference_stability_tolerance:.3g}; increase "
+                    f"exceeds {config.reference_stability_threshold:.3g}; increase "
                     f"{resample_parameter}."
                 )
             inference_method = "reference_resampling_interval"
-            interval_warning = None
+            interval = _generic_interval(reference, config.confidence)
+            resolution = None
             if metric.kind is MetricKind.FUNCTIONAL_W1:
-                interval_seed = _derive_seed(config.seed, "interval", group_name, metric.id)
-                inference_method = "cluster_bootstrap_diagnostic"
-                if (
-                    config.estimand.value == "block_balanced"
-                    and metric.functional is not None
-                    and metric.functional.support is not None
-                ):
-                    if (
-                        metric.functional.provenance.get("practical_inference")
-                        == "detection_only_discrete_functional"
-                    ):
-                        interval = dkw_w1_interval(
-                            generated_values,
-                            real_values[real_idx],
-                            real_blocks[real_idx],
-                            n_eval=plan.n_eval,
-                            support=metric.functional.support,
-                            alpha=config.alpha,
-                            seed=interval_seed,
-                        )
-                    else:
-                        interval = cluster_w1_influence_interval(
-                            generated_values,
-                            real_values[real_idx],
-                            real_blocks[real_idx],
-                            n_eval=plan.n_eval,
-                            alpha=config.alpha,
-                            seed=interval_seed,
-                            fallback_support=metric.functional.support,
-                        )
-                    inference_method = interval.method
-                else:
-                    interval = functional_w1_interval(
-                        generated_values,
-                        real_values[real_idx],
-                        real_blocks[real_idx],
-                        n_eval=plan.n_eval,
-                        estimand=config.estimand,
-                        n_resamples=config.bootstrap_resamples,
-                        confidence=config.confidence,
-                        seed=interval_seed,
-                    )
-                    interval_warning = (
-                        "Tolerance conclusion withheld: finite-sample W1 inference requires "
-                        "the block_balanced estimand and a declared finite functional support."
-                    )
                 resolution, shifts, powers = shift_resolution(
                     real_values=real_values,
                     plan=plan,
                     reference_boundary=reference_boundary,
                     target_power=config.shift_power,
                     grid_size=config.shift_grid_size,
-                    required_shifts=(
-                        None
-                        if metric.tolerance is None
-                        else np.asarray([metric.tolerance], dtype=np.float64)
-                    ),
                     max_draws=config.sensitivity_resamples,
                 )
-                tolerance_power = None
-                if metric.tolerance is not None:
-                    tolerance_index = int(np.flatnonzero(shifts == metric.tolerance)[0])
-                    tolerance_power = float(powers[tolerance_index])
                 sensitivity_payload[f"{group_name}:{metric.id}"] = {
                     "perturbation": "uniform_functional_shift",
                     "target_power": config.shift_power,
                     "n_resamples": min(config.sensitivity_resamples, len(plan.draws)),
                     "shift_resolution": resolution,
-                    "detection_probability_at_tolerance": tolerance_power,
                     "shifts": shifts.tolist(),
                     "detection_probability": powers.tolist(),
                 }
-                tolerance = metric.tolerance
-                if interval_warning is None:
-                    practical, sensitivity = practical_status(
-                        interval,
-                        tolerance=tolerance,
-                        shift_resolution=resolution,
-                    )
-                else:
-                    practical = (
-                        PracticalStatus.INCONCLUSIVE
-                        if tolerance is not None
-                        else PracticalStatus.NOT_APPLICABLE
-                    )
-                    sensitivity = (
-                        SensitivityStatus.NOT_EVALUATED
-                        if tolerance is not None
-                        else SensitivityStatus.NOT_APPLICABLE
-                    )
-                # Detection and practical relevance answer different questions.
-                # Detection is always calibrated against the finite-N perfect-generator
-                # reference; the direct population-W1 bound is reserved for tolerance
-                # inference below.
-                cell_detection = detection_status(
-                    model_reference_value, reference_boundary
-                )
-            else:
-                interval = _generic_interval(reference, config.confidence)
-                resolution = None
-                tolerance = None
-                practical = PracticalStatus.NOT_APPLICABLE
-                sensitivity = SensitivityStatus.NOT_EVALUATED
-                cell_detection = detection_status(
-                    reference.model_median, reference_boundary
-                )
+            cell_detection = detection_status(
+                model_reference_value, reference_boundary
+            )
             position = reference_position(
                 model_reference_value, reference.reference_q50, reference_boundary
             )
@@ -704,13 +570,10 @@ def evaluate(
                     "primary" if primary_reference else "secondary_diagnostic"
                 ),
                 "reference_stability_ratio": stability_ratio,
-                "reference_stability_tolerance": config.reference_stability_tolerance,
+                "reference_stability_threshold": config.reference_stability_threshold,
                 "model_reference_q025": model_position_low,
                 "model_reference_q975": model_position_high,
-                "interval_bound_type": "two_sided_1_minus_alpha",
-                "interval_standard_error": interval.standard_error,
-                "interval_degrees_of_freedom": interval.degrees_of_freedom,
-                "interval_cdf_zero_fraction": interval.cdf_zero_fraction,
+                "interval_bound_type": "central_resampling_1_minus_alpha",
             }
             if group_name == "global" and label_mixture_audit is not None:
                 metric_provenance.update(
@@ -729,18 +592,12 @@ def evaluate(
                     }
                 )
             control_failures = _failed_sensitivity_lanes(metric.id, sensitivity_results)
-            cell_warnings = [] if interval_warning is None else [interval_warning]
+            cell_warnings = []
             if stability_warning is not None:
                 cell_warnings.append(stability_warning)
                 warnings.append(f"{group_name}:{metric.id}: {stability_warning}")
             if control_failures:
                 cell_detection = DetectionStatus.NOT_EVALUATED
-                practical = (
-                    PracticalStatus.INCONCLUSIVE
-                    if tolerance is not None
-                    else PracticalStatus.NOT_APPLICABLE
-                )
-                sensitivity = SensitivityStatus.INADEQUATE
                 cell_warnings.append(
                     "Metric interpretation withheld because sensitivity lane(s) failed: "
                     + ", ".join(control_failures)
@@ -766,11 +623,8 @@ def evaluate(
                 reference_position=position,
                 reference_position_low=position_low,
                 reference_position_high=position_high,
-                tolerance=tolerance,
                 shift_resolution=resolution,
                 detection_status=cell_detection,
-                practical_status=practical,
-                sensitivity_status=sensitivity,
                 n_eval=plan.n_eval,
                 n_real=len(real_idx),
                 n_generated=len(generated_idx),
@@ -864,7 +718,7 @@ def evaluate(
     hash_value = _config_hash(config, metric_manifests, analysis_design)
     metadata = {
         "gauge_version": "0.1.0",
-        "method": "matched-reference-plus-bounded-w1-v1",
+        "method": "dependence-matched-real-reference-v2",
         "config_hash": hash_value,
         "config": config.to_dict(),
         "analysis": analysis_design,
@@ -885,8 +739,8 @@ def evaluate(
         "simultaneous_reference": simultaneous,
         "interpretation": {
             "detection": "Non-detection is not evidence of equality.",
-            "practical": "Tolerance conclusions use direct raw-distance intervals.",
             "reference_position": "Detectability at this N; not physical severity.",
+            "controls": "Sensitivity controls contextualize metric response, not acceptability.",
         },
     }
     return EvaluationReport(

@@ -8,7 +8,7 @@ license: BSD-3-Clause
 repository-code: "https://github.com/gascenso/climategen-eval"
 abstract: >-
   A portable protocol for physical, distributional, memorization, admissibility,
-  sensitivity, and downstream evaluation of generated Earth-system fields.
+  and sensitivity-aware evaluation of generated Earth-system fields.
 authors:
   - family-names: "Ascenso"
     given-names: "Guido"

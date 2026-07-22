@@ -31,17 +31,6 @@ adapter_options:
   eyewall_outer_km: 150.0
   dav_center_region_size: 3
 
-# Frozen resolution/materiality tolerances; see protocol_freeze.md. These are
-# not estimated from the held-out test outcomes.
-tolerances:
-  min_core_bt: 1.0
-  cold_frac_220: 1.0
-  r_maxgrad: 15.625
-  axisym: 1.0
-  dav: 100.0
-  eye_contrast: 1.0
-  p01_bt: 1.0
-
 feature_metrics:
   enabled: true
   n_eof: 20
@@ -66,7 +55,6 @@ evaluation:
   n_eval: null
   n_resamples: 2000
   diagnostic_resamples: 200
-  bootstrap_resamples: 1000
   sensitivity_resamples: 200
   alpha: 0.05
   confidence: 0.95
@@ -76,7 +64,7 @@ evaluation:
   warn_blocks_per_half: 30
   shift_power: 0.80
   shift_grid_size: 33
-  reference_stability_tolerance: 0.25
+  reference_stability_threshold: 0.25
   transform_batch_size: 128
   simultaneous_family:
     - global:w1:min_core_bt

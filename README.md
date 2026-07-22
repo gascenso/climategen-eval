@@ -2,9 +2,9 @@
 
 GAUGE is a reference-aware evaluation protocol for independently generated
 Earth-system fields. It combines physical functionals, distributional metrics,
-finite-sample real-reference calibration, direct practical tolerances, controls,
-and leakage-audited downstream studies. It deliberately does **not** reduce a
-model to one aggregate score.
+finite-sample real-reference calibration, sensitivity controls, diversity,
+coverage, and memorization checks. It deliberately does **not** reduce a model
+to one aggregate score.
 
 The import namespace is `gauge_climate`; the distribution and command are
 `gauge-climate`. Version 0.1 targets NumPy/memmap arrays and independent 2-D
@@ -18,8 +18,7 @@ python -m pip install -e .
 ```
 
 Use `.[xarray]` for the optional xarray/Dask adapter and `.[dev]` to run the
-test suite. The concrete TC downstream CNN is isolated in the optional
-`.[tc-downstream]` extra.
+test suite.
 
 ## One-screen example
 
@@ -41,8 +40,6 @@ mean = gauge.FunctionalSpec(
     function=lambda x: x.mean(axis=(1, 2)),
     units="standardized units",
     description="domain-mean field value",
-    tolerance=0.25,              # frozen before final evaluation
-    support=(-5.0, 5.0),         # scientifically defensible finite support
 )
 report = gauge.evaluate(
     train=train,
@@ -55,20 +52,19 @@ report.to_json("evaluation.json")
 report.to_html("evaluation.html")
 ```
 
-The report has two separate conclusions:
+The zero-configuration report is reference-aware:
 
-- `DEPARTURE_DETECTED` means the model discrepancy exceeded the declared
-  perfect-generator reference boundary at this sample size. Its complement is
-  `NO_DEPARTURE_DETECTED`, never “equal” or “indistinguishable.”
-- `WITHIN_TOLERANCE` means a direct upper confidence bound for population W1 is
-  below the predeclared physical tolerance. Other outcomes are
-  `EXCEEDS_TOLERANCE`, `INCONCLUSIVE`, or `UNDERPOWERED`.
+- every scalar functional is reported as a W1 discrepancy in its native units;
+- the real-reference envelope shows ordinary real-vs-real variation at the same
+  declared sample size and block-weighting policy;
+- the reference gap places the model relative to that envelope; and
+- sensitivity controls show whether each registered metric responds to known
+  degradations and copying.
 
-Tolerance inference in v0.1 uses a validated whole-block influence interval for
-regular bounded scalar W1 and a conservative finite-sample fallback for
-registered discrete/nonregular functionals. It requires the block-balanced
-estimand and a declared finite support. Otherwise GAUGE shows the reference
-result and a clustered-bootstrap diagnostic but withholds an equivalence claim.
+GAUGE does not ask users to invent application thresholds and does not issue a
+universal equivalence verdict. Corruption controls validate metric response and
+provide interpretable failure anchors; they do not define what is acceptable
+for every application.
 
 ## Paper-facing output
 
@@ -126,10 +122,10 @@ claims must come from matched, preregistered strata or a declared mixture rule.
 
 ## Development state
 
-This repository is pre-1.0. The validated Track-1 engine and public API are the
-v0.1 critical path; survey reconciliation, clean-room TC reproduction, three
-restricted generator retrains, user study, and independent statistical review
-remain explicit release gates. See [CHANGELOG.md](CHANGELOG.md).
+This repository is pre-1.0. The validated reference-aware engine and public API
+are the v0.1 critical path; survey reconciliation, clean-room TC reproduction,
+the user study, and independent statistical review remain explicit release
+gates. See [CHANGELOG.md](CHANGELOG.md).
 The exact implemented-versus-pending matrix is in
 [docs/development_status.md](docs/development_status.md).
 

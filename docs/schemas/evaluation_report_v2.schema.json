@@ -1,11 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/gascenso/climategen-eval/docs/schemas/evaluation_report_v1.schema.json",
-  "title": "GAUGE Climate evaluation report v1",
+  "$id": "https://github.com/gascenso/gauge-climate/docs/schemas/evaluation_report_v2.schema.json",
+  "title": "GAUGE Climate evaluation report v2",
   "type": "object",
   "required": ["schema", "metadata", "cells", "warnings", "sensitivity", "diagnostics", "partitions"],
   "properties": {
-    "schema": {"const": "gauge_climate.evaluation.v1"},
+    "schema": {"const": "gauge_climate.evaluation.v2"},
     "metadata": {"type": "object"},
     "warnings": {"type": "array", "items": {"type": "string"}},
     "memorization": {"type": ["object", "null"]},
@@ -20,10 +20,10 @@
           "metric", "stratum", "kind", "pillar", "units", "estimate",
           "ci_low", "ci_high", "reference_q025", "reference_q50",
           "reference_q95", "reference_q975", "reference_detection_boundary",
-          "tolerance", "n_eval",
-          "n_real", "n_generated", "n_blocks", "estimand",
-          "detection_status", "practical_status", "sensitivity_status",
-          "simultaneous_detection_status", "provenance"
+          "reference_position", "reference_position_low", "reference_position_high",
+          "shift_resolution", "n_eval", "n_real", "n_generated", "n_blocks",
+          "estimand", "detection_status", "simultaneous_detection_status",
+          "warnings", "provenance"
         ],
         "properties": {
           "metric": {"type": "string"},
@@ -44,7 +44,10 @@
           "reference_q95": {"type": ["number", "null"]},
           "reference_q975": {"type": ["number", "null"]},
           "reference_detection_boundary": {"type": ["number", "null"]},
-          "tolerance": {"type": ["number", "null"]},
+          "reference_position": {"type": ["number", "null"]},
+          "reference_position_low": {"type": ["number", "null"]},
+          "reference_position_high": {"type": ["number", "null"]},
+          "shift_resolution": {"type": ["number", "null"]},
           "n_eval": {"type": "integer", "minimum": 2},
           "n_real": {"type": "integer", "minimum": 0},
           "n_generated": {"type": "integer", "minimum": 0},
@@ -56,15 +59,7 @@
           "simultaneous_detection_status": {
             "enum": ["NO_DEPARTURE_DETECTED", "DEPARTURE_DETECTED", "NOT_EVALUATED"]
           },
-          "practical_status": {
-            "enum": [
-              "WITHIN_TOLERANCE", "EXCEEDS_TOLERANCE", "INCONCLUSIVE",
-              "UNDERPOWERED", "NOT_APPLICABLE"
-            ]
-          },
-          "sensitivity_status": {
-            "enum": ["ADEQUATE", "INADEQUATE", "NOT_EVALUATED", "NOT_APPLICABLE"]
-          },
+          "warnings": {"type": "array", "items": {"type": "string"}},
           "provenance": {"type": "object"}
         },
         "additionalProperties": true

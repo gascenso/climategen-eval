@@ -35,7 +35,6 @@ def functional_w1(functional: FunctionalSpec) -> MetricSpec:
         kind=MetricKind.FUNCTIONAL_W1,
         units=functional.units,
         description=f"Wasserstein-1 distance for {functional.description}",
-        tolerance=functional.tolerance,
         functional=functional,
         direction=lambda generated, real: functional.direction(generated, real),
         provenance={

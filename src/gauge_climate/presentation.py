@@ -337,8 +337,11 @@ def figure_stratified_profile(
     )
 
     fig.suptitle(spec.title, fontsize=17, fontweight="semibold", y=0.965)
+    aggregation_phrase = (
+        " with preregistered tail aggregates" if spec.priority_strata else ""
+    )
     ax.set_title(
-        f"{spec.model_label} · class-conditional fidelity with preregistered tail aggregates and "
+        f"{spec.model_label} · class-conditional fidelity{aggregation_phrase} and "
         "training-only positive controls",
         fontsize=10.5,
         color="#4c5b61",
@@ -502,8 +505,13 @@ def figure_conditional_matrix(
         fontweight="semibold",
         y=0.965,
     )
+    audit_subtitle = (
+        "Every native class is retained; priority aggregates are separated at right"
+        if spec.priority_strata
+        else "Every native class is retained; no pooled stratum replaces it"
+    )
     ax.set_title(
-        "Every native class is retained; priority aggregates are separated at right",
+        audit_subtitle,
         fontsize=10,
         color="#4c5b61",
         pad=12,
@@ -534,10 +542,8 @@ _TABLE_FIELDS = (
     "reference_q50",
     "reference_boundary",
     "reference_gap",
-    "tolerance",
     "detection",
     "simultaneous_detection",
-    "practical_status",
     "n_eval",
     "n_real",
     "n_blocks",
@@ -564,10 +570,8 @@ def _table_row(
         "reference_q50": cell.reference_q50,
         "reference_boundary": cell.reference_detection_boundary,
         "reference_gap": cell.reference_position,
-        "tolerance": cell.tolerance,
         "detection": cell.detection_status.value,
         "simultaneous_detection": cell.simultaneous_detection_status.value,
-        "practical_status": cell.practical_status.value,
         "n_eval": cell.n_eval,
         "n_real": cell.n_real,
         "n_blocks": cell.n_blocks,
@@ -632,8 +636,12 @@ def _index_html(
         )
     source_hash = html.escape(str(report.metadata.get("config_hash", "unknown")))
     profile_caption = (
-        "Every native class is shown because K is small; the preregistered "
-        "priority aggregate is emphasized."
+        (
+            "Every native class is shown because K is small; the preregistered "
+            "priority aggregate is emphasized."
+            if spec.priority_strata
+            else "Every native class is shown because K is small; no pooled stratum replaces it."
+        )
         if len(spec.native_strata) <= spec.max_visible_native_strata
         else (
             "The main profile summarizes the native-class median and range, "

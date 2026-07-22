@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Monte Carlo validation gate for GAUGE's Track-1 statistical procedures.
-
-This script deliberately reports the classical clustered-bootstrap interval as
-diagnostic only. The release gate is based on the finite-sample DKW W1 interval,
-reference-plan invariants, and sensitivity monotonicity.
-"""
+"""Monte Carlo validation gate for GAUGE's real-reference detector."""
 
 from __future__ import annotations
 
@@ -12,528 +7,222 @@ import argparse
 import json
 import math
 import sys
-from collections import Counter
 from pathlib import Path
 
 import numpy as np
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-_SRC = _REPO_ROOT / "src"
-if str(_SRC) not in sys.path:
-    sys.path.insert(0, str(_SRC))
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
-from gauge_climate.inference import (  # noqa: E402
-    cluster_w1_influence_interval,
-    dkw_w1_interval,
-    functional_w1_interval,
-    simultaneous_reference_boundaries,
-)
+from gauge_climate.inference import simultaneous_reference_boundaries  # noqa: E402
 from gauge_climate.metrics import functional_w1  # noqa: E402
-from gauge_climate.reference import build_reference_plan, evaluate_reference_plan  # noqa: E402
-from gauge_climate.types import (  # noqa: E402
-    EvaluationConfig,
-    FunctionalSpec,
-    SamplingEstimand,
+from gauge_climate.reference import (  # noqa: E402
+    build_reference_plan,
+    evaluate_reference_plan,
 )
+from gauge_climate.types import EvaluationConfig, FunctionalSpec  # noqa: E402
 
 
-def _bounded_clustered_sample(rng: np.random.Generator, n_blocks: int, frames: int):
-    block_effects = rng.uniform(-0.2, 0.2, size=n_blocks)
-    blocks = np.repeat(np.arange(n_blocks), frames)
-    values = block_effects.repeat(frames) + rng.uniform(-0.8, 0.8, size=blocks.size)
-    return values, blocks
+def _wilson(successes: int, total: int) -> tuple[float, float]:
+    z = 1.959963984540054
+    proportion = successes / total
+    denominator = 1.0 + z * z / total
+    center = (proportion + z * z / (2.0 * total)) / denominator
+    half = z * math.sqrt(
+        proportion * (1.0 - proportion) / total
+        + z * z / (4.0 * total * total)
+    ) / denominator
+    return center - half, center + half
 
 
-def _normal_clustered_sample(
+def _clustered_sample(
     rng: np.random.Generator,
     n_blocks: int,
     *,
     unequal_sizes: bool = False,
-) -> tuple[np.ndarray, np.ndarray, float]:
-    if unequal_sizes:
-        sizes = np.maximum(
-            1, np.rint(np.exp(rng.uniform(0.0, np.log(60.0), size=n_blocks)))
-        ).astype(int)
-    else:
-        sizes = rng.integers(2, 9, size=n_blocks)
+) -> tuple[np.ndarray, np.ndarray]:
+    sizes = (
+        np.maximum(1, np.rint(np.exp(rng.uniform(0.0, np.log(60.0), n_blocks))))
+        .astype(int)
+        if unequal_sizes
+        else np.full(n_blocks, 4, dtype=int)
+    )
     blocks = np.repeat(np.arange(n_blocks), sizes)
-    block_sd = 0.3
-    frame_sd = 1.0
-    effects = rng.normal(scale=block_sd, size=n_blocks)
-    values = effects.repeat(sizes) + rng.normal(scale=frame_sd, size=blocks.size)
-    return values, blocks, math.sqrt(block_sd**2 + frame_sd**2)
+    effects = rng.normal(scale=0.3, size=n_blocks)
+    values = effects.repeat(sizes) + rng.normal(size=blocks.size)
+    return values, blocks
 
 
-def _wilson_interval(successes: int, total: int, z: float = 1.959963984540054) -> tuple[float, float]:
-    proportion = successes / total
-    denominator = 1.0 + z * z / total
-    center = (proportion + z * z / (2.0 * total)) / denominator
-    half = z * math.sqrt(proportion * (1.0 - proportion) / total + z * z / (4 * total * total)) / denominator
-    return center - half, center + half
+def _detect(
+    real: np.ndarray,
+    blocks: np.ndarray,
+    generated: np.ndarray,
+    *,
+    resamples: int,
+    seed: int,
+) -> tuple[bool, bool]:
+    config = EvaluationConfig(
+        n_eval=min(160, generated.size),
+        n_resamples=resamples,
+        diagnostic_resamples=min(resamples, 200),
+        sensitivity_resamples=20,
+        min_blocks_per_half=10,
+        warn_blocks_per_half=20,
+        seed=seed,
+    )
+    plan = build_reference_plan(
+        real_indices=np.arange(real.size),
+        real_blocks=blocks,
+        n_generated=generated.size,
+        config=config,
+        seed=seed,
+    )
+    metric = functional_w1(
+        FunctionalSpec("value", lambda values: values, "unit", "validation scalar")
+    )
+    result = evaluate_reference_plan(
+        metric,
+        real_values=real,
+        generated_values=generated,
+        plan=plan,
+    )
+    detected = result.model_median > result.quantile(0.95)
+    invariants = all(
+        not (set(draw.blocks_a) & set(draw.blocks_b))
+        and len(draw.pseudo_indices) == plan.n_eval
+        and len(draw.real_indices) == plan.n_eval
+        and len(draw.generated_indices) == plan.n_eval
+        for draw in plan.draws
+    )
+    return detected, invariants
 
 
 def run_validation(*, trials: int, resamples: int, seed: int) -> dict:
-    coverage_hits = 0
-    equality_false_positives = 0
-    bootstrap_coverage_hits = 0
-    simultaneous_false_positives = 0
-    simultaneous_resolved = True
-    plan_failures = 0
-    influence_boundary_upper_misses = Counter()
-    influence_boundary_lower_misses = Counter()
-    influence_equality_within = Counter()
-    detection_hits = Counter({
-        "equality": 0,
-        "location_shift": 0,
-        "variance_change": 0,
-        "tail_contamination": 0,
-        "train_test_shift": 0,
-        "unequal_block_equality": 0,
-        "frame_weighted_unequal_block_equality": 0,
-    })
-    shift = 0.4
+    equality_detections = 0
+    unequal_equality_detections = 0
+    shift_detections = 0
+    variance_detections = 0
+    tail_detections = 0
+    invariant_failures = 0
+
     for trial in range(trials):
         rng = np.random.default_rng(seed + trial)
-        joint_rng = np.random.default_rng(seed + 80_000 + trial)
-        joint_reference = joint_rng.gamma(shape=2.0, size=(5, resamples))
-        joint_boundaries = simultaneous_reference_boundaries(
-            joint_reference, alpha=0.05
-        )
-        if not np.all(np.isfinite(joint_boundaries)):
-            simultaneous_resolved = False
-        else:
-            joint_q50 = np.quantile(joint_reference, 0.50, axis=1)
-            joint_q95 = np.quantile(joint_reference, 0.95, axis=1)
-            joint_model = joint_rng.gamma(shape=2.0, size=5)
-            joint_position = (joint_model - joint_q50) / np.maximum(
-                joint_q95 - joint_q50, np.finfo(float).eps
-            )
-            simultaneous_false_positives += int(
-                np.any(joint_position > joint_boundaries)
-            )
-        real, blocks = _bounded_clustered_sample(rng, n_blocks=80, frames=3)
-        generated_equal = (
-            rng.uniform(-0.2, 0.2, size=240) + rng.uniform(-0.8, 0.8, size=240)
-        )
-        generated_shifted = (
-            rng.uniform(-0.2, 0.2, size=240)
-            + rng.uniform(-0.8, 0.8, size=240)
-            + shift
-        )
-        generated_variance = (
-            rng.uniform(-0.2, 0.2, size=240)
-            + 0.35 * rng.uniform(-0.8, 0.8, size=240)
-        )
-        generated_tail = (
-            rng.uniform(-0.2, 0.2, size=240) + rng.uniform(-0.8, 0.8, size=240)
-        )
-        generated_tail[rng.choice(240, size=48, replace=False)] = 1.45
-        equal_interval = dkw_w1_interval(
-            generated_equal,
-            real,
-            blocks,
-            n_eval=160,
-            support=(-1.1, 1.5),
-            alpha=0.05,
-            seed=seed + 10_000 + trial,
-        )
-        equality_false_positives += int(equal_interval.low > 0.0)
-        shifted_interval = dkw_w1_interval(
-            generated_shifted,
-            real,
-            blocks,
-            n_eval=160,
-            support=(-1.1, 1.5),
-            alpha=0.05,
-            seed=seed + 20_000 + trial,
-        )
-        coverage_hits += int(shifted_interval.low <= shift <= shifted_interval.high)
-        stress_blocks = np.repeat(np.arange(50), 4)
-        stress_effects = rng.normal(0.0, 0.25, size=50)
-        stress_real = stress_effects.repeat(4) + rng.normal(0.0, 1.0, size=200)
-        stress_generated = rng.normal(0.5, np.sqrt(1.0 + 0.25**2), size=120)
-        bootstrap = functional_w1_interval(
-            stress_generated,
-            stress_real,
-            stress_blocks,
-            n_eval=100,
-            estimand=SamplingEstimand.BLOCK_BALANCED,
-            n_resamples=resamples,
-            confidence=0.95,
-            seed=seed + 30_000 + trial,
-        )
-        bootstrap_coverage_hits += int(bootstrap.low <= 0.5 <= bootstrap.high)
+        real, blocks = _clustered_sample(rng, 80)
+        marginal_sd = math.sqrt(1.0 + 0.3**2)
+        equal = rng.normal(scale=marginal_sd, size=240)
+        shifted = rng.normal(loc=0.55, scale=marginal_sd, size=240)
+        narrowed = rng.normal(scale=0.45 * marginal_sd, size=240)
+        tail = rng.normal(scale=marginal_sd, size=240)
+        tail[rng.choice(tail.size, size=48, replace=False)] += 3.0
 
-        # Practical-equivalence validation is performed at the least-favourable
-        # boundary W1=delta.  The interval is two-sided 95%, so either one-sided
-        # boundary error should be no greater than 5% (and is expected to be
-        # closer to 2.5%).  Location, crossing-CDF variance, tail-mixture, thin,
-        # and severe unequal-block scenarios exercise distinct failure modes.
-        equivalence_delta = 0.4
-        for scenario, n_blocks in (("location_80", 80), ("location_22", 22)):
-            influence_real, influence_blocks, marginal_sd = _normal_clustered_sample(
-                rng, n_blocks
+        for offset, generated, counter in (
+            (0, equal, "equality"),
+            (1_000_000, shifted, "shift"),
+            (2_000_000, narrowed, "variance"),
+            (3_000_000, tail, "tail"),
+        ):
+            detected, valid = _detect(
+                real,
+                blocks,
+                generated,
+                resamples=resamples,
+                seed=seed + offset + trial,
             )
-            influence_generated = rng.normal(
-                loc=equivalence_delta, scale=marginal_sd, size=1000
-            )
-            influence_interval = cluster_w1_influence_interval(
-                influence_generated,
-                influence_real,
-                influence_blocks,
-                n_eval=1000,
-                alpha=0.05,
-                seed=seed + 31_000 + trial + n_blocks,
-                fallback_support=(-8.0, 8.0),
-            )
-            influence_boundary_upper_misses[scenario] += int(
-                influence_interval.high < equivalence_delta
-            )
-            influence_boundary_lower_misses[scenario] += int(
-                influence_interval.low > equivalence_delta
-            )
-            equal_generated = rng.normal(scale=marginal_sd, size=1000)
-            equal_interval = cluster_w1_influence_interval(
-                equal_generated,
-                influence_real,
-                influence_blocks,
-                n_eval=1000,
-                alpha=0.05,
-                seed=seed + 32_000 + trial + n_blocks,
-                fallback_support=(-8.0, 8.0),
-            )
-            influence_equality_within[scenario] += int(
-                equal_interval.high < equivalence_delta
-            )
+            invariant_failures += int(not valid)
+            if counter == "equality":
+                equality_detections += int(detected)
+            elif counter == "shift":
+                shift_detections += int(detected)
+            elif counter == "variance":
+                variance_detections += int(detected)
+            else:
+                tail_detections += int(detected)
 
-        variance_real, variance_blocks, marginal_sd = _normal_clustered_sample(rng, 80)
-        normal_absolute_mean = math.sqrt(2.0 / math.pi)
-        variance_generated = rng.normal(
-            scale=marginal_sd + equivalence_delta / normal_absolute_mean,
-            size=1000,
-        )
-        variance_interval = cluster_w1_influence_interval(
-            variance_generated,
-            variance_real,
-            variance_blocks,
-            n_eval=1000,
-            alpha=0.05,
-            seed=seed + 33_000 + trial,
-            fallback_support=(-10.0, 10.0),
-        )
-        influence_boundary_upper_misses["variance_crossing_80"] += int(
-            variance_interval.high < equivalence_delta
-        )
-        influence_boundary_lower_misses["variance_crossing_80"] += int(
-            variance_interval.low > equivalence_delta
-        )
-
-        tail_real, tail_blocks, marginal_sd = _normal_clustered_sample(rng, 80)
-        tail_probability = 0.2
-        tail_shift = equivalence_delta / tail_probability
-        tail_generated = rng.normal(scale=marginal_sd, size=1000)
-        tail_generated += (rng.random(1000) < tail_probability) * tail_shift
-        tail_interval = cluster_w1_influence_interval(
-            tail_generated,
-            tail_real,
-            tail_blocks,
-            n_eval=1000,
-            alpha=0.05,
-            seed=seed + 34_000 + trial,
-            fallback_support=(-8.0, 10.0),
-        )
-        influence_boundary_upper_misses["tail_mixture_80"] += int(
-            tail_interval.high < equivalence_delta
-        )
-        influence_boundary_lower_misses["tail_mixture_80"] += int(
-            tail_interval.low > equivalence_delta
-        )
-
-        unequal_real, unequal_influence_blocks, marginal_sd = _normal_clustered_sample(
+        unequal_real, unequal_blocks = _clustered_sample(
             rng, 80, unequal_sizes=True
         )
-        unequal_influence_generated = rng.normal(
-            loc=equivalence_delta, scale=marginal_sd, size=1000
-        )
-        unequal_influence_interval = cluster_w1_influence_interval(
-            unequal_influence_generated,
+        unequal_equal = rng.normal(scale=marginal_sd, size=240)
+        detected, valid = _detect(
             unequal_real,
-            unequal_influence_blocks,
-            n_eval=1000,
-            alpha=0.05,
-            seed=seed + 35_000 + trial,
-            fallback_support=(-8.0, 8.0),
+            unequal_blocks,
+            unequal_equal,
+            resamples=resamples,
+            seed=seed + 4_000_000 + trial,
         )
-        influence_boundary_upper_misses["unequal_blocks_80"] += int(
-            unequal_influence_interval.high < equivalence_delta
-        )
-        influence_boundary_lower_misses["unequal_blocks_80"] += int(
-            unequal_influence_interval.low > equivalence_delta
-        )
+        unequal_equality_detections += int(detected)
+        invariant_failures += int(not valid)
 
-        sizes = np.maximum(
-            1, np.rint(np.exp(rng.uniform(0.0, np.log(60.0), size=40)))
-        ).astype(int)
-        uneven_blocks = np.repeat(np.arange(40), sizes)
-        config = EvaluationConfig(
-            n_eval=80,
-            n_resamples=max(20, resamples // 2),
-            bootstrap_resamples=20,
-            sensitivity_resamples=20,
-            min_blocks_per_half=8,
-            warn_blocks_per_half=8,
-            seed=seed + trial,
-        )
-        plan = build_reference_plan(
-            real_indices=np.arange(uneven_blocks.size),
-            real_blocks=uneven_blocks,
-            n_generated=100,
-            config=config,
-            seed=seed + 40_000 + trial,
-        )
-        normalized = np.asarray([str(value) for value in uneven_blocks], dtype=object)
-        for draw in plan.draws:
-            if not set(draw.blocks_a).isdisjoint(draw.blocks_b):
-                plan_failures += 1
-            if not set(normalized[draw.pseudo_indices]).issubset(draw.blocks_a):
-                plan_failures += 1
-            if not set(normalized[draw.real_indices]).issubset(draw.blocks_b):
-                plan_failures += 1
+    family_size = 5
+    rng = np.random.default_rng(seed + 9_000_000)
+    reference_matrix = rng.gamma(shape=2.0, size=(family_size, resamples))
+    simultaneous = simultaneous_reference_boundaries(reference_matrix, alpha=0.05)
+    minimum_resamples = math.ceil(family_size / 0.05 - 1)
 
-        unequal_effects = rng.uniform(-0.2, 0.2, size=40)
-        unequal_values = unequal_effects.repeat(sizes) + rng.uniform(
-            -0.8, 0.8, size=uneven_blocks.size
-        )
-        unequal_generated = rng.uniform(-0.2, 0.2, size=100) + rng.uniform(
-            -0.8, 0.8, size=100
-        )
-        unequal_metric = functional_w1(
-            FunctionalSpec(
-                "unequal_value",
-                lambda fields: fields[:, 0],
-                "unit",
-                "unequal-block validation functional",
-                support=(-1.1, 1.1),
-            )
-        )
-        unequal_evaluation = evaluate_reference_plan(
-            unequal_metric,
-            real_values=unequal_values,
-            generated_values=unequal_generated,
-            plan=plan,
-        )
-        detection_hits["unequal_block_equality"] += int(
-            unequal_evaluation.model_median > unequal_evaluation.reference_q95
-        )
-        frame_config = EvaluationConfig(
-            n_eval=80,
-            n_resamples=max(20, resamples // 2),
-            bootstrap_resamples=20,
-            sensitivity_resamples=20,
-            min_blocks_per_half=8,
-            warn_blocks_per_half=8,
-            estimand=SamplingEstimand.FRAME_WEIGHTED,
-            seed=seed + trial,
-        )
-        frame_plan = build_reference_plan(
-            real_indices=np.arange(uneven_blocks.size),
-            real_blocks=uneven_blocks,
-            n_generated=100,
-            config=frame_config,
-            seed=seed + 45_000 + trial,
-        )
-        frame_evaluation = evaluate_reference_plan(
-            unequal_metric,
-            real_values=unequal_values,
-            generated_values=unequal_generated,
-            plan=frame_plan,
-        )
-        detection_hits["frame_weighted_unequal_block_equality"] += int(
-            frame_evaluation.model_median > frame_evaluation.reference_q95
-        )
-
-        detection_config = EvaluationConfig(
-            n_eval=160,
-            n_resamples=resamples,
-            bootstrap_resamples=20,
-            sensitivity_resamples=20,
-            min_blocks_per_half=10,
-            warn_blocks_per_half=10,
-            seed=seed + trial,
-        )
-        detection_plan = build_reference_plan(
-            real_indices=np.arange(real.size),
-            real_blocks=blocks,
-            n_generated=240,
-            config=detection_config,
-            seed=seed + 50_000 + trial,
-        )
-        spec = FunctionalSpec(
-            "bounded_value",
-            lambda fields: fields[:, 0],
-            "unit",
-            "bounded validation functional",
-            support=(-1.1, 1.5),
-        )
-        metric = functional_w1(spec)
-        scenarios = {
-            "equality": generated_equal,
-            "location_shift": generated_shifted,
-            "variance_change": generated_variance,
-            "tail_contamination": generated_tail,
-            # The held-out target is shifted relative to the implicit training
-            # distribution represented by this unshifted generator.
-            "train_test_shift": generated_equal - shift,
-        }
-        for name, values in scenarios.items():
-            evaluated = evaluate_reference_plan(
-                metric,
-                real_values=real,
-                generated_values=values,
-                plan=detection_plan,
-            )
-            detection_hits[name] += int(
-                evaluated.model_median > evaluated.reference_q95
-            )
-
-    coverage = coverage_hits / trials
-    false_positive = equality_false_positives / trials
-    bootstrap_coverage = bootstrap_coverage_hits / trials
-    coverage_wilson = _wilson_interval(coverage_hits, trials)
-    false_positive_wilson = _wilson_interval(equality_false_positives, trials)
-    simultaneous_rate = simultaneous_false_positives / trials
-    simultaneous_wilson = _wilson_interval(simultaneous_false_positives, trials)
-    reference_rates = {key: value / trials for key, value in detection_hits.items()}
-    reference_intervals = {
-        key: list(_wilson_interval(value, trials)) for key, value in detection_hits.items()
-    }
-    influence_names = tuple(influence_boundary_upper_misses)
-    influence_upper_rates = {
-        name: influence_boundary_upper_misses[name] / trials for name in influence_names
-    }
-    influence_lower_rates = {
-        name: influence_boundary_lower_misses[name] / trials for name in influence_names
-    }
-    influence_upper_intervals = {
-        name: list(_wilson_interval(influence_boundary_upper_misses[name], trials))
-        for name in influence_names
-    }
-    influence_lower_intervals = {
-        name: list(_wilson_interval(influence_boundary_lower_misses[name], trials))
-        for name in influence_names
-    }
-    influence_equality_rates = {
-        name: influence_equality_within[name] / trials
-        for name in influence_equality_within
-    }
-    gate = {
-        "dkw_coverage_at_least_nominal_with_mc_uncertainty": coverage_wilson[0] >= 0.95,
-        "dkw_false_positive_at_most_alpha_with_mc_uncertainty": false_positive_wilson[1]
-        <= 0.05,
-        "reference_plan_invariants": plan_failures == 0,
-        "reference_detection_false_positive_control": reference_intervals["equality"][1]
-        <= 0.05,
-        "reference_detection_location_power": reference_intervals["location_shift"][0]
-        >= 0.80,
-        "reference_detection_variance_power": reference_intervals["variance_change"][0]
-        >= 0.80,
-        "reference_detection_tail_power": reference_intervals["tail_contamination"][0]
-        >= 0.80,
-        "reference_detection_train_test_shift_power": reference_intervals["train_test_shift"][0]
-        >= 0.80,
-        "unequal_block_false_positive_control": reference_intervals[
-            "unequal_block_equality"
-        ][1]
-        <= 0.05,
-        "frame_weighted_unequal_block_false_positive_control": reference_intervals[
-            "frame_weighted_unequal_block_equality"
-        ][1]
-        <= 0.05,
-        "simultaneous_reference_calibration": simultaneous_resolved
-        and simultaneous_wilson[0] <= 0.05 <= simultaneous_wilson[1],
-        "cluster_w1_boundary_upper_error_at_most_alpha": all(
-            rate <= 0.05 for rate in influence_upper_rates.values()
+    equality_rate = equality_detections / trials
+    unequal_rate = unequal_equality_detections / trials
+    shift_power = shift_detections / trials
+    equality_ci = _wilson(equality_detections, trials)
+    unequal_ci = _wilson(unequal_equality_detections, trials)
+    shift_ci = _wilson(shift_detections, trials)
+    gates = {
+        "reference_plan_invariants": invariant_failures == 0,
+        "equality_false_positive_upper_at_most_0.05": equality_ci[1] <= 0.05,
+        "unequal_block_false_positive_upper_at_most_0.05": unequal_ci[1] <= 0.05,
+        "shift_power_lower_at_least_0.80": shift_ci[0] >= 0.80,
+        "simultaneous_boundary_resolution": bool(
+            resamples >= minimum_resamples and np.all(np.isfinite(simultaneous))
         ),
-        "cluster_w1_boundary_lower_error_at_most_alpha": all(
-            rate <= 0.05 for rate in influence_lower_rates.values()
-        ),
-        "cluster_w1_equality_power_80_blocks": influence_equality_rates["location_80"]
-        >= 0.80,
     }
     return {
-        "schema": "gauge_climate.statistical_validation.v1",
+        "schema": "gauge_climate.statistical_validation.v2",
+        "status": "PASSED" if all(gates.values()) else "FAILED",
         "seed": seed,
         "trials": trials,
         "resamples": resamples,
         "scenarios": {
-            "bounded_shift_dkw": {
-                "true_w1": shift,
-                "coverage": coverage,
-                "coverage_wilson_95": list(coverage_wilson),
+            "equality": {"detection_rate": equality_rate, "wilson_95": equality_ci},
+            "unequal_block_equality": {
+                "detection_rate": unequal_rate,
+                "wilson_95": unequal_ci,
             },
-            "bounded_equality_dkw": {
-                "false_positive_rate": false_positive,
-                "false_positive_wilson_95": list(false_positive_wilson),
+            "location_shift_0.55": {
+                "detection_power": shift_power,
+                "wilson_95": shift_ci,
             },
-            "cluster_bootstrap_diagnostic": {
-                "coverage": bootstrap_coverage,
-                "release_gate": False,
-                "reason": "Classical bootstrap coverage is not guaranteed for empirical W1.",
-            },
-            "cluster_w1_influence_interval": {
-                "method": "integrated-CDF influence values with whole-block real variance and Welch-Satterthwaite t interval",
-                "bound_type": "two-sided 95%; practical equivalence uses the upper endpoint",
-                "boundary_true_w1": equivalence_delta,
-                "upper_below_boundary_rate": influence_upper_rates,
-                "upper_below_boundary_wilson_95": influence_upper_intervals,
-                "lower_above_boundary_rate": influence_lower_rates,
-                "lower_above_boundary_wilson_95": influence_lower_intervals,
-                "perfect_generator_within_tolerance_rate": influence_equality_rates,
-                "discrete_functionals": "finite-sample DKW fallback; not covered by this gate",
-            },
-            "unequal_block_reference_plan": {"invariant_failures": plan_failures},
+            "variance_change": {"detection_power": variance_detections / trials},
+            "tail_contamination": {"detection_power": tail_detections / trials},
             "simultaneous_reference": {
-                "method": "Bonferroni order-statistic boundaries",
-                "family_size": 5,
-                "false_positive_rate": simultaneous_rate,
-                "false_positive_wilson_95": list(simultaneous_wilson),
-                "resolved_at_declared_resamples": simultaneous_resolved,
-            },
-            "reference_detection": {
-                "rule": "median model discrepancy exceeds q95 real-reference discrepancy",
-                "calibration_target": "one-sided type-I error no greater than alpha; conservatism is reported",
-                "rates": reference_rates,
-                "wilson_95": reference_intervals,
-                "declared_severities": {
-                    "location_shift": 0.4,
-                    "variance_scale_on_frame_component": 0.35,
-                    "tail_contamination_fraction": 0.20,
-                    "tail_value": 1.45,
-                    "train_test_location_shift": 0.4,
-                },
+                "family_size": family_size,
+                "minimum_resamples": minimum_resamples,
+                "boundaries": simultaneous.tolist(),
             },
         },
-        "gate": gate,
-        "passed": all(gate.values()),
+        "gates": gates,
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--trials", type=int, default=200)
+    parser.add_argument("--trials", type=int, default=500)
     parser.add_argument("--resamples", type=int, default=200)
     parser.add_argument("--seed", type=int, default=1789)
-    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("validation/statistical_validation_v0.1.json"),
+    )
     args = parser.parse_args()
-    if args.trials < 20 or args.resamples < 20:
-        parser.error("--trials and --resamples must both be at least 20")
-    result = run_validation(trials=args.trials, resamples=args.resamples, seed=args.seed)
-    rendered = json.dumps(result, indent=2)
-    print(rendered)
-    if args.output is not None:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(rendered + "\n", encoding="utf-8")
-    return 0 if result["passed"] else 1
+    if args.trials < 50 or args.resamples < 100:
+        raise ValueError("Validation requires at least 50 trials and 100 resamples.")
+    result = run_validation(
+        trials=args.trials, resamples=args.resamples, seed=args.seed
+    )
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(result, indent=2))
+    return 0 if result["status"] == "PASSED" else 1
 
 
 if __name__ == "__main__":

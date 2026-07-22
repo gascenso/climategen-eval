@@ -47,21 +47,6 @@ class DetectionStatus(str, Enum):
     NOT_EVALUATED = "NOT_EVALUATED"
 
 
-class PracticalStatus(str, Enum):
-    WITHIN_TOLERANCE = "WITHIN_TOLERANCE"
-    EXCEEDS_TOLERANCE = "EXCEEDS_TOLERANCE"
-    INCONCLUSIVE = "INCONCLUSIVE"
-    UNDERPOWERED = "UNDERPOWERED"
-    NOT_APPLICABLE = "NOT_APPLICABLE"
-
-
-class SensitivityStatus(str, Enum):
-    ADEQUATE = "ADEQUATE"
-    INADEQUATE = "INADEQUATE"
-    NOT_EVALUATED = "NOT_EVALUATED"
-    NOT_APPLICABLE = "NOT_APPLICABLE"
-
-
 ArrayTransform = Callable[[np.ndarray], np.ndarray]
 MetricEstimator = Callable[[np.ndarray, np.ndarray], float]
 DirectionFunction = Callable[[np.ndarray, np.ndarray], str]
@@ -75,7 +60,6 @@ class FunctionalSpec:
     function: ArrayTransform
     units: str
     description: str
-    tolerance: float | None = None
     support: tuple[float, float] | None = None
     tail_referenced: bool = False
     direction_negative: str = "lower"
@@ -89,8 +73,6 @@ class FunctionalSpec:
             raise ValueError(f"Functional {self.id!r} must declare units.")
         if not self.description:
             raise ValueError(f"Functional {self.id!r} must have a description.")
-        if self.tolerance is not None and self.tolerance <= 0:
-            raise ValueError(f"Functional {self.id!r} tolerance must be positive.")
         if self.support is not None:
             if len(self.support) != 2 or not self.support[0] < self.support[1]:
                 raise ValueError(f"Functional {self.id!r} support must be (lower, upper).")
@@ -103,6 +85,13 @@ class FunctionalSpec:
             )
         if not np.all(np.isfinite(values)):
             raise ValueError(f"Functional {self.id!r} returned non-finite values.")
+        if self.support is not None:
+            lower, upper = self.support
+            if np.any(values < lower) or np.any(values > upper):
+                raise ValueError(
+                    f"Functional {self.id!r} returned values outside its declared "
+                    f"support [{lower}, {upper}]."
+                )
         return values
 
     def direction(self, generated: np.ndarray, real: np.ndarray) -> str:
@@ -123,7 +112,6 @@ class MetricSpec:
     units: str
     description: str
     pillar: str = "physical_fidelity"
-    tolerance: float | None = None
     functional: FunctionalSpec | None = None
     direction: DirectionFunction | None = None
     provenance: Mapping[str, Any] = field(default_factory=dict)
@@ -144,8 +132,6 @@ class MetricSpec:
             raise ValueError(
                 f"Metric {self.id!r} has unknown report pillar {self.pillar!r}."
             )
-        if self.tolerance is not None and self.tolerance <= 0:
-            raise ValueError(f"Metric {self.id!r} tolerance must be positive.")
         if self.kind is MetricKind.FUNCTIONAL_W1 and self.functional is None:
             raise ValueError("functional_w1 metrics must retain their FunctionalSpec.")
 
@@ -157,7 +143,6 @@ class EvaluationConfig:
     n_eval: int | None = None
     n_resamples: int = 200
     diagnostic_resamples: int | None = None
-    bootstrap_resamples: int = 500
     sensitivity_resamples: int = 100
     alpha: float = 0.05
     confidence: float = 0.95
@@ -167,7 +152,7 @@ class EvaluationConfig:
     warn_blocks_per_half: int = 30
     shift_power: float = 0.80
     shift_grid_size: int = 33
-    reference_stability_tolerance: float = 0.25
+    reference_stability_threshold: float = 0.25
     simultaneous_family: tuple[str, ...] = ()
     max_materialize_bytes: int | None = None
     transform_batch_size: int = 128
@@ -186,8 +171,6 @@ class EvaluationConfig:
             raise ValueError("diagnostic_resamples must be at least 20.")
         if self.diagnostic_resamples > self.n_resamples:
             raise ValueError("diagnostic_resamples cannot exceed n_resamples.")
-        if self.bootstrap_resamples < 20:
-            raise ValueError("bootstrap_resamples must be at least 20.")
         if self.sensitivity_resamples < 20:
             raise ValueError("sensitivity_resamples must be at least 20.")
         if not 0 < self.alpha < 0.5:
@@ -204,8 +187,8 @@ class EvaluationConfig:
             raise ValueError("shift_power must be between 0.5 and 1.")
         if self.shift_grid_size < 8:
             raise ValueError("shift_grid_size must be at least eight.")
-        if not 0 < self.reference_stability_tolerance <= 1:
-            raise ValueError("reference_stability_tolerance must be in (0, 1].")
+        if not 0 < self.reference_stability_threshold <= 1:
+            raise ValueError("reference_stability_threshold must be in (0, 1].")
         if self.transform_batch_size < 1:
             raise ValueError("transform_batch_size must be positive.")
         if isinstance(self.simultaneous_family, str):
@@ -243,11 +226,8 @@ class CellReport:
     reference_position: float | None
     reference_position_low: float | None
     reference_position_high: float | None
-    tolerance: float | None
     shift_resolution: float | None
     detection_status: DetectionStatus
-    practical_status: PracticalStatus
-    sensitivity_status: SensitivityStatus
     n_eval: int
     n_real: int
     n_generated: int
@@ -262,8 +242,6 @@ class CellReport:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["detection_status"] = self.detection_status.value
-        payload["practical_status"] = self.practical_status.value
-        payload["sensitivity_status"] = self.sensitivity_status.value
         payload["simultaneous_detection_status"] = self.simultaneous_detection_status.value
         payload["estimand"] = self.estimand.value
         payload["warnings"] = list(self.warnings)

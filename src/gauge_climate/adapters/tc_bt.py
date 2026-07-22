@@ -313,7 +313,6 @@ def functionals(config: TCBTConfig = TCBTConfig()) -> tuple[FunctionalSpec, ...]
                 "discrete_support_step_km": (
                     config.max_profile_radius_km / config.profile_bins
                 ),
-                "practical_inference": "detection_only_discrete_functional",
             },
         ),
         FunctionalSpec(

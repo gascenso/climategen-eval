@@ -78,7 +78,6 @@ def _builtin_functional(node: dict[str, Any]) -> FunctionalSpec:
     identifier = str(node["id"])
     builtin = str(node["builtin"])
     units = str(node["units"])
-    tolerance = node.get("tolerance")
     if builtin == "mean":
         function = lambda fields: np.mean(fields, axis=tuple(range(1, fields.ndim)))
     elif builtin == "minimum":
@@ -104,7 +103,6 @@ def _builtin_functional(node: dict[str, Any]) -> FunctionalSpec:
         function=function,
         units=units,
         description=str(node.get("description", f"CLI builtin {builtin}")),
-        tolerance=None if tolerance is None else float(tolerance),
         support=(
             None
             if node.get("support") is None
@@ -180,7 +178,6 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
         adapter_config = None
         metrics = []
     config = EvaluationConfig(**payload.get("evaluation", {}))
-    tolerances = {str(key): float(value) for key, value in payload.get("tolerances", {}).items()}
     feature_node = payload.get("feature_metrics", {})
     if feature_node is None:
         feature_node = {}
@@ -316,7 +313,6 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
         functionals,
         tuple(metrics),
         config,
-        tolerances,
         memorization_result,
         sensitivity_results,
         feature_enabled,
@@ -333,7 +329,6 @@ def command_validate(args: argparse.Namespace) -> int:
         functionals,
         metrics,
         config,
-        tolerances,
         _,
         _,
         feature_enabled,
@@ -350,7 +345,6 @@ def command_validate(args: argparse.Namespace) -> int:
         "n_functionals": len(functionals),
         "n_metrics": len(metrics),
         "feature_metrics_requested": feature_enabled,
-        "tolerances": tolerances,
         "config": config.to_dict(),
     }
     print(json.dumps(result, indent=2))
@@ -367,7 +361,6 @@ def command_run(args: argparse.Namespace) -> int:
         functionals,
         metrics,
         config,
-        tolerances,
         memorization_result,
         sensitivity_results,
         _,
@@ -379,7 +372,6 @@ def command_run(args: argparse.Namespace) -> int:
         functionals=functionals,
         metrics=metrics,
         config=config,
-        tolerances=tolerances,
         memorization_result=memorization_result,
         sensitivity_results=sensitivity_results,
         conditional=bool(payload.get("conditional", False)),
@@ -421,7 +413,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate", help="Validate data and configuration.")
     validate_parser.add_argument("config")
     validate_parser.set_defaults(function=command_validate)
-    run_parser = subparsers.add_parser("run", help="Run a Track-1 evaluation.")
+    run_parser = subparsers.add_parser("run", help="Run a GAUGE evaluation.")
     run_parser.add_argument("config")
     run_parser.set_defaults(function=command_run)
     report_parser = subparsers.add_parser("report", help="Render an existing JSON report.")

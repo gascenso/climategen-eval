@@ -1,6 +1,6 @@
 schema: gauge_climate.cli_config.v1
 adapter: tc_bt
-# All values are software-test fixtures, not scientific tolerances or TC results.
+# All values are deterministic software-test fixtures, not TC results.
 
 data:
   train:
@@ -28,15 +28,6 @@ adapter_options:
   profile_bins: 8
   psd_bins: 8
 
-tolerances:
-  min_core_bt: 5.0
-  cold_frac_220: 5.0
-  r_maxgrad: 40.0
-  axisym: 5.0
-  dav: 500.0
-  eye_contrast: 5.0
-  p01_bt: 5.0
-
 feature_metrics:
   enabled: true
   n_eof: 4
@@ -54,7 +45,6 @@ tc_admissibility: true
 evaluation:
   n_eval: 24
   n_resamples: 200
-  bootstrap_resamples: 20
   sensitivity_resamples: 20
   min_blocks_per_half: 5
   warn_blocks_per_half: 10

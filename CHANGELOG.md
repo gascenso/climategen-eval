@@ -6,8 +6,8 @@ semantic versioning once the public API is frozen.
 ## [Unreleased]
 
 - Independent statistical review and clean-room TC reproduction.
-- Independent review of TC direct-W1 inference before the final Track-1 run.
-- Three leakage-free restricted generator retrains and the final Track-2 study.
+- Independent review of the dependence-matched real-reference detector before
+  the final evaluation.
 - Reconciled and independently double-coded literature survey.
 
 ### Added
@@ -15,8 +15,8 @@ semantic versioning once the public API is frozen.
 - Frozen, training-only TC warm-shift, blur, center-jitter, phase, and exact-copyist
   controls with a versioned JSON artifact and figure.
 - Separate sensitivity response-contract and finite-sample resolution conclusions.
-- Frozen, training-only 56-cell TC statistical calibration with versioned JSON
-  and PDF artifacts, provenance hashes, simultaneous thresholds, and power audit.
+- Versioned 500-trial Monte Carlo validation artifact for the generic
+  dependence-matched real-reference detector.
 
 ### Changed
 
@@ -31,13 +31,12 @@ semantic versioning once the public API is frozen.
 
 ### Added
 
-- Portable `gauge_climate` Track-1 API and `gauge-climate` CLI.
+- Portable `gauge_climate` evaluation API and `gauge-climate` CLI.
 - Matched, dependence-aware real-reference engine with explicit weighting estimands.
-- Separate detection and practical-tolerance conclusions.
-- Finite-sample DKW quantile-band intervals for bounded scalar functional W1.
+- Calibrate detection against dependence-matched real-reference envelopes.
+- Matched model-versus-reference resampling intervals for raw discrepancies.
 - Explicitly preregistered Bonferroni simultaneous families with finite-Monte-Carlo
   resolution checks.
 - Train-fit feature spaces, diversity/coverage/dependence metrics, localized
   copying test, sensitivity lanes, versioned JSON/HTML reporting, and TC adapter.
-- Leakage-audited eight-arm generic downstream ladder.
 - Checksummed synthetic TC fixture and fail-closed survey/artifact/release audits.

@@ -20,7 +20,6 @@ def main() -> None:
         function=lambda fields: fields.mean(axis=(1, 2)),
         units="field units",
         description="spatial mean",
-        tolerance=0.10,
         support=(-1.0, 1.0),
     )
     report = gauge.evaluate(
@@ -28,7 +27,7 @@ def main() -> None:
         real=real,
         generated=generated,
         functionals=(functional,),
-        config=gauge.EvaluationConfig(n_resamples=100, bootstrap_resamples=100),
+        config=gauge.EvaluationConfig(n_resamples=100),
     )
     output = Path("outputs/minimal")
     report.to_json(output / "evaluation.json")

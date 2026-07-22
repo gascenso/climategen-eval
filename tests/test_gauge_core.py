@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 from dataclasses import replace
 from pathlib import Path
@@ -25,7 +26,6 @@ def _config(**overrides):
     values = dict(
         n_eval=100,
         n_resamples=40,
-        bootstrap_resamples=60,
         sensitivity_resamples=40,
         min_blocks_per_half=5,
         warn_blocks_per_half=10,
@@ -141,14 +141,13 @@ def test_reference_plan_has_compact_reproducible_provenance():
     )
 
 
-def test_perfect_generator_has_two_separate_conclusions():
+def test_perfect_generator_has_reference_aware_detection_and_raw_interval():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(
         "value",
         lambda fields: fields[:, 0],
         "unit",
         "bounded toy value",
-        tolerance=0.8,
         support=(-1.0, 1.0),
     )
     report = gauge.evaluate(
@@ -160,13 +159,9 @@ def test_perfect_generator_has_two_separate_conclusions():
     )
     cell = report.cells[0]
     assert cell.detection_status is gauge.DetectionStatus.NO_DEPARTURE_DETECTED
-    assert cell.practical_status in {
-        gauge.PracticalStatus.WITHIN_TOLERANCE,
-        gauge.PracticalStatus.INCONCLUSIVE,
-        gauge.PracticalStatus.UNDERPOWERED,
-    }
-    assert cell.provenance["inference_method"] == "cluster_w1_influence_t"
-    assert cell.provenance["interval_bound_type"] == "two_sided_1_minus_alpha"
+    assert cell.provenance["inference_method"] == "reference_resampling_interval"
+    assert cell.provenance["interval_bound_type"] == "central_resampling_1_minus_alpha"
+    assert cell.ci_low <= cell.estimate <= cell.ci_high
     assert cell.reference_position is not None
 
 
@@ -234,10 +229,10 @@ def test_joint_detection_is_only_issued_for_a_preregistered_family():
     )
 
 
-def test_missing_support_withholds_tolerance_conclusion():
+def test_functional_support_is_not_required_for_reference_evaluation():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(
-        "value", lambda fields: fields[:, 0], "unit", "unbounded toy", tolerance=0.2
+        "value", lambda fields: fields[:, 0], "unit", "unbounded toy"
     )
     report = gauge.evaluate(
         train=train,
@@ -247,11 +242,11 @@ def test_missing_support_withholds_tolerance_conclusion():
         config=_config(),
     )
     cell = report.cells[0]
-    assert cell.practical_status is gauge.PracticalStatus.INCONCLUSIVE
-    assert "withheld" in cell.warnings[0].lower()
+    assert cell.estimate is not None
+    assert cell.detection_status is not gauge.DetectionStatus.NOT_EVALUATED
 
 
-def test_thin_conditional_stratum_is_reported_underpowered():
+def test_thin_conditional_stratum_is_reported_without_a_verdict():
     train, real, generated = _datasets()
     real_labels = np.zeros(real.n_samples, dtype=int)
     real_labels[:16] = 1  # four blocks
@@ -264,7 +259,6 @@ def test_thin_conditional_stratum_is_reported_underpowered():
         lambda fields: fields[:, 0],
         "unit",
         "bounded toy value",
-        tolerance=0.5,
         support=(-1, 1),
     )
     report = gauge.evaluate(
@@ -277,7 +271,7 @@ def test_thin_conditional_stratum_is_reported_underpowered():
     )
     thin = next(cell for cell in report.cells if cell.stratum == "1")
     assert thin.detection_status is gauge.DetectionStatus.NOT_EVALUATED
-    assert thin.practical_status is gauge.PracticalStatus.UNDERPOWERED
+    assert "block" in thin.warnings[0].lower()
 
 
 def test_predeclared_conditional_aggregate_is_an_explicit_report_stratum():
@@ -348,10 +342,55 @@ def test_report_round_trip_and_render():
         report.to_json(root / "report.json")
         report.to_html(root / "report.html")
         report.figure_reference_profile(root / "profile.png")
+        html = (root / "report.html").read_text(encoding="utf-8")
         loaded = gauge.EvaluationReport.from_json(root / "report.json")
         assert loaded.to_dict() == report.to_dict()
+        assert "<th>Tolerance</th>" not in html
+        assert "<th>Practical relevance</th>" not in html
+        assert "not proof of equality or universal application acceptability" in html
         assert (root / "report.html").stat().st_size > 100
         assert (root / "profile.png").stat().st_size > 100
+
+
+def test_v1_report_migration_reuses_matched_reference_interval():
+    train, real, generated = _datasets()
+    functional = gauge.FunctionalSpec(
+        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(),
+    )
+    payload = report.to_dict()
+    payload["schema"] = "gauge_climate.evaluation.v1"
+    payload["metadata"]["config"]["bootstrap_resamples"] = 100
+    payload["metadata"]["interpretation"]["practical"] = "retired"
+    cell = payload["cells"][0]
+    cell["tolerance"] = 0.2
+    cell["practical_status"] = "WITHIN_TOLERANCE"
+    cell["provenance"]["reference_model_median"] = 0.31
+    cell["provenance"]["model_reference_q025"] = 0.21
+    cell["provenance"]["model_reference_q975"] = 0.44
+    cell["provenance"]["interval_standard_error"] = 99.0
+
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "legacy.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        migrated = gauge.EvaluationReport.from_json(path)
+        result = migrated.to_dict()
+
+    migrated_cell = result["cells"][0]
+    assert result["schema"] == "gauge_climate.evaluation.v2"
+    assert migrated_cell["estimate"] == 0.31
+    assert migrated_cell["ci_low"] == 0.21
+    assert migrated_cell["ci_high"] == 0.44
+    assert migrated_cell["provenance"]["inference_method"] == "reference_resampling_interval"
+    assert "tolerance" not in migrated_cell
+    assert "practical_status" not in migrated_cell
+    assert "bootstrap_resamples" not in result["metadata"]["config"]
 
 
 def test_paper_bundle_preserves_native_strata_and_renders_controls():
@@ -446,14 +485,13 @@ def test_paper_bundle_compresses_large_k_only_in_main_profile():
 def test_config_hash_captures_metric_contract():
     train, real, generated = _datasets()
     reports = []
-    for tolerance in (0.2, 0.4):
+    for support in ((-1.0, 1.0), (-2.0, 2.0)):
         functional = gauge.FunctionalSpec(
             "value",
             lambda fields: fields[:, 0],
             "unit",
             "bounded toy",
-            tolerance=tolerance,
-            support=(-1, 1),
+            support=support,
         )
         reports.append(
             gauge.evaluate(
@@ -474,7 +512,6 @@ def test_failed_predeclared_control_withholds_metric_interpretation():
         lambda fields: fields[:, 0],
         "unit",
         "bounded toy",
-        tolerance=0.4,
         support=(-1, 1),
     )
     metric_id = "w1:value"
@@ -490,7 +527,6 @@ def test_failed_predeclared_control_withholds_metric_interpretation():
     )
     cell = report.cells[0]
     assert cell.detection_status is gauge.DetectionStatus.NOT_EVALUATED
-    assert cell.sensitivity_status is gauge.SensitivityStatus.INADEQUATE
     assert "withheld" in cell.warnings[-1].lower()
 
 

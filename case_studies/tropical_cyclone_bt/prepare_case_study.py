@@ -21,20 +21,13 @@ from tqdm.auto import tqdm
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-# Both banks come from the selected baseline_ztsnr model. The training bank is
-# development-only because that generator saw the complete training split.
+# Held-out samples from the selected baseline_ztsnr model.
 DEFAULT_BANKS = {
     "baseline_ztsnr_test": {
         "source": "outputs/baseline_ztsnr/sample_banks/test/test_baseline_n1000",
         "destination": "baseline_ztsnr/test/test_baseline_n1000",
-        "role": "track1_held_out_generation",
+        "role": "held_out_generation",
         "split": "test",
-    },
-    "baseline_ztsnr_train_development": {
-        "source": "outputs/baseline_ztsnr/sample_banks/train/aug_guidance_train",
-        "destination": "baseline_ztsnr/train/aug_guidance_train",
-        "role": "track2_development_only_full_training_generator",
-        "split": "train",
     },
 }
 
@@ -636,9 +629,6 @@ def copy_source_manifests(*, source_repo: Path, output_root: Path, overwrite: bo
         "data/packed_tc_memmap_usa1min/rel_paths.txt",
         "runs/baseline_ztsnr/config.yaml",
         "runs/baseline_ztsnr/meta.json",
-        "runs/cm_E3_s42/synthetic_augmentation.json",
-        "runs/cm_E3_s43/synthetic_augmentation.json",
-        "runs/cm_E3_s44/synthetic_augmentation.json",
     ]:
         src = source_repo / rel
         dst = dst_root / rel.replace("/", "__")

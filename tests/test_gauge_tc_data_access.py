@@ -8,7 +8,6 @@ from gauge_climate.adapters.tc_data import (
     load_sample_bank,
     wind_to_category,
 )
-from case_studies.tropical_cyclone_bt.downstream_cnn import tc_geometry
 
 
 def test_wind_categories_use_usa_one_minute_thresholds():
@@ -85,11 +84,3 @@ def test_baseline_sample_bank_is_loaded_lazily(tmp_path):
     assert archive.fields.shape == (5, 4, 4)
     assert archive.fields[[4, 0], 0, 0].tolist() == [2.0, 1.0]
     assert archive.labels.tolist() == [0, 0, 5, 5, 5]
-
-
-def test_tc_geometry_uses_shape_preserving_reflect_shifts():
-    fields = np.arange(2 * 5 * 5, dtype=np.float32).reshape(2, 5, 5)
-    transformed, trace = tc_geometry(fields, np.asarray([40.0, 140.0]), np.random.default_rng(4))
-    assert transformed.shape == fields.shape
-    assert trace["policy"] == "tc_rot90_reflect_shift_v1"
-    assert trace["explicit_parameters"] is True

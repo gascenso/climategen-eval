@@ -12,7 +12,83 @@ import numpy as np
 from .types import CellReport, _jsonable
 
 
-REPORT_SCHEMA = "gauge_climate.evaluation.v1"
+REPORT_SCHEMA = "gauge_climate.evaluation.v2"
+_RETIRED_TOLERANCE_FIELDS = {
+    "tolerance",
+    "practical",
+    "practical_status",
+    "sensitivity_status",
+    "detection_probability_at_tolerance",
+}
+_RENAMED_THRESHOLD_FIELDS = {
+    "reference_stability_tolerance": "reference_stability_threshold",
+    "phase_power_relative_tolerance": "phase_power_relative_threshold",
+    "relative_tolerance": "relative_threshold",
+}
+
+
+def _without_retired_tolerance_fields(value: Any) -> Any:
+    """Migrate pre-v2 reports without preserving the retired verdict layer."""
+
+    if isinstance(value, Mapping):
+        return {
+            _RENAMED_THRESHOLD_FIELDS.get(key, key): _without_retired_tolerance_fields(item)
+            for key, item in value.items()
+            if key not in _RETIRED_TOLERANCE_FIELDS
+        }
+    if isinstance(value, list):
+        return [_without_retired_tolerance_fields(item) for item in value]
+    return value
+
+
+def _migrate_v1_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Convert a v1 artifact to the detection-only v2 report contract.
+
+    The v1 artifact already stored the matched model-versus-reference draw
+    distribution.  V2 uses its median and central interval directly and drops
+    the separate population-equivalence interval and verdict branch.
+    """
+
+    migrated = _without_retired_tolerance_fields(payload)
+    metadata = dict(migrated.get("metadata", {}))
+    metadata["method"] = "dependence-matched-real-reference-v2"
+    metadata["interpretation"] = {
+        "detection": (
+            "Non-detection means only that the model discrepancy did not exceed "
+            "the finite-N real-reference boundary."
+        ),
+        "reference_position": "Detectability at this N; not physical severity.",
+    }
+    metadata["migration"] = {
+        "source_schema": "gauge_climate.evaluation.v1",
+        "method": "reuse_stored_matched_model_reference_draws",
+    }
+    config = dict(metadata.get("config", {}))
+    config.pop("bootstrap_resamples", None)
+    metadata["config"] = config
+    migrated["metadata"] = metadata
+
+    cells = []
+    for raw in migrated.get("cells", []):
+        node = dict(raw)
+        provenance = dict(node.get("provenance", {}))
+        median = provenance.get("reference_model_median")
+        low = provenance.get("model_reference_q025")
+        high = provenance.get("model_reference_q975")
+        if median is not None and low is not None and high is not None:
+            node["estimate"] = median
+            node["ci_low"] = low
+            node["ci_high"] = high
+            provenance["inference_method"] = "reference_resampling_interval"
+            provenance["interval_bound_type"] = "central_resampling_1_minus_alpha"
+            provenance.pop("interval_standard_error", None)
+            provenance.pop("interval_degrees_of_freedom", None)
+            provenance.pop("interval_cdf_zero_fraction", None)
+        node["provenance"] = provenance
+        cells.append(node)
+    migrated["cells"] = cells
+    migrated["schema"] = REPORT_SCHEMA
+    return migrated
 
 
 @dataclass
@@ -48,23 +124,20 @@ class EvaluationReport:
 
     @classmethod
     def from_json(cls, path: str | Path) -> "EvaluationReport":
-        from .types import (  # local import avoids a circular conversion helper
-            DetectionStatus,
-            PracticalStatus,
-            SamplingEstimand,
-            SensitivityStatus,
-        )
+        from .types import DetectionStatus, SamplingEstimand
 
         with Path(path).open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
+            raw_payload = json.load(handle)
+        if raw_payload.get("schema") == "gauge_climate.evaluation.v1":
+            payload = _migrate_v1_payload(raw_payload)
+        else:
+            payload = _without_retired_tolerance_fields(raw_payload)
         cells = []
         for raw in payload["cells"]:
             node = dict(raw)
             node.setdefault("pillar", "physical_fidelity")
             node.setdefault("reference_detection_boundary", node.get("reference_q95"))
             node["detection_status"] = DetectionStatus(node["detection_status"])
-            node["practical_status"] = PracticalStatus(node["practical_status"])
-            node["sensitivity_status"] = SensitivityStatus(node["sensitivity_status"])
             node["simultaneous_detection_status"] = DetectionStatus(
                 node.get("simultaneous_detection_status", "NOT_EVALUATED")
             )
@@ -79,7 +152,7 @@ class EvaluationReport:
             sensitivity=payload.get("sensitivity", {}),
             diagnostics=payload.get("diagnostics", {}),
             partitions=payload.get("partitions", {}),
-            schema=payload.get("schema", REPORT_SCHEMA),
+            schema=REPORT_SCHEMA,
         )
 
     def to_html(self, path: str | Path) -> Path:
@@ -101,11 +174,12 @@ class EvaluationReport:
         confidence_label = 100.0 * float(
             self.metadata.get("config", {}).get("confidence", 0.95)
         )
+        column_count = 8
         for cell in ordered_cells:
             if cell.pillar != previous_pillar:
                 title = cell.pillar.replace("_", " ").title()
                 rows.append(
-                    f'<tr class="section"><th colspan="11">{html.escape(title)}</th></tr>'
+                    f'<tr class="section"><th colspan="{column_count}">{html.escape(title)}</th></tr>'
                 )
                 previous_pillar = cell.pillar
             estimate = "—" if cell.estimate is None else f"{cell.estimate:.4g} {html.escape(cell.units)}"
@@ -124,7 +198,6 @@ class EvaluationReport:
                     f"boundary={cell.reference_detection_boundary:.4g}"
                 )
             )
-            tolerance = "—" if cell.tolerance is None else f"{cell.tolerance:.4g} {html.escape(cell.units)}"
             detection = html.escape(cell.detection_status.value)
             if cell.simultaneous_detection_status.value != "NOT_EVALUATED":
                 detection += (
@@ -140,10 +213,7 @@ class EvaluationReport:
                 f'<td title="real={cell.n_real}; generated pool={cell.n_generated}">'
                 f"N={cell.n_eval}; blocks={cell.n_blocks}</td>"
                 f"<td>{estimate}</td><td>{interval}</td><td>{reference}</td>"
-                f"<td>{tolerance}</td>"
                 f"<td>{detection}</td>"
-                f"<td>{html.escape(cell.practical_status.value)}</td>"
-                f"<td>{html.escape(cell.sensitivity_status.value)}</td>"
                 "</tr>"
             )
         warning_html = "".join(f"<li>{html.escape(str(item))}</li>" for item in self.warnings)
@@ -167,6 +237,11 @@ class EvaluationReport:
             f"<p>{len(self.sensitivity)} registered result(s); "
             f"{len(sensitivity_failures)} failed response contract(s).</p>"
         )
+        status_note = (
+            "<strong>Reference-aware result.</strong> ‘No departure detected’ means "
+            "only that the model did not exceed the finite-N real-reference boundary; "
+            "it is not proof of equality or universal application acceptability."
+        )
         document = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>GAUGE evaluation card</title>
 <style>
@@ -175,9 +250,9 @@ table{{border-collapse:collapse;width:100%;font-size:.9rem}}th,td{{border:1px so
 th{{background:#eef2f5}}tr.section th{{background:#dfeaf1;text-transform:uppercase;letter-spacing:.04em}}code{{background:#eef2f5;padding:.1rem .25rem}}.note{{border-left:4px solid #33658a;padding:.5rem 1rem;background:#f3f8fb}}
 </style></head><body>
 <h1>GAUGE evaluation card</h1>
-<p class="note"><strong>Read the two status columns separately.</strong> “No departure detected” is not proof of equality. Practical relevance is established only by a direct interval relative to a declared tolerance.</p>
+<p class="note">{status_note}</p>
 <p>Estimand: <code>{html.escape(str(self.metadata.get('estimand', 'unknown')))}</code>; N: <code>{html.escape(str(self.metadata.get('n_eval', 'varies')))}</code>; config: <code>{html.escape(str(self.metadata.get('config_hash', 'unknown')))}</code></p>
-<table><thead><tr><th>Pillar</th><th>Metric</th><th>Stratum</th><th>Design</th><th>Raw effect</th><th>{confidence_label:g}% interval</th><th>Real-reference envelope</th><th>Tolerance</th><th>Detection</th><th>Practical relevance</th><th>Sensitivity</th></tr></thead>
+<table><thead><tr><th>Pillar</th><th>Metric</th><th>Stratum</th><th>Design</th><th>Raw effect</th><th>{confidence_label:g}% resampling interval</th><th>Real-reference envelope</th><th>Detection</th></tr></thead>
 <tbody>{''.join(rows)}</tbody></table>
 <h2>Memorization</h2>{memorization_html}
 <h2>Sensitivity controls</h2>{sensitivity_html}

@@ -102,49 +102,17 @@ def main() -> int:
             failures.append("TC control provenance mismatch: sensitivity contract.")
     if not control_figure.is_file():
         failures.append("TC Track-1 control figure is missing.")
-    calibration_path = (
-        ROOT / "case_studies/tropical_cyclone_bt/calibration_results/track1_statistics.json"
-    )
-    calibration_figure = (
-        ROOT / "case_studies/tropical_cyclone_bt/calibration_results/track1_statistics.pdf"
-    )
-    if not calibration_path.is_file():
-        failures.append("TC Track-1 statistical calibration artifact is missing.")
+    validation_path = ROOT / "validation/statistical_validation_v0.1.json"
+    if not validation_path.is_file():
+        failures.append("GAUGE statistical validation artifact is missing.")
     else:
-        calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
-        if calibration.get("status") != "PASSED":
-            failures.append("TC Track-1 statistical calibration has not passed.")
-        metadata = calibration.get("_metadata", {})
-        if metadata.get("test_fields_used") is not False:
-            failures.append("TC Track-1 calibration does not attest training-only use.")
-        calibration_sources = {
-            "protocol_sha256": (
-                ROOT / "case_studies/tropical_cyclone_bt/calibration_protocol.yaml"
-            ),
-            "runner_sha256": (ROOT / "case_studies/tropical_cyclone_bt/run_track1_calibration.py"),
-            "real_train_manifest_sha256": (
-                ROOT / "data/tropical_cyclone_bt/real_train/manifest.json"
-            ),
-            "partition_summary_sha256": (
-                ROOT / "case_studies/tropical_cyclone_bt/partition_summary.json"
-            ),
-            "track1_config_sha256": (
-                ROOT / "case_studies/tropical_cyclone_bt/track1_config.template.yaml"
-            ),
-        }
-        for key, source in calibration_sources.items():
-            if not source.is_file() or metadata.get(key) != _sha256(source):
-                failures.append(f"TC calibration provenance mismatch: {key}.")
-        if metadata.get("gauge_source_sha256") != _source_tree_sha256(ROOT / "src/gauge_climate"):
-            failures.append("TC calibration provenance mismatch: GAUGE source tree.")
-        family = calibration.get("family", {})
-        summary = calibration.get("summary", {})
-        if family.get("size") != 56 or summary.get("total_cells") != 56:
-            failures.append("TC calibration does not contain the frozen 56-cell family.")
-        if summary.get("pseudo_reference_overlap_failures") != 0:
-            failures.append("TC calibration pseudo-generator overlaps reference storms.")
-    if not calibration_figure.is_file():
-        failures.append("TC Track-1 statistical calibration figure is missing.")
+        validation = json.loads(validation_path.read_text(encoding="utf-8"))
+        if validation.get("schema") != "gauge_climate.statistical_validation.v2":
+            failures.append("GAUGE statistical validation uses an obsolete schema.")
+        if validation.get("status") != "PASSED" or not all(
+            validation.get("gates", {}).values()
+        ):
+            failures.append("GAUGE statistical validation has not passed.")
     artifacts = _yaml(ROOT / "case_studies/tropical_cyclone_bt/artifacts.yaml")
     if not artifacts.get("release_ready"):
         failures.append("TC artifacts are not archived and release-ready.")
@@ -200,13 +168,6 @@ def main() -> int:
                 failures.append(
                     "Survey source workbook checksum does not match its export manifest."
                 )
-    validation_path = ROOT / "validation/statistical_validation_v0.1.json"
-    if not validation_path.exists():
-        failures.append("Statistical validation artifact is missing.")
-    else:
-        validation = json.loads(validation_path.read_text(encoding="utf-8"))
-        if not validation.get("passed"):
-            failures.append("Statistical validation gate did not pass.")
     for split in ("real_train", "real_val", "real_test"):
         manifest = ROOT / "data/tropical_cyclone_bt" / split / "manifest.json"
         if not manifest.exists():

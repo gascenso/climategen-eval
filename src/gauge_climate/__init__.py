@@ -2,7 +2,7 @@
 
 from .data import Dataset
 from .evaluation import evaluate
-from . import adapters, downstream, features, lanes, memorization, metrics
+from . import adapters, features, lanes, memorization, metrics
 from .report import EvaluationReport
 from .presentation import PaperBundleSpec, ReferenceControl
 from .types import (
@@ -11,9 +11,7 @@ from .types import (
     FunctionalSpec,
     MetricKind,
     MetricSpec,
-    PracticalStatus,
     SamplingEstimand,
-    SensitivityStatus,
 )
 
 __all__ = [
@@ -25,12 +23,9 @@ __all__ = [
     "MetricKind",
     "MetricSpec",
     "PaperBundleSpec",
-    "PracticalStatus",
     "ReferenceControl",
     "SamplingEstimand",
-    "SensitivityStatus",
     "evaluate",
-    "downstream",
     "adapters",
     "features",
     "lanes",

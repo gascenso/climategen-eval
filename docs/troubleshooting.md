@@ -3,16 +3,11 @@
 - **Train/test block leakage:** all frames from a physical event must remain on
   one side of the split. For TC data, the block is the storm, not the frame or
   intensity label.
-- **Thin conditional stratum:** report it as underpowered and use only a
-  scientifically predeclared aggregate (for example C4+)—never merge after
-  inspecting model results.
 - **Functional outside support:** correct or justify the physical support before
   running. GAUGE refuses to clip values silently.
-- **No practical verdict:** v0.1 W1 tolerance inference needs a bounded scalar
-  functional, the block-balanced estimand, and enough independent blocks.
-  Discrete/nonregular functionals use the conservative DKW fallback. The
-  reference result remains usable for detection; percentile-bootstrap output is
-  diagnostic only.
+- **No detection result for a thin stratum:** report the block and sample counts,
+  retain the native class in the appendix, and use only a scientifically
+  predeclared aggregate—never merge after inspecting model outcomes.
 - **Lazy archive exceeds memory:** lower `transform_batch_size`; for train-fit
   EOF features, also lower the preregistered `max_fit_samples` or feature-space
   batch size. `max_materialize_bytes` guards explicit `Dataset.as_numpy()` calls;

@@ -1,4 +1,4 @@
-# Frozen Track-1 controls
+# Frozen GAUGE sensitivity controls
 
 `sensitivity_lanes.json` and `sensitivity_lanes.pdf` were generated exclusively
 from the corrected training archive with:

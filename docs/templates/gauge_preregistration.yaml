@@ -18,7 +18,7 @@ data:
   overlap_expected: 0
   temporal_sensitivity_split: null
 
-track1:
+evaluation:
   estimand: block_balanced  # block_balanced | frame_weighted
   estimand_justification: "REPLACE"
   n_eval: "REPLACE"
@@ -39,10 +39,8 @@ track1:
       units: "REPLACE"
       aspect: "amplitude | structure | extreme"
       tail_referenced: false
-      finite_support: ["REPLACE lower", "REPLACE upper"]
-      support_basis: "REPLACE physical, sensor, or preprocessing guarantee"
-      tolerance: "REPLACE"
-      tolerance_justification: "REPLACE independent scientific justification"
+      finite_support: null  # optional [lower, upper] physical-validity check
+      support_basis: null  # required only when finite_support is supplied
       lower_direction: "REPLACE"
       higher_direction: "REPLACE"
 
@@ -80,26 +78,7 @@ track1:
     strata: []
     global_condition_mixture: "skip | as_provided_composition_check | REPLACE common mixture"
     predeclared_pooled_strata: []
-    thin_stratum_action: UNDERPOWERED
-
-track2:
-  applicable: false
-  primary_endpoint: "REPLACE"
-  endpoint_orientation: "higher_is_better | lower_is_better"
-  delta_task: "REPLACE"
-  delta_task_justification: "REPLACE"
-  secondary_endpoints: []
-  holdout_block_rule: "REPLACE"
-  n_holdouts: 3
-  holdout_fraction: 0.5
-  generator_retrained_per_holdout: true
-  downstream_seeds: [101, 102, 103, 104, 105]
-  transform_policy: "REPLACE exact transforms and sampling probabilities"
-  primary_contrast: A5_minus_A3
-  secondary_source_contrast: A4_minus_A2
-  headroom_contrasts: [A6_minus_A2, A7_minus_A3]
-  reproduction_contrast: A4_minus_A0
-  task_switching_after_results: prohibited
+    thin_stratum_action: REPORT_NOT_EVALUATED_WITH_WARNING
 
 analysis_exclusions:
   sample_exclusions: []
