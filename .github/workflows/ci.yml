@@ -17,10 +17,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
-      - run: >-
-          python -m ruff check src/gauge_climate tests/test_gauge_*.py
-          scripts/validate_gauge_statistics.py scripts/audit_release_gates.py
-          scripts/fetch_tc_artifact.py survey
+      - run: python -m ruff check .
       - run: python -m pytest tests/test_gauge_*.py
       - run: python examples/minimal.py
       - run: gauge-climate validate tests/fixtures/tc_bt/config.yaml

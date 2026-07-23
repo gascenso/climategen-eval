@@ -5,18 +5,23 @@ semantic versioning once the public API is frozen.
 
 ## [Unreleased]
 
-- Independent statistical review and clean-room TC reproduction.
-- Independent review of the dependence-matched real-reference detector before
-  the final evaluation.
-- Reconciled and independently double-coded literature survey.
+External archival gates still open: independent statistical review,
+permission-cleared TC data deposition, and clean-room reproduction. The
+literature survey remains a separate manuscript workstream.
 
 ### Added
 
 - Frozen, training-only TC warm-shift, blur, center-jitter, phase, and exact-copyist
   controls with a versioned JSON artifact and figure.
 - Separate sensitivity response-contract and finite-sample resolution conclusions.
-- Versioned 500-trial Monte Carlo validation artifact for the generic
-  dependence-matched real-reference detector.
+- Versioned 300-trial Monte Carlo calibration and power artifact for the generic
+  dependence-matched real-reference detector, including C5-like and
+  minimum-block designs, crossing CDFs, train/test shift, and familywise behavior.
+- Clean current-engine TC report and a checksummed 56-artifact main/appendix
+  manuscript bundle generated from it.
+- Framework, statistical-validation, deterministic example, class-aware
+  reference-gap, thin-tail, all-class curve, sensitivity, memorization,
+  admissibility, partition, and Vmax-support paper evidence.
 
 ### Changed
 
@@ -26,6 +31,11 @@ semantic versioning once the public API is frozen.
   every analysis input while preserving raw archive bytes and checksums.
 - Shift-resolution evaluation now limits both the reference draws and bootstrap
   work, eliminating an unintended full-resample computation at every grid point.
+- Unstable reference boundaries now retain their raw discrepancy and gap but
+  receive `NOT_EVALUATED`; per-metric diagnostic budgets make headline
+  stability explicit without inflating every exploratory cell.
+- Memorization results distinguish `FARTHER_FROM_TRAINING` from copying or
+  physical inadmissibility.
 
 ## [0.1.0] - 2026-07-15
 

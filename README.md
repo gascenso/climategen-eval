@@ -52,7 +52,7 @@ report.to_json("evaluation.json")
 report.to_html("evaluation.html")
 ```
 
-The zero-configuration report is reference-aware:
+The standard report is reference-aware:
 
 - every scalar functional is reported as a W1 discrepancy in its native units;
 - the real-reference envelope shows ordinary real-vs-real variation at the same
@@ -122,10 +122,11 @@ claims must come from matched, preregistered strata or a declared mixture rule.
 
 ## Development state
 
-This repository is pre-1.0. The validated reference-aware engine and public API
-are the v0.1 critical path; survey reconciliation, clean-room TC reproduction,
-the user study, and independent statistical review remain explicit release
-gates. See [CHANGELOG.md](CHANGELOG.md).
+This repository is pre-1.0. The validated reference-aware engine, clean TC
+evaluation, and complete manuscript evidence bundle are frozen. Independent
+statistical review, permission-cleared data deposition, and clean-room TC
+reproduction remain archival release gates; the survey is a separate
+workstream. See [CHANGELOG.md](CHANGELOG.md).
 The exact implemented-versus-pending matrix is in
 [docs/development_status.md](docs/development_status.md).
 

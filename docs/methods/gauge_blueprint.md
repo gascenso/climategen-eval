@@ -47,7 +47,7 @@ GAUGE evaluates intrinsic fidelity. It does not claim that generated samples
 improve every possible use, certify a model as physically correct, or produce a
 universal model ranking.
 
-### 1.3 Zero-configuration contract
+### 1.3 Streamlined-use contract
 
 The standard workflow must not require users to invent statistical thresholds:
 
@@ -64,8 +64,10 @@ With scientifically named functionals and correctly declared dependence
 blocks, the default report includes native-unit discrepancies and uncertainty,
 the real-reference envelope, a reference-calibrated gap profile, condition
 audits, registered controls, diversity, memorization, admissibility, and full
-provenance. The command-line equivalent is one `gauge-climate run` invocation
-followed by `gauge-climate report`.
+provenance. The command-line interface exposes the same evaluation and
+reporting objects. Folding every application-specific paper renderer into one
+command remains a usability target, not a scientific prerequisite for the
+protocol.
 
 GAUGE deliberately does not ask users to invent application thresholds. It
 reports what departure was measured, how uncertain it is, where it lies
@@ -177,6 +179,10 @@ Every draw records its seed, effective sample and block counts, deterministic
 partition digest, and preprocessing provenance. Functional cells and any
 registered simultaneous family use the primary resampling budget. Secondary
 diagnostics may use a smaller declared budget, which is recorded per cell.
+When the declared evaluation size equals the supplied generated-bank size, the
+bank is fixed across draws and uncertainty is explicitly conditional on that
+bank. GAUGE does not silently claim generator-population uncertainty from a
+single finite bank.
 
 The model statistic is compared with a one-sided real-reference boundary at the
 declared `N`. A pointwise result is:
@@ -320,8 +326,9 @@ No categorical detection result is released until simulation tests cover:
 - perfect generators and pointwise false-positive behavior;
 - detectable shifts, variance changes, crossing CDFs, and tail contamination;
 - balanced and severely unequal block sizes;
-- thin strata and fewer-than-ten-block failure paths;
-- localized copying, mode collapse, excessive diversity, and off-manifold data;
+- thin strata, the 20-block validity boundary, and below-boundary failure paths;
+- localized copying, mode collapse, excessive diversity, and samples farther
+  from the training manifold;
 - monotone perturbation-severity response;
 - global condition-mixture mismatch;
 - xarray ordering, lazy arrays, NaNs, invalid units, and block overlap;
@@ -374,16 +381,21 @@ The strongest paper contribution is the protocol and reporting design, supported
 by statistical validation and a nontrivial case study—not the performance of any
 particular generator.
 
-## 13. Remaining release gates
+## 13. Freeze state and external release gates
 
-Before submission:
+The in-repository scientific implementation is frozen: statistical simulations,
+unit/integration tests, training-only controls, the clean TC evaluation, and all
+manuscript figures/tables are generated from checksummed artifacts.
 
-1. complete an independent statistical review of the reference engine,
-   resampling intervals, simultaneous inference, and simulation coverage;
-2. finish unit/integration tests and clean-environment package installation;
-3. make the zero-configuration CLI/API produce the same paper bundle as the TC
-   workflow;
-4. archive permission-cleared data manifests, checksums, configurations, and
-   reports;
-5. regenerate every manuscript figure and table from archived reports;
-6. complete a clean-room reproduction and usability test with target users.
+The remaining pre-archival actions require independent people or an external
+repository:
+
+1. independent statistical review of the reference engine, resampling
+   intervals, simultaneous inference, and simulation coverage;
+2. permission-cleared deposition of the real/generated TC artifacts and their
+   persistent identifiers;
+3. an independent clean-room reproduction of the frozen TC workflow.
+
+A broader usability study and a one-call application-specific paper renderer
+are post-paper product improvements, not conditions for the scientific
+submission.
