@@ -8,8 +8,8 @@ are TS and Categories 1–5; TD is not claimed.
 
 - The v0.1 TC adapter implements seven scalar functionals, physical radial
   profiles, and a fully specified Hann-windowed physical-wavenumber PSD.
-- Existing sample banks and exploratory outputs predate the frozen GAUGE
-  reference/inference engine. They are development inputs, not paper results.
+- The selected sample bank has been evaluated by the frozen current engine.
+  Earlier exploratory outputs are not used as paper evidence.
 - Raw real archives are retained byte-for-byte, while the TC adapter exposes a
   lazy 170--325 K clipped analysis view matching `tc-diffusion` training
   preprocessing. These quantiles are not mislabeled as physical validity limits;
@@ -96,16 +96,21 @@ archive has its natural intensity mixture. Global rows are therefore retained
 as supplied-bank composition checks; native-class rows answer
 conditional-generator fidelity. The registered C4+ row remains supplemental.
 
-In the first completed audit, all 49 native-class plus supplemental-C4+ scalar-functional cells
-had no pointwise departure detected. All seven pointwise functional detections
-occurred in the global composition row. Memorization is tested within joint
+In the clean final audit, all 49 native-class plus supplemental-C4+ scalar-functional
+cells had no pointwise departure detected. All seven pointwise functional
+detections occurred in the global composition row, and four of those global
+cells also exceeded the registered simultaneous boundaries. Memorization is
+tested within joint
 intensity-class and training-fitted feature-region cells; “farther from
 training” is never treated as proof of physical invalidity.
 
-Forty-four secondary cells in the first completed audit, mostly pairwise
-Spearman entries, carry a split-half Monte Carlo-stability warning at the frozen
-200-draw diagnostic budget. They remain in the machine report with daggers and
-are not headline claims; no primary functional cell has this warning.
+All 104 registered physical, curve, and feature cells—including the global and
+supplemental C4+ audits—pass the frozen reference-boundary stability check and
+receive categorical detection results. The main class-aware profile shows the
+78 native-class cells.
+Thirty-one exploratory pairwise-Spearman cells and two discrete
+preprocessing-rate cells fail that check; they retain raw audit values but
+correctly receive `NOT_EVALUATED`. No main-profile conclusion is withheld.
 
 ## Paper-facing bundle
 
@@ -113,13 +118,17 @@ are not headline claims; no primary functional cell has this warning.
 reporting the case study. It separates a small main-text package from a complete
 appendix:
 
+- a framework schematic, generic statistical-validation figure, and
+  deterministically selected real/generated example montage;
 - one reference-calibrated profile containing all TS/C1--C5 results and
   training-only positive controls, without a pooled tail headline;
 - Category 5 physical-distribution and spatial-structure drill-downs, explicitly
   marked as thin-stratum evidence;
-- a compact memorization/admissibility safeguard panel;
-- a complete class-by-metric matrix and lossless native-unit CSV tables;
-- per-metric appendix figures containing all six native-class distributions.
+- all-class curve figures, a compact memorization/admissibility safeguard panel,
+  and extended feature/dependence audits;
+- a complete class-by-metric matrix, partition/Vmax tables, deterministic
+  montage-selection audit, and lossless native-unit CSV tables;
+- per-functional appendix figures containing all six native-class distributions.
 
 The unmatched global composition result remains in the machine audit and full
 table but is deliberately absent from the conditional-fidelity figure. Rebuild
@@ -136,10 +145,13 @@ PYTHONPATH=src python scripts/render_tc_track1_paper.py \
 ## Reproduction gates
 
 ```bash
+python scripts/audit_release_gates.py --local-only
 python scripts/audit_release_gates.py
 ```
 
-The first command is expected to fail until the remaining scientific-review and
-artifact gates are genuinely complete. The literature survey is currently a
+The first command verifies the complete in-repository evidence and must pass.
+The second is expected to fail only until the remaining external
+scientific-review and artifact-deposition gates are genuinely complete. The
+literature survey is currently a
 separate workstream; add `--include-survey` only for the full manuscript audit.
 Do not bypass failed software/TC gates for a release.

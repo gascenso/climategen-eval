@@ -91,6 +91,18 @@ feature_space:
 reference_computation:
   primary_functional_and_simultaneous_family_resamples: 2000
   secondary_diagnostic_resamples: 200
+  headline_diagnostic_resamples:
+    default_count: 1000
+    metric_overrides:
+      feature_coverage_deficit: 2000
+    metrics:
+      - radial_profile_mae
+      - radial_log_psd_mse
+      - feature_mmd2
+      - feature_density
+      - feature_coverage_deficit
+      - feature_diversity_departure
+      - preprocessing_boundary_saturation
   complete_partition_record: deterministic_seed_plus_sha256_and_three_draw_preview
 
 sensitivity_lanes:
@@ -132,6 +144,31 @@ freeze_record:
   final_evaluation_authorized_at_utc: "2026-07-16T06:29:36Z"
   rationale_document: case_studies/tropical_cyclone_bt/protocol_freeze.md
   amendments:
+    - date: "2026-07-23"
+      stage: during_clean_current_engine_stability_audit_before_final_promotion
+      change: >-
+        Increase the paper-facing secondary diagnostics from 200 to 1,000
+        reference draws (2,000 for feature coverage after its 1,000-draw
+        stability ratio was 0.257 against the frozen 0.25 threshold), retain 200
+        draws for exploratory pairwise-dependence cells, and withhold categorical
+        conclusions whenever the declared
+        split-half boundary-stability check fails. Replace the per-frame Python
+        implementation of block-balanced sampling with its vectorized,
+        distribution-identical implementation before the clean v2 rerun.
+      reason: >-
+        The first report exposed Monte Carlo boundary warnings on several
+        paper-facing curve and feature cells. Increasing their predeclared
+        computational budget improves numerical stability without changing any
+        field, metric, estimand, detection boundary, or interpretation rule.
+        Coverage received the already available full primary budget rather than
+        relaxing the stability threshold after its near-boundary diagnostic.
+        Exploratory dependence cells retain their smaller declared budget and
+        are explicitly uninterpreted when unstable. The vectorized sampler draws
+        the same block-balanced target distribution but changes the deterministic
+        RNG stream and therefore requires a complete fresh report rather than a
+        schema migration. This amendment was made for reproducibility and runtime,
+        not to preserve or reverse any model conclusion; any changed categorical
+        outcome will be reported.
     - date: "2026-07-21"
       stage: after_final_run_during_framework_scope_freeze
       change: retire_application_materiality_verdict_branch

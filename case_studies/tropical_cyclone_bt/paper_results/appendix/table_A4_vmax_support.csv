@@ -1,0 +1,7 @@
+class,generated_n,generated_unique_vmax,real_n,real_unique_vmax,generated_median_kt,real_median_kt,distribution_total_variation,generated_support_subset_of_real
+TS,1000,12,3942,13,45.0,45.0,0.031481481481481485,True
+C1,1000,7,1318,7,70.0,70.0,0.012142640364188152,True
+C2,1000,6,700,6,90.0,90.0,0.02014285714285712,True
+C3,1000,6,505,6,105.0,105.0,0.015326732673267339,True
+C4,1000,8,461,8,120.0,120.0,0.031190889370932753,True
+C5,1000,9,85,9,140.0,140.0,0.05500000000000001,True

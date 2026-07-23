@@ -17,11 +17,20 @@ composition-check rows; none of the 42 exact class-conditional cells or seven
 predeclared C4+ cells exceeds its pointwise boundary. Non-detection is not a
 claim of equality or universal application acceptability.
 
-The v2 artifact was migrated without rerunning the model from the complete
-matched model-versus-reference draw distributions stored in the frozen v1
-artifact. Its point estimate and interval are now the median and central 95%
-interval of those draws. The original configuration hash
-`9d4bdd409257157f` is retained as source provenance.
+This is a clean current-engine run from the frozen fields, not a migrated
+artifact. Scalar functionals use 2,000 reference draws. Every metric displayed
+in the main reference-gap profile uses at least 1,000 draws, and feature
+coverage uses 2,000. All 104 registered physical, curve, and feature cells pass
+the frozen reference-boundary stability gate; 78 native-class cells appear in
+the headline profile. Thirty-one exploratory pairwise-dependence cells and two
+discrete preprocessing-rate cells fail that gate, retain their raw audit values,
+and correctly receive `NOT_EVALUATED` rather than categorical conclusions.
+Configuration hash: `4bf4adb40d792785`.
+
+The localized copying audit contains no copying cell: five supported
+label-by-feature-region cells are significantly farther from training and 36
+are inconclusive. `FARTHER_FROM_TRAINING` is not interpreted as physical
+inadmissibility.
 
 Files:
 

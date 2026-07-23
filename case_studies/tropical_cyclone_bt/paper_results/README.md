@@ -1,29 +1,35 @@
 # TC GAUGE paper-facing results
 
-This directory is the output an ordinary GAUGE user should start from. The
-statistical machinery remains in the frozen report, while the main directory
-contains the concise figures and native-unit table intended for a results
-section.
+This is the complete manuscript figure/table bundle generated from one clean
+current-engine report. The main directory contains the framework, statistical
+validation, case-study, and headline-result artifacts. The appendix retains the
+complete class, curve, sensitivity, copying, dependence, admissibility, data,
+and provenance evidence.
 
 ## Main-text artifacts
 
-- `main/figure_1_reference_gap_profile.pdf`: primary intrinsic result. Every
+- `main/figure_1_framework_overview.pdf`: GAUGE data, calibration, metric, and
+  reporting workflow.
+- `main/figure_2_statistical_validation.pdf`: Monte Carlo calibration and power,
+  including the 22-block C5-like regime.
+- `main/figure_3_tc_examples.pdf`: deterministically selected typical real and
+  generated fields for TS and Categories 1--5.
+- `main/figure_4_reference_gap_profile.pdf`: primary intrinsic result. Every
   native class is visible and training-only positive controls are open diamonds.
-- `main/figure_2_tail_physical_distributions.pdf`: Category 5 empirical distributions
+- `main/figure_5_tail_physical_distributions.pdf`: Category 5 empirical distributions
   for all seven physical functionals.
-- `main/figure_3_tail_spatial_structure.pdf`: Category 5 radial-profile and spectral
+- `main/figure_6_tail_spatial_structure.pdf`: Category 5 radial-profile and spectral
   drill-downs.
-- `main/figure_4_generation_safeguards.pdf`: compact memorization and
-  preprocessing-boundary audit.
-- `main/table_1_native_metric_values.csv`: exact native-unit estimates,
+- `main/table_1_metric_registry.md`: definitions, units, roles, and registered
+  controls for the TC metric suite.
+- `main/table_2_native_metric_values.csv`: exact native-unit estimates,
   intervals, reference summaries, gaps, and statuses for every displayed class.
-- `main/table_1_c5_values.md`: compact human-readable Category 5 table for
-  direct inspection or manuscript adaptation.
-- `main/table_1_c5_values.csv`: the same Category 5 values in machine-readable form.
 
-`index.html` provides a browser-friendly landing page. The appendix retains the
-complete class matrix, all report cells, every native-class distribution, and
-the extended diagnostics.
+The appendix includes the complete conditional matrix, sensitivity lanes,
+all-class radial-profile and PSD figures, copying/preprocessing audits, every
+native-class functional distribution, extended feature/dependence diagnostics,
+partition and Vmax-support tables, deterministic example selection, and every
+report cell.
 
 ## Reporting language
 
@@ -32,11 +38,15 @@ the extended diagnostics.
 - Gap units express detectability at the declared sample size, not physical
   severity, and must not be averaged into a model score.
 - A point below 1 supports “no departure detected,” not equality.
+- A `NOT_EVALUATED` cell retains its raw audit value but supports no categorical
+  conclusion.
 - The unmatched global mixture is deliberately absent from the fidelity figure;
   it remains in the complete audit table as a dataset-composition check.
+- Curve shading is pointwise variability; curve detection uses the registered
+  scalar curve discrepancy and is not inferred by visually counting excursions.
 
 Source report: `evaluation.json`
 
-Source report SHA-256: `162514928163ff8366d4739255233259d40c3e40faed02f7d879626ec0403f45`
+Source report SHA-256: `0deb6105130a97a9a71ecbd0c369f094b3d430a00de4a2877a1eba1cba8e6c01`
 
-Configuration hash: `9d4bdd409257157f`
+Configuration hash: `4bf4adb40d792785`

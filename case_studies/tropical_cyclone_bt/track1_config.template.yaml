@@ -55,6 +55,14 @@ evaluation:
   n_eval: null
   n_resamples: 2000
   diagnostic_resamples: 200
+  diagnostic_resamples_by_metric:
+    radial_profile_mae: 1000
+    radial_log_psd_mse: 1000
+    feature_mmd2: 1000
+    feature_density: 1000
+    feature_coverage_deficit: 2000
+    feature_diversity_departure: 1000
+    preprocessing_boundary_saturation: 1000
   sensitivity_resamples: 200
   alpha: 0.05
   confidence: 0.95

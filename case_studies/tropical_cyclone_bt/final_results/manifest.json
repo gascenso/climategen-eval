@@ -2,12 +2,12 @@
   "schema": "gauge_climate.artifact_manifest.v1",
   "artifacts": {
     "evaluation.json": {
-      "sha256": "162514928163ff8366d4739255233259d40c3e40faed02f7d879626ec0403f45",
-      "bytes": 3168097
+      "sha256": "0deb6105130a97a9a71ecbd0c369f094b3d430a00de4a2877a1eba1cba8e6c01",
+      "bytes": 3163826
     },
     "evaluation_full.html": {
-      "sha256": "989d65393c7663944856dfbf549a24cdb7b0c7d3eb5fa09b857f79c51c9d1206",
-      "bytes": 90799
+      "sha256": "930cb539db03ffd5f2b715975a45dafa40a99c9dcc30a52053639554487bb34a",
+      "bytes": 89216
     }
   }
 }

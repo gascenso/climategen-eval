@@ -8,11 +8,11 @@
     "wind_averaging_period": "1-minute",
     "real_train_manifest": "data/tropical_cyclone_bt/real_train/manifest.json",
     "real_train_manifest_sha256": "f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a",
-    "preregistration_sha256": "63ccc2a9d7e9773609d0c08774d2ca063ad270e72681169bdd2843ed55836553",
+    "preregistration_sha256": "ec28e5af617eb433e35cea99d6467098f23b5bae68af788a355c5d5604106320",
     "sensitivity_contract_sha256": "1aa4592049a6137db209e3a8124cb5d48bc52343d0c763fdb5f590943ebebacf",
-    "track1_config_sha256": "1dcffbb6951a3c7e6d8b65c7642aa51232effa3ef4b6e6dc3d5efb36c4c5377b",
+    "track1_config_sha256": "5fabee14f8b9e2c1908644bdd8a277bb6b87c6a6d9eec962131c3bae76d858df",
     "runner_sha256": "2833cb7bd7826b4b1ed8bf523f962dab8b49fecda76d0b9c4d0ff3a9e4146c5d",
-    "gauge_source_sha256": "5416dd7389767e153c00fd81d8a3d2f070b378a10c530844e4207d99cce5ad46",
+    "gauge_source_sha256": "6bd2a3c89e88908eeb038efeb3628fbe8473b35fb836ea6a9b328931579d04f0",
     "design": {
       "seed": 1789,
       "control_block_count": 80,
@@ -109,47 +109,47 @@
       "1983212N06151",
       "2019040S17183"
     ],
-    "source_index_sha256": "5ca6dd941826dbd87a2c8b7ae94577cfb5ee219b8654de3f509d937146520870",
+    "source_index_sha256": "b59917d3d815d3834c7a78b4046e56d71916bace804cea801a94c7cfe78ded45",
     "reference_envelopes": {
       "w1:min_core_bt": {
-        "q50": 1.699505569458008,
-        "boundary": 3.4523539939880346,
+        "q50": 1.7002667846679689,
+        "boundary": 3.3912115982055657,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:p01_bt": {
-        "q50": 1.71229433517456,
-        "boundary": 3.5778681757736215,
+        "q50": 1.7586191074371342,
+        "boundary": 3.4560215130996674,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:r_maxgrad": {
-        "q50": 12.671875000000002,
-        "boundary": 25.046874999999986,
+        "q50": 13.3203125,
+        "boundary": 26.238281249999996,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:axisym": {
-        "q50": 0.7371343900932041,
-        "boundary": 1.5652811488063154,
+        "q50": 0.7230699502797814,
+        "boundary": 1.6077277146960032,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "w1:dav": {
-        "q50": 49.14968384116035,
-        "boundary": 107.23494673075798,
+        "q50": 49.306547954631384,
+        "boundary": 101.72156789499235,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "radial_profile_mae": {
-        "q50": 1.947605145126217,
-        "boundary": 5.29905757767293,
+        "q50": 1.9761128422835257,
+        "boundary": 5.111484629688172,
         "quantile": 0.95,
         "n_resamples": 500
       },
       "radial_log_psd_mse": {
-        "q50": 0.001153887870675567,
-        "boundary": 0.002903565856539427,
+        "q50": 0.001194869643784566,
+        "boundary": 0.0029178110352883232,
         "quantile": 0.95,
         "n_resamples": 500
       }
@@ -176,15 +176,15 @@
         "values": [
           0.0,
           0.5,
-          0.9999999999999997,
+          1.0,
           2.0,
-          4.0
+          3.9999999999999996
         ],
         "rank_correlation": 0.9999999999999999,
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 3.4523539939880346,
+        "reference_boundary": 3.3912115982055657,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -193,16 +193,16 @@
       "w1:p01_bt": {
         "values": [
           0.0,
-          0.5,
+          0.49999999999999994,
           1.0,
-          1.9999999999999993,
-          4.000000009918214
+          2.0,
+          4.000000009918213
         ],
         "rank_correlation": 0.9999999999999999,
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 3.5778681757736215,
+        "reference_boundary": 3.4560215130996674,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -231,15 +231,15 @@
       "radial_log_psd_mse": {
         "values": [
           0.0,
-          0.029723679373678782,
-          1.0834225549127952,
-          10.604078098194938
+          0.029696494380388874,
+          1.0832516483950214,
+          10.592229006199412
         ],
         "rank_correlation": 1.0,
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 0.002903565856539427,
+        "reference_boundary": 0.0029178110352883232,
         "reaches_reference_boundary": true,
         "resolution_status": "DETECTABLE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -248,15 +248,15 @@
       "w1:r_maxgrad": {
         "values": [
           0.0,
-          1.718750000000001,
-          7.953125000000002,
-          22.578125
+          1.703125,
+          9.593749999999998,
+          24.390625
         ],
         "rank_correlation": 1.0,
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 25.046874999999986,
+        "reference_boundary": 26.238281249999996,
         "reaches_reference_boundary": false,
         "resolution_status": "BELOW_REFERENCE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -286,15 +286,15 @@
       "radial_profile_mae": {
         "values": [
           0.0,
-          0.02547793407979526,
-          0.062496660993461184,
-          0.19920453335148824
+          0.02085674943600324,
+          0.05780439036797347,
+          0.18809472907674873
         ],
         "rank_correlation": 1.0,
         "minimum_rank_correlation": 0.8,
         "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 5.29905757767293,
+        "reference_boundary": 5.111484629688172,
         "reaches_reference_boundary": false,
         "resolution_status": "BELOW_REFERENCE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -303,15 +303,15 @@
       "w1:r_maxgrad": {
         "values": [
           0.0,
-          4.265625000000001,
-          3.906249999999999,
-          5.843749999999998
+          4.53125,
+          6.593750000000002,
+          7.859375
         ],
-        "rank_correlation": 0.7999999999999999,
+        "rank_correlation": 1.0,
         "minimum_rank_correlation": 0.8,
-        "monotone_nondecreasing": false,
+        "monotone_nondecreasing": true,
         "response_contract_passed": true,
-        "reference_boundary": 25.046874999999986,
+        "reference_boundary": 26.238281249999996,
         "reaches_reference_boundary": false,
         "resolution_status": "BELOW_REFERENCE_AT_MAX_SEVERITY",
         "reference_boundary_required_for_pass": false,
@@ -326,28 +326,28 @@
     "expected_response": "positive_control_exceeds_real_reference_boundary",
     "invariant": {
       "id": "per_image_discrete_fourier_power_preserved",
-      "maximum_relative_error": 3.235871752479109e-07,
+      "maximum_relative_error": 2.911195156237051e-07,
       "relative_threshold": 1e-05,
       "passed": true
     },
     "metrics": {
       "w1:axisym": {
-        "value": 2.580784781523734,
-        "reference_boundary": 1.5652811488063154,
+        "value": 2.3022841934911598,
+        "reference_boundary": 1.6077277146960032,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
       },
       "w1:dav": {
-        "value": 211.40677420316055,
-        "reference_boundary": 107.23494673075798,
+        "value": 217.32347744122725,
+        "reference_boundary": 101.72156789499235,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
       },
       "radial_profile_mae": {
-        "value": 32.632273793519445,
-        "reference_boundary": 5.29905757767293,
+        "value": 32.60612923397081,
+        "reference_boundary": 5.111484629688172,
         "reaches_reference_boundary": true,
         "invariant_passed": true,
         "passed": true
@@ -370,7 +370,7 @@
       "effect_definition": "median generated-to-train NN minus median real-to-train NN",
       "status_semantics": {
         "COPYING_DETECTED": "generated queries are significantly closer to training",
-        "OFF_MANIFOLD": "legacy schema label: generated queries are significantly farther from training; this does not establish physical inadmissibility",
+        "FARTHER_FROM_TRAINING": "generated queries are significantly farther from training; this does not establish physical inadmissibility or a global manifold failure",
         "INCONCLUSIVE": "the simultaneous interval crosses zero"
       },
       "multiplicity": "Bonferroni simultaneous intervals across supported query-stratum-by-region cells",
@@ -379,89 +379,100 @@
         {
           "region": 0,
           "stratum": null,
-          "n_generated": 202,
-          "n_real": 181,
-          "n_real_blocks": 25,
-          "effect": -3.801855281941652,
-          "ci_low": -4.262024284520112,
-          "ci_high": -3.355482473139482,
+          "n_generated": 86,
+          "n_real": 86,
+          "n_real_blocks": 19,
+          "effect": -4.123516187142709,
+          "ci_low": -4.483567814826853,
+          "ci_high": -3.8323748729813856,
           "status": "COPYING_DETECTED"
         },
         {
           "region": 1,
           "stratum": null,
-          "n_generated": 194,
-          "n_real": 187,
-          "n_real_blocks": 24,
-          "effect": -3.754497041276617,
-          "ci_low": -4.370694209110048,
-          "ci_high": -3.5509377462050518,
+          "n_generated": 159,
+          "n_real": 217,
+          "n_real_blocks": 30,
+          "effect": -3.6606843344498454,
+          "ci_low": -3.9641000711790335,
+          "ci_high": -3.3266479704648453,
           "status": "COPYING_DETECTED"
         },
         {
           "region": 2,
           "stratum": null,
-          "n_generated": 19,
-          "n_real": 47,
-          "n_real_blocks": 8,
-          "effect": -5.053271144184216,
-          "ci_low": -6.304011418532931,
-          "ci_high": -4.041756812582271,
+          "n_generated": 134,
+          "n_real": 116,
+          "n_real_blocks": 21,
+          "effect": -3.528357226519351,
+          "ci_low": -4.041508205339786,
+          "ci_high": -3.29127043318029,
           "status": "COPYING_DETECTED"
         },
         {
           "region": 3,
           "stratum": null,
-          "n_generated": 226,
-          "n_real": 174,
-          "n_real_blocks": 19,
-          "effect": -4.136461069962177,
-          "ci_low": -4.6520674029624915,
-          "ci_high": -3.607343107900816,
+          "n_generated": 105,
+          "n_real": 75,
+          "n_real_blocks": 11,
+          "effect": -3.7403106374296797,
+          "ci_low": -4.152676736854338,
+          "ci_high": -3.3410342335896996,
           "status": "COPYING_DETECTED"
         },
         {
           "region": 4,
           "stratum": null,
-          "n_generated": 90,
-          "n_real": 73,
-          "n_real_blocks": 20,
-          "effect": -4.331695482382204,
-          "ci_low": -4.603249338691152,
-          "ci_high": -3.9314251280570485,
+          "n_generated": 213,
+          "n_real": 221,
+          "n_real_blocks": 27,
+          "effect": -3.66128773431995,
+          "ci_low": -4.044946129231195,
+          "ci_high": -3.239641609590286,
+          "status": "COPYING_DETECTED"
+        },
+        {
+          "region": 5,
+          "stratum": null,
+          "n_generated": 92,
+          "n_real": 41,
+          "n_real_blocks": 9,
+          "effect": -4.357173075623797,
+          "ci_low": -5.066040707242488,
+          "ci_high": -3.9870175581782794,
           "status": "COPYING_DETECTED"
         },
         {
           "region": 6,
           "stratum": null,
-          "n_generated": 121,
-          "n_real": 148,
-          "n_real_blocks": 17,
-          "effect": -3.6952044792895555,
-          "ci_low": -3.9549092261656504,
-          "ci_high": -3.2667041457170534,
+          "n_generated": 125,
+          "n_real": 181,
+          "n_real_blocks": 22,
+          "effect": -3.9082884643727147,
+          "ci_low": -4.1196911730281816,
+          "ci_high": -3.471719565912433,
           "status": "COPYING_DETECTED"
         },
         {
           "region": 7,
           "stratum": null,
-          "n_generated": 139,
-          "n_real": 184,
-          "n_real_blocks": 28,
-          "effect": -3.7012148640789713,
-          "ci_low": -3.883045593447631,
-          "ci_high": -3.2801991558507977,
+          "n_generated": 86,
+          "n_real": 63,
+          "n_real_blocks": 10,
+          "effect": -4.238795560017573,
+          "ci_low": -4.817376008462412,
+          "ci_high": -3.8605475113095093,
           "status": "COPYING_DETECTED"
         }
       ],
       "n_regions": 8,
-      "n_supported_cells": 7,
+      "n_supported_cells": 8,
       "query_stratification": "none",
       "seed": 1789,
       "feature_provenance": {
         "schema": "gauge_climate.feature_space.v1",
         "fit_source": "train",
-        "source_fingerprint": "ff1718475979cc13",
+        "source_fingerprint": "a2e767a4e3cfd6ae",
         "sample_shape": [
           256,
           256
@@ -990,26 +1001,26 @@
           "p01_bt"
         ],
         "n_eof": 20,
-        "provenance_hash": "265bcdf4680610f8"
+        "provenance_hash": "d45c30219c6242eb"
       },
       "estimand": "block_balanced",
       "train_region_counts": [
-        190,
-        206,
-        27,
-        202,
-        94,
-        9,
-        116,
-        156
+        104,
+        181,
+        134,
+        90,
+        213,
+        73,
+        112,
+        93
       ]
     },
     "sampling": {
       "n_train_reference": 1000,
       "n_real_query": 1000,
       "n_copyist": 1000,
-      "train_index_sha256": "72937baeab4e8dbd350e4ea58276387dc9a0edc452f7e90de21ab0f2663a5c8d",
-      "real_index_sha256": "97f86d8d9664c73cf0c32073cdf860b10c9a2c405941f9f5c8c9f8ed34f9fec3"
+      "train_index_sha256": "312b8f8c1d42830ea30d9e4a01d12a992bccd8a111dab2bfa830cbabdd478bbd",
+      "real_index_sha256": "bdbd3c8f76d4fd26e4d2282fc9522861bd9989ec4532cce5f6e1f106e384fedb"
     },
     "passed": true
   }

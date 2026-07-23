@@ -1,0 +1,84 @@
+{
+  "schema": "gauge_climate.tc_submission_inventory.v1",
+  "label_contract": {
+    "wind_variable": "USA_WIND",
+    "averaging_period": "1-minute"
+  },
+  "datasets": {
+    "real_train": {
+      "path": "data/tropical_cyclone_bt/real_train",
+      "file_count": 6,
+      "logical_bytes": 13607774617,
+      "checksum_manifest": "data/tropical_cyclone_bt/real_train/manifest.json",
+      "checksum_manifest_sha256": "f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a"
+    },
+    "real_validation": {
+      "path": "data/tropical_cyclone_bt/real_val",
+      "file_count": 6,
+      "logical_bytes": 1885789013,
+      "checksum_manifest": "data/tropical_cyclone_bt/real_val/manifest.json",
+      "checksum_manifest_sha256": "c64ad082f47d60956a31233f571e347a00cd3304fa90dc2db22289dba456a3ed"
+    },
+    "real_test": {
+      "path": "data/tropical_cyclone_bt/real_test",
+      "file_count": 6,
+      "logical_bytes": 1838585160,
+      "checksum_manifest": "data/tropical_cyclone_bt/real_test/manifest.json",
+      "checksum_manifest_sha256": "edd7d0f6bf3ec37c5332b53ee57afd9f690f32a6d98def7d3af60cdcb53fd89e"
+    },
+    "baseline_ztsnr_test": {
+      "path": "data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000",
+      "file_count": 13,
+      "logical_bytes": 1572893720,
+      "checksum_manifest": "data/tropical_cyclone_bt/generated/manifests/baseline_ztsnr_test.json",
+      "checksum_manifest_sha256": "e3b0922c5eee3c18f68e4d0e0bd381739d828451e4b4434a15b713720d94a7aa"
+    }
+  },
+  "evidence": {
+    "preregistration": {
+      "path": "case_studies/tropical_cyclone_bt/preregistration.yaml",
+      "bytes": 12539,
+      "sha256": "ec28e5af617eb433e35cea99d6467098f23b5bae68af788a355c5d5604106320"
+    },
+    "protocol_freeze": {
+      "path": "case_studies/tropical_cyclone_bt/protocol_freeze.md",
+      "bytes": 8346,
+      "sha256": "3080639e8085dd63506248ecaca09a8f4d4159923205535ee4ba4c83acff0cd9"
+    },
+    "evaluation_config": {
+      "path": "case_studies/tropical_cyclone_bt/track1_config.template.yaml",
+      "bytes": 3407,
+      "sha256": "5fabee14f8b9e2c1908644bdd8a277bb6b87c6a6d9eec962131c3bae76d858df"
+    },
+    "sensitivity_controls": {
+      "path": "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json",
+      "bytes": 22781,
+      "sha256": "0484fa4c02b465b150ae5247c2449e01082fde561d5d7ce1800cee4fb171db0d"
+    },
+    "statistical_validation": {
+      "path": "validation/statistical_validation_v0.2.json",
+      "bytes": 12912,
+      "sha256": "67ec4fc8407f97dbe6e04ea1c97c7d055c15d012576e1bda036452d6fedb4f82"
+    },
+    "final_report_manifest": {
+      "path": "case_studies/tropical_cyclone_bt/final_results/manifest.json",
+      "bytes": 355,
+      "sha256": "d84ca2016bdb704362894b3e8c09243242b288761e52c9f203ded901077c04ae"
+    },
+    "paper_bundle_manifest": {
+      "path": "case_studies/tropical_cyclone_bt/paper_results/manifest.json",
+      "bytes": 9666,
+      "sha256": "f634d498e899431de2bcff7e94eae052e41c3b86239aa8cdd7555a2a365ca7b4"
+    },
+    "partition_summary": {
+      "path": "case_studies/tropical_cyclone_bt/partition_summary.json",
+      "bytes": 2806,
+      "sha256": "4151962defd07da970fcf37fd36b6266d5d9a2041c2d394e0872a68f094f13a1"
+    },
+    "vmax_support_audit": {
+      "path": "case_studies/tropical_cyclone_bt/vmax_support_summary.json",
+      "bytes": 9756,
+      "sha256": "47113c164cfdafef93dda61f224c3acb86250f9a298266a815244a126eed204b"
+    }
+  }
+}

@@ -97,6 +97,20 @@ intensity-class-by-feature-region cells and controls multiplicity across all
 supported cells. The original completed report and its SHA-256 are retained;
 no physical metric or conclusion rule was changed after seeing its values.
 
+Superseding computational amendment on 2026-07-23, after auditing the migrated
+v2 report and before a clean current-engine rerun: diagnostics displayed
+in the paper-facing profile use 1,000 reference draws, except feature coverage,
+which uses the full 2,000 after its 1,000-draw stability ratio was 0.257 against
+the frozen 0.25 threshold. Exploratory
+pairwise-dependence cells retain 200. A failed split-half boundary-stability
+check now withholds the categorical conclusion while retaining the raw estimate
+and gap. Block-balanced frame draws are generated in vectorized batches per
+selected block rather than one Python call per frame; this is the same sampling
+distribution but changes the deterministic RNG stream. The complete report,
+controls, checksums, and figures must therefore be regenerated. The amendment
+does not change the data, estimand, metric definitions, or detection rule, and
+any resulting categorical change must remain visible.
+
 The generic Monte Carlo gate validates whole-block partition invariants,
 pointwise false-positive behavior, simultaneous boundaries, unequal block
 sizes, and controlled-shift power. The TC training-only response and copyist
@@ -111,12 +125,14 @@ arbitrary. This changes no raw discrepancy, reference envelope, gap,
 sensitivity control, memorization result, or detection conclusion. The earlier
 implementation remains transparent in Git history.
 
-## Gates still blocking final inference
+## External gates still blocking the archival release
 
 - Independently review the real-reference engine, simultaneous inference, and
   interpretation wording; the frozen training-only sensitivity and copyist
   controls have passed.
-- Archive permission-cleared real/generated artifacts.
+- Archive permission-cleared real/generated artifacts and record their
+  persistent identifiers.
+- Have an independent user reproduce the frozen workflow from the archive.
 - Preserve this record in Git history and record any amendments.
 
 The literature survey is a separate manuscript workstream and is not part of
