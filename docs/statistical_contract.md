@@ -26,9 +26,12 @@ physical realism, or application acceptability.
 
 The printed raw interval is the central `(1 - alpha)` interval of the matched
 model-versus-reference resampling distribution. It quantifies variation induced
-by whole-block real resampling, matched generated subsampling, and the declared
-finite evaluation design. It is not presented as a regular population-W1
-equivalence interval.
+by whole-block real resampling, generated subsampling when `N_eval` is smaller
+than the supplied bank, and the declared finite evaluation design. When
+`N_eval` equals the bank size, the generated bank is intentionally fixed across
+draws: the interval is conditional on that bank and does not estimate
+generator-population uncertainty. It is not presented as a regular
+population-W1 equivalence interval.
 
 For scalar functionals, W1 and its interval remain in the functional’s native
 units. Curve, feature, rate, and dependence metrics retain their registered
@@ -51,8 +54,13 @@ resampling units and draws.
 ## Resampling and conditioning contract
 
 Functional W1 cells and all cells in a simultaneous family use `n_resamples`.
-Secondary diagnostics may use the smaller `diagnostic_resamples` budget, which
-is reported per cell. Quadratic feature metrics may use a declared matched
+Secondary diagnostics may use the smaller `diagnostic_resamples` budget.
+Predeclared headline diagnostics may receive a larger
+`diagnostic_resamples_by_metric` budget without being added to a simultaneous
+inferential family. The effective count is reported per cell. A cell whose
+reference boundary fails the declared split-half stability check retains its raw
+estimate and gap for audit but receives `NOT_EVALUATED`, not a categorical
+detection conclusion. Quadratic feature metrics may use a declared matched
 sample cap. Complete reference plans are deterministic from the inputs,
 configuration, and seed; reports retain a SHA-256 digest and preview.
 

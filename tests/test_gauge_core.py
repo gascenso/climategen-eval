@@ -596,3 +596,66 @@ def test_secondary_metrics_use_declared_diagnostic_resample_budget():
     assert partition["draw_count"] == 40
     assert len(partition["preview"]) == 3
     assert len(partition["manifest_sha256"]) == 64
+
+
+def test_secondary_metric_can_receive_a_predeclared_larger_budget():
+    train, real, generated = _datasets()
+    diagnostic = gauge.MetricSpec(
+        id="mean_departure",
+        transform=lambda fields: fields[:, 0],
+        estimator=lambda generated_values, real_values: abs(
+            float(np.mean(generated_values) - np.mean(real_values))
+        ),
+        kind=gauge.MetricKind.SET,
+        units="unit",
+        description="toy secondary diagnostic",
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        metrics=[diagnostic],
+        config=_config(
+            diagnostic_resamples=20,
+            diagnostic_resamples_by_metric={"mean_departure": 30},
+        ),
+    )
+    cell = report.cells[0]
+    assert cell.provenance["reference_resamples_used"] == 30
+
+
+def test_invalid_per_metric_diagnostic_budget_is_rejected():
+    for budget in (19, 41):
+        try:
+            _config(diagnostic_resamples_by_metric={"mean_departure": budget})
+        except ValueError:
+            pass
+        else:  # pragma: no cover
+            raise AssertionError("Expected invalid per-metric diagnostic budget rejection.")
+
+
+def test_unstable_reference_boundary_withholds_categorical_detection():
+    train, real, generated = _datasets()
+    diagnostic = gauge.MetricSpec(
+        id="mean_departure",
+        transform=lambda fields: fields[:, 0],
+        estimator=lambda generated_values, real_values: abs(
+            float(np.mean(generated_values) - np.mean(real_values))
+        ),
+        kind=gauge.MetricKind.SET,
+        units="unit",
+        description="toy secondary diagnostic",
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        metrics=[diagnostic],
+        config=_config(
+            diagnostic_resamples=20,
+            reference_stability_threshold=1e-12,
+        ),
+    )
+    cell = report.cells[0]
+    assert cell.detection_status is gauge.DetectionStatus.NOT_EVALUATED
+    assert any("instability" in warning for warning in cell.warnings)

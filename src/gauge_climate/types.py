@@ -143,6 +143,7 @@ class EvaluationConfig:
     n_eval: int | None = None
     n_resamples: int = 200
     diagnostic_resamples: int | None = None
+    diagnostic_resamples_by_metric: Mapping[str, int] = field(default_factory=dict)
     sensitivity_resamples: int = 100
     alpha: float = 0.05
     confidence: float = 0.95
@@ -171,6 +172,26 @@ class EvaluationConfig:
             raise ValueError("diagnostic_resamples must be at least 20.")
         if self.diagnostic_resamples > self.n_resamples:
             raise ValueError("diagnostic_resamples cannot exceed n_resamples.")
+        diagnostic_overrides = {
+            str(metric_id): int(value)
+            for metric_id, value in self.diagnostic_resamples_by_metric.items()
+        }
+        if any(not metric_id or any(char.isspace() for char in metric_id) for metric_id in diagnostic_overrides):
+            raise ValueError(
+                "diagnostic_resamples_by_metric keys must be metric identifiers."
+            )
+        if any(
+            value < 20 or value > self.n_resamples
+            for value in diagnostic_overrides.values()
+        ):
+            raise ValueError(
+                "Per-metric diagnostic resamples must be between 20 and n_resamples."
+            )
+        object.__setattr__(
+            self,
+            "diagnostic_resamples_by_metric",
+            diagnostic_overrides,
+        )
         if self.sensitivity_resamples < 20:
             raise ValueError("sensitivity_resamples must be at least 20.")
         if not 0 < self.alpha < 0.5:

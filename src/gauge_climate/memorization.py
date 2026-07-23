@@ -202,7 +202,11 @@ def localized_copying_test(
             )
         low = float(np.quantile(bootstrap, simultaneous_alpha / 2.0))
         high = float(np.quantile(bootstrap, 1.0 - simultaneous_alpha / 2.0))
-        status = "COPYING_DETECTED" if high < 0 else ("OFF_MANIFOLD" if low > 0 else "INCONCLUSIVE")
+        status = (
+            "COPYING_DETECTED"
+            if high < 0
+            else ("FARTHER_FROM_TRAINING" if low > 0 else "INCONCLUSIVE")
+        )
         region_results.append(
             RegionCopyingResult(
                 region=region,
@@ -220,16 +224,20 @@ def localized_copying_test(
     overall = (
         "COPYING_DETECTED"
         if "COPYING_DETECTED" in statuses
-        else ("OFF_MANIFOLD" if "OFF_MANIFOLD" in statuses else "NO_LOCAL_DEPARTURE_DETECTED")
+        else (
+            "FARTHER_FROM_TRAINING"
+            if "FARTHER_FROM_TRAINING" in statuses
+            else "NO_LOCAL_DEPARTURE_DETECTED"
+        )
     )
     return {
         "status": overall,
         "effect_definition": "median generated-to-train NN minus median real-to-train NN",
         "status_semantics": {
             "COPYING_DETECTED": "generated queries are significantly closer to training",
-            "OFF_MANIFOLD": (
-                "legacy schema label: generated queries are significantly farther from "
-                "training; this does not establish physical inadmissibility"
+            "FARTHER_FROM_TRAINING": (
+                "generated queries are significantly farther from training; this does "
+                "not establish physical inadmissibility or a global manifold failure"
             ),
             "INCONCLUSIVE": "the simultaneous interval crosses zero",
         },

@@ -419,10 +419,14 @@ def evaluate(
                 metric.kind is MetricKind.FUNCTIONAL_W1
                 or cell_key in config.simultaneous_family
             )
+            diagnostic_draw_count = config.diagnostic_resamples_by_metric.get(
+                metric.id,
+                config.diagnostic_resamples,
+            )
             metric_plan = (
                 plan
                 if primary_reference
-                else replace(plan, draws=plan.draws[: config.diagnostic_resamples])
+                else replace(plan, draws=plan.draws[:diagnostic_draw_count])
             )
             real_values, all_generated_values = transformed[metric.id]
             generated_values = all_generated_values[generated_idx]
@@ -509,7 +513,13 @@ def evaluate(
             stability_warning = None
             if stability_ratio > config.reference_stability_threshold:
                 resample_parameter = (
-                    "n_resamples" if primary_reference else "diagnostic_resamples"
+                    "n_resamples"
+                    if primary_reference
+                    else (
+                        f"diagnostic_resamples_by_metric[{metric.id!r}]"
+                        if metric.id in config.diagnostic_resamples_by_metric
+                        else "diagnostic_resamples"
+                    )
                 )
                 stability_warning = (
                     f"Reference boundary split-half instability={stability_ratio:.3g} "
@@ -594,6 +604,7 @@ def evaluate(
             control_failures = _failed_sensitivity_lanes(metric.id, sensitivity_results)
             cell_warnings = []
             if stability_warning is not None:
+                cell_detection = DetectionStatus.NOT_EVALUATED
                 cell_warnings.append(stability_warning)
                 warnings.append(f"{group_name}:{metric.id}: {stability_warning}")
             if control_failures:

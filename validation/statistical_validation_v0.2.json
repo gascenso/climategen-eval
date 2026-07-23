@@ -1,0 +1,515 @@
+{
+  "schema": "gauge_climate.statistical_validation.v3",
+  "status": "PASSED",
+  "configuration": {
+    "seed": 1789,
+    "trials": 300,
+    "resamples": 200,
+    "jobs": 4,
+    "alpha": 0.05,
+    "minimum_blocks_per_half": 10,
+    "shift_effect_units": "marginal standard deviations"
+  },
+  "regimes": {
+    "balanced_80": {
+      "id": "balanced_80",
+      "label": "80 balanced blocks",
+      "n_blocks": 80,
+      "n_eval": 240,
+      "block_sizes": "balanced",
+      "null": {
+        "detection_rate": 0.0033333333333333335,
+        "successes": 1,
+        "trials": 300,
+        "wilson_95": [
+          0.0005886577218511581,
+          0.018636693694531237
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "detection_power": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "detection_power": 0.04666666666666667,
+          "successes": 14,
+          "trials": 300,
+          "wilson_95": [
+            0.027998933682334012,
+            0.07679736022792105
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "detection_power": 0.52,
+          "successes": 156,
+          "trials": 300,
+          "wilson_95": [
+            0.4635710820137406,
+            0.5759231991372775
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "detection_power": 0.95,
+          "successes": 285,
+          "trials": 300,
+          "wilson_95": [
+            0.9191529665272558,
+            0.9694683593706526
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "detection_power": 0.9866666666666667,
+          "successes": 296,
+          "trials": 300,
+          "wilson_95": [
+            0.9662244697474675,
+            0.9948030382606411
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "detection_power": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "variance_wide": {
+          "detection_power": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "crossing_cdf": {
+          "detection_power": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "tail_contamination": {
+          "detection_power": 0.9966666666666667,
+          "successes": 299,
+          "trials": 300,
+          "wilson_95": [
+            0.9813633063054688,
+            0.9994113422781488
+          ]
+        },
+        "train_test_shift": {
+          "detection_power": 0.9966666666666667,
+          "successes": 299,
+          "trials": 300,
+          "wilson_95": [
+            0.9813633063054688,
+            0.9994113422781488
+          ]
+        }
+      }
+    },
+    "unequal_80": {
+      "id": "unequal_80",
+      "label": "80 unequal blocks",
+      "n_blocks": 80,
+      "n_eval": 240,
+      "block_sizes": "severely_unequal",
+      "null": {
+        "detection_rate": 0.0,
+        "successes": 0,
+        "trials": 300,
+        "wilson_95": [
+          8.673617379884035e-19,
+          0.012642971224546034
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "detection_power": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "detection_power": 0.04,
+          "successes": 12,
+          "trials": 300,
+          "wilson_95": [
+            0.023027321487942308,
+            0.06860421203864003
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "detection_power": 0.44333333333333336,
+          "successes": 133,
+          "trials": 300,
+          "wilson_95": [
+            0.38818691756565193,
+            0.4999126191731299
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "detection_power": 0.91,
+          "successes": 273,
+          "trials": 300,
+          "wilson_95": [
+            0.8722229892013517,
+            0.9374097743945206
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "detection_power": 0.9866666666666667,
+          "successes": 296,
+          "trials": 300,
+          "wilson_95": [
+            0.9662244697474675,
+            0.9948030382606411
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "detection_power": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "variance_wide": {
+          "detection_power": 0.9933333333333333,
+          "successes": 298,
+          "trials": 300,
+          "wilson_95": [
+            0.9760224167496929,
+            0.998169851642088
+          ]
+        },
+        "crossing_cdf": {
+          "detection_power": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "tail_contamination": {
+          "detection_power": 0.9933333333333333,
+          "successes": 298,
+          "trials": 300,
+          "wilson_95": [
+            0.9760224167496929,
+            0.998169851642088
+          ]
+        },
+        "train_test_shift": {
+          "detection_power": 0.9966666666666667,
+          "successes": 299,
+          "trials": 300,
+          "wilson_95": [
+            0.9813633063054688,
+            0.9994113422781488
+          ]
+        }
+      }
+    },
+    "c5_like_22": {
+      "id": "c5_like_22",
+      "label": "22 blocks, N=1,000",
+      "n_blocks": 22,
+      "n_eval": 1000,
+      "block_sizes": "c5_like",
+      "null": {
+        "detection_rate": 0.006666666666666667,
+        "successes": 2,
+        "trials": 300,
+        "wilson_95": [
+          0.0018301483579117855,
+          0.023977583250306973
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "detection_power": 0.0033333333333333335,
+          "successes": 1,
+          "trials": 300,
+          "wilson_95": [
+            0.0005886577218511581,
+            0.018636693694531237
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "detection_power": 0.013333333333333334,
+          "successes": 4,
+          "trials": 300,
+          "wilson_95": [
+            0.005196961739358857,
+            0.03377553025253262
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "detection_power": 0.08,
+          "successes": 24,
+          "trials": 300,
+          "wilson_95": [
+            0.054346855395144764,
+            0.11627324043347391
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "detection_power": 0.26,
+          "successes": 78,
+          "trials": 300,
+          "wilson_95": [
+            0.21362060325993487,
+            0.3124480229278472
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "detection_power": 0.43333333333333335,
+          "successes": 130,
+          "trials": 300,
+          "wilson_95": [
+            0.3784513181454693,
+            0.48990107801780347
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "detection_power": 0.016666666666666666,
+          "successes": 5,
+          "trials": 300,
+          "wilson_95": [
+            0.00713947735063333,
+            0.0384153948330945
+          ]
+        },
+        "variance_wide": {
+          "detection_power": 0.4666666666666667,
+          "successes": 140,
+          "trials": 300,
+          "wilson_95": [
+            0.41099110566704244,
+            0.5231850924145939
+          ]
+        },
+        "crossing_cdf": {
+          "detection_power": 0.12666666666666668,
+          "successes": 38,
+          "trials": 300,
+          "wilson_95": [
+            0.09369224846506602,
+            0.16908117004926165
+          ]
+        },
+        "tail_contamination": {
+          "detection_power": 0.37666666666666665,
+          "successes": 113,
+          "trials": 300,
+          "wilson_95": [
+            0.3237203650702255,
+            0.4327315678318291
+          ]
+        },
+        "train_test_shift": {
+          "detection_power": 0.36666666666666664,
+          "successes": 110,
+          "trials": 300,
+          "wilson_95": [
+            0.3141415065082282,
+            0.4225632858183173
+          ]
+        }
+      }
+    },
+    "minimum_20": {
+      "id": "minimum_20",
+      "label": "20-block boundary",
+      "n_blocks": 20,
+      "n_eval": 1000,
+      "block_sizes": "c5_like",
+      "null": {
+        "detection_rate": 0.0033333333333333335,
+        "successes": 1,
+        "trials": 300,
+        "wilson_95": [
+          0.0005886577218511581,
+          0.018636693694531237
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "detection_power": 0.0033333333333333335,
+          "successes": 1,
+          "trials": 300,
+          "wilson_95": [
+            0.0005886577218511581,
+            0.018636693694531237
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "detection_power": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "detection_power": 0.03,
+          "successes": 9,
+          "trials": 300,
+          "wilson_95": [
+            0.01586185380943231,
+            0.05602253914164096
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "detection_power": 0.18666666666666668,
+          "successes": 56,
+          "trials": 300,
+          "wilson_95": [
+            0.1466374821326313,
+            0.23461877983475085
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "detection_power": 0.33,
+          "successes": 99,
+          "trials": 300,
+          "wilson_95": [
+            0.2792344636154957,
+            0.3850641466008499
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "detection_power": 0.016666666666666666,
+          "successes": 5,
+          "trials": 300,
+          "wilson_95": [
+            0.00713947735063333,
+            0.0384153948330945
+          ]
+        },
+        "variance_wide": {
+          "detection_power": 0.48333333333333334,
+          "successes": 145,
+          "trials": 300,
+          "wilson_95": [
+            0.4273544128335898,
+            0.5397336862072283
+          ]
+        },
+        "crossing_cdf": {
+          "detection_power": 0.10666666666666667,
+          "successes": 32,
+          "trials": 300,
+          "wilson_95": [
+            0.07657584904594214,
+            0.14670328831736743
+          ]
+        },
+        "tail_contamination": {
+          "detection_power": 0.31333333333333335,
+          "successes": 94,
+          "trials": 300,
+          "wilson_95": [
+            0.2634843975598553,
+            0.36790231169730847
+          ]
+        },
+        "train_test_shift": {
+          "detection_power": 0.39666666666666667,
+          "successes": 119,
+          "trials": 300,
+          "wilson_95": [
+            0.34295083194304077,
+            0.452995382110032
+          ]
+        }
+      }
+    }
+  },
+  "simultaneous_reference": {
+    "family_size": 5,
+    "pointwise_any": {
+      "familywise_detection_rate": 0.0,
+      "successes": 0,
+      "trials": 300,
+      "wilson_95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ]
+    },
+    "bonferroni_any": {
+      "familywise_detection_rate": 0.0,
+      "successes": 0,
+      "trials": 300,
+      "wilson_95": [
+        8.673617379884035e-19,
+        0.012642971224546034
+      ]
+    },
+    "all_boundaries_resolved": true,
+    "minimum_resamples": 99
+  },
+  "failure_paths": {
+    "nineteen_blocks": {
+      "expected": "fail closed before inference",
+      "passed": true
+    }
+  },
+  "engine_parity_max_abs": 2.220446049250313e-16,
+  "gates": {
+    "reference_plan_invariants": true,
+    "vectorized_engine_parity": true,
+    "pointwise_false_positive_upper_at_most_0.05_all_regimes": true,
+    "standard_shift_0.55_power_lower_at_least_0.80": true,
+    "standard_alternative_power_lower_at_least_0.80": true,
+    "simultaneous_familywise_upper_at_most_0.05": true,
+    "simultaneous_boundary_resolution": true,
+    "fewer_than_twenty_blocks_rejected": true
+  }
+}

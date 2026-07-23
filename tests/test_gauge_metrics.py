@@ -202,7 +202,7 @@ def test_copying_test_matches_queries_within_supplied_strata():
     assert common["status"] == "COPYING_DETECTED"
 
 
-def test_localized_test_flags_clear_off_manifold_generation():
+def test_localized_test_reports_clear_farther_from_training_generation():
     rng = np.random.default_rng(33)
     train = rng.normal(size=(120, 3))
     real = rng.normal(size=(90, 3))
@@ -218,7 +218,7 @@ def test_localized_test_flags_clear_off_manifold_generation():
         min_real_blocks=5,
         seed=4,
     )
-    assert result["status"] == "OFF_MANIFOLD"
+    assert result["status"] == "FARTHER_FROM_TRAINING"
 
 
 def test_predeclared_sensitivity_lane_has_monotone_response():

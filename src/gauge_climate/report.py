@@ -25,6 +25,9 @@ _RENAMED_THRESHOLD_FIELDS = {
     "phase_power_relative_tolerance": "phase_power_relative_threshold",
     "relative_tolerance": "relative_threshold",
 }
+_RENAMED_MEMORIZATION_STATUS = {
+    "OFF_MANIFOLD": "FARTHER_FROM_TRAINING",
+}
 
 
 def _without_retired_tolerance_fields(value: Any) -> Any:
@@ -38,6 +41,23 @@ def _without_retired_tolerance_fields(value: Any) -> Any:
         }
     if isinstance(value, list):
         return [_without_retired_tolerance_fields(item) for item in value]
+    return value
+
+
+def _with_current_memorization_statuses(value: Any) -> Any:
+    """Read pre-1.0 reports using the current neutral copying vocabulary."""
+
+    if isinstance(value, Mapping):
+        return {
+            _RENAMED_MEMORIZATION_STATUS.get(str(key), str(key)): (
+                _with_current_memorization_statuses(item)
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_with_current_memorization_statuses(item) for item in value]
+    if isinstance(value, str):
+        return _RENAMED_MEMORIZATION_STATUS.get(value, value)
     return value
 
 
@@ -132,6 +152,7 @@ class EvaluationReport:
             payload = _migrate_v1_payload(raw_payload)
         else:
             payload = _without_retired_tolerance_fields(raw_payload)
+        payload = _with_current_memorization_statuses(payload)
         cells = []
         for raw in payload["cells"]:
             node = dict(raw)

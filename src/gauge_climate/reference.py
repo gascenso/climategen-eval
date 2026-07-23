@@ -124,9 +124,23 @@ def draw_real_indices(
     block_ids = list(by_block)
     if not block_ids:
         raise ValueError("No eligible blocks remain for block-balanced sampling.")
-    selected_blocks = rng.choice(np.asarray(block_ids, dtype=object), size=n, replace=True)
-    output = [int(rng.choice(by_block[str(block)])) for block in selected_blocks]
-    return np.asarray(output, dtype=np.int64)
+    # Draw the block for every requested observation, then draw frames in one
+    # vectorized call per occupied block.  This is exactly the declared
+    # block-balanced distribution but avoids one Python/RNG call per frame,
+    # which is material for N=1,000 reference plans with thousands of draws.
+    selected = rng.integers(0, len(block_ids), size=n)
+    output = np.empty(n, dtype=np.int64)
+    for block_index in np.unique(selected):
+        positions = np.flatnonzero(selected == block_index)
+        candidates_for_block = np.asarray(
+            by_block[block_ids[int(block_index)]], dtype=np.int64
+        )
+        output[positions] = rng.choice(
+            candidates_for_block,
+            size=positions.size,
+            replace=True,
+        )
+    return output
 
 
 def build_reference_plan(
