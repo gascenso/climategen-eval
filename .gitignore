@@ -28,3 +28,35 @@ survey/figures/
 
 # Local design sketch superseded by the generated paper-facing bundle.
 /EXAMPLE_SIMPLER_FRAMEWORK.jpg
+
+# Supplied platform download metadata and the source template archive; the
+# extracted, populated package under manuscript/gmd is versioned instead.
+*:Zone.Identifier
+/Copernicus_LaTeX_Package.zip
+
+# Local LaTeX build products. The reviewed manuscript PDF is retained as a
+# paper-facing preview; transient compiler state is not.
+/manuscript/gmd/*.aux
+/manuscript/gmd/*.bbl
+/manuscript/gmd/*.blg
+/manuscript/gmd/*.log
+/manuscript/gmd/*.out
+/manuscript/gmd/*.synctex.gz
+/manuscript/gmd/*.toc
+
+# Local manuscript previews and raster staging copies can lag the canonical
+# LaTeX/PDF source bundle. They are convenient for inspection but are not
+# release evidence.
+/manuscript/gmd/manuscript.pdf
+/manuscript/gmd/manuscript_changes_highlighted.pdf
+/manuscript/gmd/fig*.png
+/manuscript/gmd/fig08.pdf
+/manuscript/gmd/fig09.pdf
+/manuscript/gmd/fig10.pdf
+/manuscript/gmd/fig11.pdf
+/manuscript/gmd/fig12.pdf
+/manuscript/Peer review of GAUGE.docx
+
+# Deterministic submission archives are rebuilt from manuscript/gmd; keep the
+# immutable submitted baseline ZIP, but do not version regenerated v0.2 bundles.
+/manuscript/GAUGE_v0.2_GMD_*.zip

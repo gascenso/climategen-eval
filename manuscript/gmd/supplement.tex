@@ -1,0 +1,339 @@
+\PassOptionsToPackage{countmax}{subfloat}
+\makeatletter
+\def\caption@documentclass{standard}
+\makeatother
+\documentclass[gmd, manuscript]{copernicus}
+
+\renewcommand{\thesection}{S\arabic{section}}
+\renewcommand{\thesubsection}{S\arabic{section}.\arabic{subsection}}
+\renewcommand{\thefigure}{S\arabic{figure}}
+\renewcommand{\thetable}{S\arabic{table}}
+
+\begin{document}
+\input{tables/results_macros.tex}
+
+\section{TC metric definitions and preprocessing}
+\label{sec:smetrics}
+
+All fields are clipped to the generator's training representation of
+170--325\,K before metric calculation; the unmodified archives remain preserved.
+Distances between scalar distributions use one-dimensional Wasserstein-1. The
+feature vector concatenates the seven standardized scalar quantities with 20
+standardized EOF coefficients. Means, scales, EOFs, the Gaussian-kernel bandwidth,
+and the eight memorization neighbourhoods are fitted using training data only. The
+main feature configuration fits the EOFs and bandwidth on the same seeded subset of
+512 training fields and caps each set-metric comparison at 256 samples per side.
+
+\begin{table*}[t]
+\caption{Metrics used in the TC demonstration. Each control is applied to reserved
+training storms. Lower discrepancy is favourable, except that density is first
+converted to absolute departure from its ideal value of one and diversity records
+whether the generated dispersion is excessive or insufficient.}
+\label{tab:smetrics}
+\centering
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.18\linewidth}
+                  >{\raggedright\arraybackslash}p{0.09\linewidth}
+                  >{\raggedright\arraybackslash}p{0.45\linewidth}
+                  >{\raggedright\arraybackslash}p{0.18\linewidth}}
+\tophline
+Metric & Unit & Exact quantity & Registered controls\\
+\middlehline
+Core minimum BT W1 & K & Minimum BT among pixels whose centres lie within 100\,km & uniform temperature shift\\
+Cold-cloud area W1 & \% & Percentage of pixels below 220\,K within 300\,km & warming and cooling localized around 220\,K\\
+Maximum-gradient radius W1 & km & Centre of the radial bin with largest absolute gradient in the 32-bin azimuthal-mean BT profile out to 500\,km & blur, centre displacement, radial deformation\\
+Axisymmetry W1 & K & Root-mean-square departure of pixels from their radial-bin mean within 300\,km & Fourier-phase randomisation\\
+Deviation-angle variance W1 & deg\(^2\) & Variance of local infrared-gradient deviation angles within 300\,km, using the registered centre region and angle convention & Fourier-phase randomisation\\
+Eye contrast W1 & K & Mean BT within 50\,km minus mean BT from 50 to 150\,km & opposite eye and eyewall temperature shifts\\
+Lower-tail BT W1 & K & First percentile of all pixels in each field & uniform temperature shift\\
+Radial-profile MAE & K & Mean absolute difference between the two sample-mean 32-bin azimuthal BT profiles out to 500\,km & centre displacement, radial deformation, phase randomisation\\
+Radial log-PSD MSE & dex\(^2\) & Mean squared difference between sample-mean 24-bin log-base-10 power curves after per-field mean removal, separable Hann windowing, window-energy normalization, and physical-wavenumber binning & blur and checkerboard sensitivity; 90\(^\circ\) rotation invariance\\
+Feature MMD\(^2\) & MMD\(^2\) & Non-negative biased V-statistic with a Gaussian kernel and training-median bandwidth & EOF-direction excursion and clipped checkerboard spatial artifact\\
+Feature-density departure & absolute departure & Absolute difference between one and Naeem-style density with \(k=5\) real-manifold radii & EOF-direction excursion\\
+Feature-coverage deficit & fraction & One minus the fraction of real features reached by at least one generated feature within the \(k=5\) real-manifold radius & training-feature mode removal\\
+Feature-diversity departure & relative departure & Absolute relative difference in mean pairwise feature distance, with the sign retained separately & duplication/contraction and expansion\\
+Preprocessing saturation & absolute rate difference & Absolute difference in the fraction of pixels at the 170 or 325\,K preprocessing bounds & boundary spikes and clipping\\
+\bottomhline
+\end{tabular}
+\end{table*}
+
+The localized memorization audit uses the complete
+\MemorizationTrainingFields-field diffusion-training archive as its
+nearest-neighbour reference. Generated and held-out-real queries are
+compared separately within each intensity class and training-fitted feature
+neighbourhood. Its effect is the median generated-to-training distance minus the
+storm-weighted median held-out-real-to-training distance. Central paired resampling
+ranges are descriptive. The event-disjoint control uses
+\ControlReferenceFields{} reserved training fields and exact-replay fractions from
+1 to 100\,\%; its resolution curve validates response under that separate control
+design rather than supplying a universal copying limit for the full-archive audit.
+
+\section{Complete conditional results}
+\label{sec:scomplete}
+
+Figure~\ref{fig:smatrix} shows every native intensity-class by headline-metric
+comparison. The associated machine-readable table contains the native discrepancy and
+central comparison range, real-reference quantiles and their conditional Monte Carlo
+intervals, reference percentile and gap, sample and storm counts, weighting rule,
+control status, warnings, and provenance. No C4+ or pooled tail condition is included.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS01.pdf}
+\caption{Complete six-class by metric reference-gap matrix. The marker encodes the
+empirical reference status for each independently interpreted comparison. The gap is a
+presentation scale conditional on the archive and evaluation design, not physical
+severity or an aggregate model score.}
+\label{fig:smatrix}
+\end{figure}
+
+\clearpage
+\tablecaption{Complete native-unit conditional results underlying the reference-gap
+profile. The reference column reports the empirical real-reference median and 95th
+percentile. Central ranges condition on the fixed generated bank and the available
+held-out archive.}
+\label{tab:snative}
+\input{tables/native_values.tex}
+\clearpage
+
+\begin{table}[t]
+\caption{Unmatched as-provided global comparison. The generated bank contains equal
+numbers from TS and Categories 1--5, whereas the held-out archive has its natural,
+strongly imbalanced intensity mixture. These values therefore audit dataset
+composition and are not conditional model-fidelity results.}
+\label{tab:sglobal}
+\centering
+\input{tables/global_composition.tex}
+\end{table}
+
+\section{Metric-specific controls}
+\label{sec:scontrols}
+
+Controls were constructed exclusively from reserved training storms. Each curve
+reports the response over all declared severities rather than reducing the evidence
+to a single label. A response can be monotone while remaining below the empirical
+reference range; invariance controls have the opposite expectation.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS20.pdf}
+\caption{Controls for the scalar physical quantities. Curves show discrepancy
+relative to the empirical real-reference 95th-percentile marker at every declared
+severity. Dotted vertical lines mark the first crossing where one occurs, and
+\(\rho\) is Spearman's severity-response coefficient.}
+\label{fig:sphysicalcontrols}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS21.pdf}
+\caption{Controls for storm geometry and spatial structure. Blur, centre
+displacement, radial deformation, and a high-frequency artifact target different
+spatial diagnostics rather than serving as interchangeable generic corruptions.}
+\label{fig:sspatialcontrols}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS22.pdf}
+\caption{Feature-space controls in the exact training-fitted representation used
+by the reported TC metrics. A training-EOF excursion targets MMD\({}^2\) and
+density, feature-mode removal targets coverage, and contraction and expansion
+target the two directions of diversity departure.}
+\label{fig:sfeaturecontrols}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS23.pdf}
+\caption{Invariance and resolution controls. Fourier-phase randomisation disrupts
+registered spatial-organisation diagnostics while preserving each field's
+unwindowed Fourier magnitude; a quarter-turn leaves the radial Hann-windowed PSD
+unchanged. Boundary spikes control preprocessing saturation, and the copied-fraction
+curve records the smallest exact-replay mixture resolved by the localized
+memorization audit.}
+\label{fig:sinvariancecontrols}
+\end{figure}
+
+\section{All-class spatial curves}
+\label{sec:scurves}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS03.pdf}
+\caption{Radial brightness-temperature profiles for held-out real and generated
+fields in all six native intensity classes. Shading shows variation between admissible
+real subsets at each radius; reference status is assigned from the scalar discrepancy
+between complete curves.}
+\label{fig:sprofiles}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS04.pdf}
+\caption{Radial log-power curves for all six native intensity classes after
+per-field mean removal, a separable Hann window, window-energy normalization, and
+physical-wavenumber binning. The scalar discrepancy is mean squared log-power
+difference in dex\({}^2\).}
+\label{fig:spsd}
+\end{figure}
+
+\section{All-class physical distributions}
+\label{sec:sfunctionals}
+
+Figures~\ref{fig:sminbt}--\ref{fig:sp01} provide the class-resolved distributions
+behind the seven scalar Wasserstein distances.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS13.pdf}
+\caption{Minimum core brightness temperature within 100\,km.}
+\label{fig:sminbt}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS14.pdf}
+\caption{Cold-cloud area below 220\,K within 300\,km.}
+\label{fig:scold}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS15.pdf}
+\caption{Radius of the largest absolute radial-mean brightness-temperature
+gradient.}
+\label{fig:sradius}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS16.pdf}
+\caption{Root-mean-square azimuthal brightness-temperature departure within
+300\,km.}
+\label{fig:saxisym}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS17.pdf}
+\caption{Variance of the infrared-gradient deviation angle within 300\,km.}
+\label{fig:sdav}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS18.pdf}
+\caption{Eye-to-eyewall brightness-temperature contrast.}
+\label{fig:seye}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS19.pdf}
+\caption{Per-field first percentile of brightness temperature.}
+\label{fig:sp01}
+\end{figure}
+
+\section{Feature, dependence, memorization, and preprocessing audits}
+\label{sec:ssafeguards}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS05.pdf}
+\caption{Compact training-similarity and preprocessing-saturation audit. Similarity
+is evaluated within supported intensity and training-fitted feature
+neighbourhoods. Saturation refers to the fixed preprocessing bounds, not a universal
+physical-admissibility criterion.}
+\label{fig:ssafeguards}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS09.pdf}
+\caption{Feature-space MMD\({}^2\), density, coverage, and diversity diagnostics
+with direction and empirical reference context.}
+\label{fig:sfeatures}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS10.pdf}
+\caption{Registered relationships among the physical functionals. These
+diagnostics complement, rather than replace, their marginal distributions.}
+\label{fig:sdependence}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS11.pdf}
+\caption{Localized three-sample training-similarity results. Central ranges compare
+generated-to-training and held-out-real-to-training nearest-neighbour distances while
+resampling generated queries and complete held-out storms.}
+\label{fig:smemorization}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS12.pdf}
+\caption{Preprocessing saturation at 170 and 325\,K. The audit identifies mass at
+the generator's fixed clipping bounds and makes no claim that these are physical
+limits.}
+\label{fig:ssaturation}
+\end{figure}
+
+\section{Reference stability and synthetic extensions}
+\label{sec:sstability}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS06.pdf}
+\caption{Conditional Monte Carlo intervals for real-reference summaries,
+delete-group finite-archive sensitivity, correct event blocking versus intentionally
+incorrect frame-IID identifiers, and metric-family severity curves.}
+\label{fig:sstability}
+\end{figure}
+
+\section{Feature-space robustness}
+\label{sec:srobustness}
+
+The registered representation and \FeatureRepresentationVariants{} declared
+alternatives produce \FeatureRobustnessComparisons{} class-specific comparisons per
+metric. MMD\({}^2\) and coverage remain within the empirical range in
+\FeatureMmdWithinCount{} and \FeatureCoverageWithinCount{} comparisons,
+respectively. Diversity remains above the range in
+\FeatureDiversityAboveCount{}, whereas density does so in
+\FeatureDensityAboveCount{}. These are post-hoc robustness summaries rather than a
+new model verdict.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS08.pdf}
+\caption{Post-hoc robustness of MMD\({}^2\), density, coverage, and diversity to
+EOF fit sizes 256, 512, and 1024; EOF ranks 10, 20, and 40; and declared physical
+low-pass scales. The analysis asks whether qualitative patterns persist, weaken, or
+reverse across reasonable representations.}
+\label{fig:srobustness}
+\end{figure}
+
+\section{Continuous-wind response}
+\label{sec:swind}
+
+The slope intervals exclude zero in \WindRealResolved{} of
+\WindSlopeComparisons{} real-data combinations and \WindGeneratedResolved{} generated
+combinations. Both are resolved in \WindBothResolved{} cases, with the same direction
+in all \WindBothSameSign{}. \WindCfiveRealResolved{} Category 5 real slopes are
+resolved, while
+\WindCfiveGeneratedResolved{} generated slopes are; this contrast is reported as a
+resolution limitation rather than evidence of disagreement.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=16cm]{figS07.pdf}
+\caption{Within-class response of the seven physical quantities to the continuous
+wind condition. Real slopes use inverse storm-frequency weights and storm bootstrap
+intervals; generated slopes use equal sample weights and sample bootstrap intervals.
+The audit is descriptive and carries no equivalence verdict.}
+\label{fig:swind}
+\end{figure}
+
+\end{document}
