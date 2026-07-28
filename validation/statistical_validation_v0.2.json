@@ -1,139 +1,24 @@
 {
-  "schema": "gauge_climate.statistical_validation.v3",
+  "schema": "gauge_climate.statistical_validation.v4",
   "status": "PASSED",
   "configuration": {
     "seed": 1789,
     "trials": 300,
     "resamples": 200,
     "jobs": 4,
-    "alpha": 0.05,
+    "reference_quantile": 0.95,
     "minimum_blocks_per_half": 10,
     "shift_effect_units": "marginal standard deviations"
   },
   "regimes": {
-    "balanced_80": {
-      "id": "balanced_80",
-      "label": "80 balanced blocks",
+    "balanced_80_n80": {
+      "id": "balanced_80_n80",
+      "label": "80 balanced blocks, N=80",
       "n_blocks": 80,
-      "n_eval": 240,
+      "n_eval": 80,
       "block_sizes": "balanced",
-      "null": {
-        "detection_rate": 0.0033333333333333335,
-        "successes": 1,
-        "trials": 300,
-        "wilson_95": [
-          0.0005886577218511581,
-          0.018636693694531237
-        ]
-      },
-      "location_shift": [
-        {
-          "effect_sd": 0.0,
-          "detection_power": 0.0,
-          "successes": 0,
-          "trials": 300,
-          "wilson_95": [
-            8.673617379884035e-19,
-            0.012642971224546034
-          ]
-        },
-        {
-          "effect_sd": 0.15,
-          "detection_power": 0.04666666666666667,
-          "successes": 14,
-          "trials": 300,
-          "wilson_95": [
-            0.027998933682334012,
-            0.07679736022792105
-          ]
-        },
-        {
-          "effect_sd": 0.3,
-          "detection_power": 0.52,
-          "successes": 156,
-          "trials": 300,
-          "wilson_95": [
-            0.4635710820137406,
-            0.5759231991372775
-          ]
-        },
-        {
-          "effect_sd": 0.45,
-          "detection_power": 0.95,
-          "successes": 285,
-          "trials": 300,
-          "wilson_95": [
-            0.9191529665272558,
-            0.9694683593706526
-          ]
-        },
-        {
-          "effect_sd": 0.55,
-          "detection_power": 0.9866666666666667,
-          "successes": 296,
-          "trials": 300,
-          "wilson_95": [
-            0.9662244697474675,
-            0.9948030382606411
-          ]
-        }
-      ],
-      "alternatives": {
-        "variance_narrow": {
-          "detection_power": 1.0,
-          "successes": 300,
-          "trials": 300,
-          "wilson_95": [
-            0.9873570287754538,
-            0.9999999999999998
-          ]
-        },
-        "variance_wide": {
-          "detection_power": 1.0,
-          "successes": 300,
-          "trials": 300,
-          "wilson_95": [
-            0.9873570287754538,
-            0.9999999999999998
-          ]
-        },
-        "crossing_cdf": {
-          "detection_power": 1.0,
-          "successes": 300,
-          "trials": 300,
-          "wilson_95": [
-            0.9873570287754538,
-            0.9999999999999998
-          ]
-        },
-        "tail_contamination": {
-          "detection_power": 0.9966666666666667,
-          "successes": 299,
-          "trials": 300,
-          "wilson_95": [
-            0.9813633063054688,
-            0.9994113422781488
-          ]
-        },
-        "train_test_shift": {
-          "detection_power": 0.9966666666666667,
-          "successes": 299,
-          "trials": 300,
-          "wilson_95": [
-            0.9813633063054688,
-            0.9994113422781488
-          ]
-        }
-      }
-    },
-    "unequal_80": {
-      "id": "unequal_80",
-      "label": "80 unequal blocks",
-      "n_blocks": 80,
-      "n_eval": 240,
-      "block_sizes": "severely_unequal",
-      "null": {
-        "detection_rate": 0.0,
+      "same_population": {
+        "boundary_crossing_rate": 0.0,
         "successes": 0,
         "trials": 300,
         "wilson_95": [
@@ -144,7 +29,7 @@
       "location_shift": [
         {
           "effect_sd": 0.0,
-          "detection_power": 0.0,
+          "boundary_crossing_probability": 0.0,
           "successes": 0,
           "trials": 300,
           "wilson_95": [
@@ -154,48 +39,163 @@
         },
         {
           "effect_sd": 0.15,
-          "detection_power": 0.04,
-          "successes": 12,
+          "boundary_crossing_probability": 0.02666666666666667,
+          "successes": 8,
           "trials": 300,
           "wilson_95": [
-            0.023027321487942308,
-            0.06860421203864003
+            0.01357306980864708,
+            0.05172894295058982
           ]
         },
         {
           "effect_sd": 0.3,
-          "detection_power": 0.44333333333333336,
-          "successes": 133,
+          "boundary_crossing_probability": 0.21,
+          "successes": 63,
           "trials": 300,
           "wilson_95": [
-            0.38818691756565193,
-            0.4999126191731299
+            0.1677218007333024,
+            0.25961112257693425
           ]
         },
         {
           "effect_sd": 0.45,
-          "detection_power": 0.91,
-          "successes": 273,
+          "boundary_crossing_probability": 0.6233333333333333,
+          "successes": 187,
           "trials": 300,
           "wilson_95": [
-            0.8722229892013517,
-            0.9374097743945206
+            0.5672684321681708,
+            0.6762796349297745
           ]
         },
         {
           "effect_sd": 0.55,
-          "detection_power": 0.9866666666666667,
-          "successes": 296,
+          "boundary_crossing_probability": 0.87,
+          "successes": 261,
           "trials": 300,
           "wilson_95": [
-            0.9662244697474675,
-            0.9948030382606411
+            0.8272195707065882,
+            0.9034246305872476
           ]
         }
       ],
       "alternatives": {
         "variance_narrow": {
-          "detection_power": 1.0,
+          "boundary_crossing_probability": 0.8033333333333333,
+          "successes": 241,
+          "trials": 300,
+          "wilson_95": [
+            0.7546412316550143,
+            0.8443553658020945
+          ]
+        },
+        "variance_wide": {
+          "boundary_crossing_probability": 0.92,
+          "successes": 276,
+          "trials": 300,
+          "wilson_95": [
+            0.8837267595665261,
+            0.9456531446048553
+          ]
+        },
+        "crossing_cdf": {
+          "boundary_crossing_probability": 0.9066666666666666,
+          "successes": 272,
+          "trials": 300,
+          "wilson_95": [
+            0.8684146029829267,
+            0.934635780421109
+          ]
+        },
+        "tail_contamination": {
+          "boundary_crossing_probability": 0.8533333333333334,
+          "successes": 256,
+          "trials": 300,
+          "wilson_95": [
+            0.8088374877749912,
+            0.8888948125596631
+          ]
+        },
+        "train_test_shift": {
+          "boundary_crossing_probability": 0.8466666666666667,
+          "successes": 254,
+          "trials": 300,
+          "wilson_95": [
+            0.8015339429418983,
+            0.8830335970090831
+          ]
+        }
+      }
+    },
+    "balanced_80": {
+      "id": "balanced_80",
+      "label": "80 balanced blocks",
+      "n_blocks": 80,
+      "n_eval": 240,
+      "block_sizes": "balanced",
+      "same_population": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
+        "trials": 300,
+        "wilson_95": [
+          8.673617379884035e-19,
+          0.012642971224546034
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "boundary_crossing_probability": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "boundary_crossing_probability": 0.02666666666666667,
+          "successes": 8,
+          "trials": 300,
+          "wilson_95": [
+            0.01357306980864708,
+            0.05172894295058982
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "boundary_crossing_probability": 0.4066666666666667,
+          "successes": 122,
+          "trials": 300,
+          "wilson_95": [
+            0.3526017598634212,
+            0.46309159476516065
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "boundary_crossing_probability": 0.9433333333333334,
+          "successes": 283,
+          "trials": 300,
+          "wilson_95": [
+            0.9111340419775253,
+            0.9643225235367106
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "boundary_crossing_probability": 0.9933333333333333,
+          "successes": 298,
+          "trials": 300,
+          "wilson_95": [
+            0.9760224167496929,
+            0.998169851642088
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "boundary_crossing_probability": 1.0,
           "successes": 300,
           "trials": 300,
           "wilson_95": [
@@ -204,16 +204,16 @@
           ]
         },
         "variance_wide": {
-          "detection_power": 0.9933333333333333,
-          "successes": 298,
+          "boundary_crossing_probability": 0.9966666666666667,
+          "successes": 299,
           "trials": 300,
           "wilson_95": [
-            0.9760224167496929,
-            0.998169851642088
+            0.9813633063054688,
+            0.9994113422781488
           ]
         },
         "crossing_cdf": {
-          "detection_power": 1.0,
+          "boundary_crossing_probability": 1.0,
           "successes": 300,
           "trials": 300,
           "wilson_95": [
@@ -222,7 +222,7 @@
           ]
         },
         "tail_contamination": {
-          "detection_power": 0.9933333333333333,
+          "boundary_crossing_probability": 0.9933333333333333,
           "successes": 298,
           "trials": 300,
           "wilson_95": [
@@ -231,7 +231,237 @@
           ]
         },
         "train_test_shift": {
-          "detection_power": 0.9966666666666667,
+          "boundary_crossing_probability": 0.99,
+          "successes": 297,
+          "trials": 300,
+          "wilson_95": [
+            0.9710165066376601,
+            0.9965933815622847
+          ]
+        }
+      }
+    },
+    "balanced_80_n1000": {
+      "id": "balanced_80_n1000",
+      "label": "80 balanced blocks, N=1,000",
+      "n_blocks": 80,
+      "n_eval": 1000,
+      "block_sizes": "balanced",
+      "same_population": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
+        "trials": 300,
+        "wilson_95": [
+          8.673617379884035e-19,
+          0.012642971224546034
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "boundary_crossing_probability": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "boundary_crossing_probability": 0.056666666666666664,
+          "successes": 17,
+          "trials": 300,
+          "wilson_95": [
+            0.03567747646328951,
+            0.08886595802247463
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "boundary_crossing_probability": 0.7,
+          "successes": 210,
+          "trials": 300,
+          "wilson_95": [
+            0.6458824752950584,
+            0.749060336215123
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "boundary_crossing_probability": 0.99,
+          "successes": 297,
+          "trials": 300,
+          "wilson_95": [
+            0.9710165066376601,
+            0.9965933815622847
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "variance_wide": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "crossing_cdf": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "tail_contamination": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "train_test_shift": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        }
+      }
+    },
+    "unequal_80": {
+      "id": "unequal_80",
+      "label": "80 unequal blocks",
+      "n_blocks": 80,
+      "n_eval": 240,
+      "block_sizes": "severely_unequal",
+      "same_population": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
+        "trials": 300,
+        "wilson_95": [
+          8.673617379884035e-19,
+          0.012642971224546034
+        ]
+      },
+      "location_shift": [
+        {
+          "effect_sd": 0.0,
+          "boundary_crossing_probability": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "boundary_crossing_probability": 0.03666666666666667,
+          "successes": 11,
+          "trials": 300,
+          "wilson_95": [
+            0.02059530516285303,
+            0.06445384817189295
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "boundary_crossing_probability": 0.49,
+          "successes": 147,
+          "trials": 300,
+          "wilson_95": [
+            0.43391704888051774,
+            0.5463358105439731
+          ]
+        },
+        {
+          "effect_sd": 0.45,
+          "boundary_crossing_probability": 0.9133333333333333,
+          "successes": 274,
+          "trials": 300,
+          "wilson_95": [
+            0.8760440413057516,
+            0.9401711024819569
+          ]
+        },
+        {
+          "effect_sd": 0.55,
+          "boundary_crossing_probability": 0.9966666666666667,
+          "successes": 299,
+          "trials": 300,
+          "wilson_95": [
+            0.9813633063054688,
+            0.9994113422781488
+          ]
+        }
+      ],
+      "alternatives": {
+        "variance_narrow": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "variance_wide": {
+          "boundary_crossing_probability": 0.9966666666666667,
+          "successes": 299,
+          "trials": 300,
+          "wilson_95": [
+            0.9813633063054688,
+            0.9994113422781488
+          ]
+        },
+        "crossing_cdf": {
+          "boundary_crossing_probability": 1.0,
+          "successes": 300,
+          "trials": 300,
+          "wilson_95": [
+            0.9873570287754538,
+            0.9999999999999998
+          ]
+        },
+        "tail_contamination": {
+          "boundary_crossing_probability": 0.9933333333333333,
+          "successes": 298,
+          "trials": 300,
+          "wilson_95": [
+            0.9760224167496929,
+            0.998169851642088
+          ]
+        },
+        "train_test_shift": {
+          "boundary_crossing_probability": 0.9966666666666667,
           "successes": 299,
           "trials": 300,
           "wilson_95": [
@@ -247,19 +477,29 @@
       "n_blocks": 22,
       "n_eval": 1000,
       "block_sizes": "c5_like",
-      "null": {
-        "detection_rate": 0.006666666666666667,
-        "successes": 2,
+      "same_population": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
         "trials": 300,
         "wilson_95": [
-          0.0018301483579117855,
-          0.023977583250306973
+          8.673617379884035e-19,
+          0.012642971224546034
         ]
       },
       "location_shift": [
         {
           "effect_sd": 0.0,
-          "detection_power": 0.0033333333333333335,
+          "boundary_crossing_probability": 0.0,
+          "successes": 0,
+          "trials": 300,
+          "wilson_95": [
+            8.673617379884035e-19,
+            0.012642971224546034
+          ]
+        },
+        {
+          "effect_sd": 0.15,
+          "boundary_crossing_probability": 0.0033333333333333335,
           "successes": 1,
           "trials": 300,
           "wilson_95": [
@@ -268,90 +508,80 @@
           ]
         },
         {
-          "effect_sd": 0.15,
-          "detection_power": 0.013333333333333334,
-          "successes": 4,
-          "trials": 300,
-          "wilson_95": [
-            0.005196961739358857,
-            0.03377553025253262
-          ]
-        },
-        {
           "effect_sd": 0.3,
-          "detection_power": 0.08,
-          "successes": 24,
+          "boundary_crossing_probability": 0.06666666666666667,
+          "successes": 20,
           "trials": 300,
           "wilson_95": [
-            0.054346855395144764,
-            0.11627324043347391
+            0.043567515545158274,
+            0.10072305951611496
           ]
         },
         {
           "effect_sd": 0.45,
-          "detection_power": 0.26,
-          "successes": 78,
+          "boundary_crossing_probability": 0.23333333333333334,
+          "successes": 70,
           "trials": 300,
           "wilson_95": [
-            0.21362060325993487,
-            0.3124480229278472
+            0.18902823823172718,
+            0.28438134642136403
           ]
         },
         {
           "effect_sd": 0.55,
-          "detection_power": 0.43333333333333335,
-          "successes": 130,
+          "boundary_crossing_probability": 0.39666666666666667,
+          "successes": 119,
           "trials": 300,
           "wilson_95": [
-            0.3784513181454693,
-            0.48990107801780347
+            0.34295083194304077,
+            0.452995382110032
           ]
         }
       ],
       "alternatives": {
         "variance_narrow": {
-          "detection_power": 0.016666666666666666,
-          "successes": 5,
+          "boundary_crossing_probability": 0.02666666666666667,
+          "successes": 8,
           "trials": 300,
           "wilson_95": [
-            0.00713947735063333,
-            0.0384153948330945
+            0.01357306980864708,
+            0.05172894295058982
           ]
         },
         "variance_wide": {
-          "detection_power": 0.4666666666666667,
-          "successes": 140,
+          "boundary_crossing_probability": 0.47,
+          "successes": 141,
           "trials": 300,
           "wilson_95": [
-            0.41099110566704244,
-            0.5231850924145939
+            0.4142588116594049,
+            0.5264997666140677
           ]
         },
         "crossing_cdf": {
-          "detection_power": 0.12666666666666668,
-          "successes": 38,
+          "boundary_crossing_probability": 0.12333333333333334,
+          "successes": 37,
           "trials": 300,
           "wilson_95": [
-            0.09369224846506602,
-            0.16908117004926165
+            0.09081731429366795,
+            0.1653737240288234
           ]
         },
         "tail_contamination": {
-          "detection_power": 0.37666666666666665,
-          "successes": 113,
+          "boundary_crossing_probability": 0.3333333333333333,
+          "successes": 100,
           "trials": 300,
           "wilson_95": [
-            0.3237203650702255,
-            0.4327315678318291
+            0.2823934472922627,
+            0.38848754311591926
           ]
         },
         "train_test_shift": {
-          "detection_power": 0.36666666666666664,
-          "successes": 110,
+          "boundary_crossing_probability": 0.43,
+          "successes": 129,
           "trials": 300,
           "wilson_95": [
-            0.3141415065082282,
-            0.4225632858183173
+            0.3752111767337645,
+            0.48655883923767185
           ]
         }
       }
@@ -362,29 +592,19 @@
       "n_blocks": 20,
       "n_eval": 1000,
       "block_sizes": "c5_like",
-      "null": {
-        "detection_rate": 0.0033333333333333335,
-        "successes": 1,
+      "same_population": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
         "trials": 300,
         "wilson_95": [
-          0.0005886577218511581,
-          0.018636693694531237
+          8.673617379884035e-19,
+          0.012642971224546034
         ]
       },
       "location_shift": [
         {
           "effect_sd": 0.0,
-          "detection_power": 0.0033333333333333335,
-          "successes": 1,
-          "trials": 300,
-          "wilson_95": [
-            0.0005886577218511581,
-            0.018636693694531237
-          ]
-        },
-        {
-          "effect_sd": 0.15,
-          "detection_power": 0.0,
+          "boundary_crossing_probability": 0.0,
           "successes": 0,
           "trials": 300,
           "wilson_95": [
@@ -393,107 +613,1026 @@
           ]
         },
         {
-          "effect_sd": 0.3,
-          "detection_power": 0.03,
-          "successes": 9,
+          "effect_sd": 0.15,
+          "boundary_crossing_probability": 0.0033333333333333335,
+          "successes": 1,
           "trials": 300,
           "wilson_95": [
-            0.01586185380943231,
-            0.05602253914164096
+            0.0005886577218511581,
+            0.018636693694531237
+          ]
+        },
+        {
+          "effect_sd": 0.3,
+          "boundary_crossing_probability": 0.05333333333333334,
+          "successes": 16,
+          "trials": 300,
+          "wilson_95": [
+            0.03309191251909646,
+            0.08486914177483133
           ]
         },
         {
           "effect_sd": 0.45,
-          "detection_power": 0.18666666666666668,
-          "successes": 56,
+          "boundary_crossing_probability": 0.14666666666666667,
+          "successes": 44,
           "trials": 300,
           "wilson_95": [
-            0.1466374821326313,
-            0.23461877983475085
+            0.11110518744033696,
+            0.19116251222500888
           ]
         },
         {
           "effect_sd": 0.55,
-          "detection_power": 0.33,
-          "successes": 99,
+          "boundary_crossing_probability": 0.3233333333333333,
+          "successes": 97,
           "trials": 300,
           "wilson_95": [
-            0.2792344636154957,
-            0.3850641466008499
+            0.2729253960837475,
+            0.37820845374892526
           ]
         }
       ],
       "alternatives": {
         "variance_narrow": {
-          "detection_power": 0.016666666666666666,
-          "successes": 5,
+          "boundary_crossing_probability": 0.013333333333333334,
+          "successes": 4,
           "trials": 300,
           "wilson_95": [
-            0.00713947735063333,
-            0.0384153948330945
+            0.005196961739358857,
+            0.03377553025253262
           ]
         },
         "variance_wide": {
-          "detection_power": 0.48333333333333334,
-          "successes": 145,
+          "boundary_crossing_probability": 0.38666666666666666,
+          "successes": 116,
           "trials": 300,
           "wilson_95": [
-            0.4273544128335898,
-            0.5397336862072283
+            0.3333235932848012,
+            0.44287548019276246
           ]
         },
         "crossing_cdf": {
-          "detection_power": 0.10666666666666667,
-          "successes": 32,
+          "boundary_crossing_probability": 0.07333333333333333,
+          "successes": 22,
           "trials": 300,
           "wilson_95": [
-            0.07657584904594214,
-            0.14670328831736743
+            0.04892399383922859,
+            0.10853134160571733
           ]
         },
         "tail_contamination": {
-          "detection_power": 0.31333333333333335,
-          "successes": 94,
+          "boundary_crossing_probability": 0.26,
+          "successes": 78,
           "trials": 300,
           "wilson_95": [
-            0.2634843975598553,
-            0.36790231169730847
+            0.21362060325993487,
+            0.3124480229278472
           ]
         },
         "train_test_shift": {
-          "detection_power": 0.39666666666666667,
-          "successes": 119,
+          "boundary_crossing_probability": 0.33666666666666667,
+          "successes": 101,
           "trials": 300,
           "wilson_95": [
-            0.34295083194304077,
-            0.452995382110032
+            0.2855553679085868,
+            0.39190800269143145
           ]
         }
       }
     }
   },
-  "simultaneous_reference": {
-    "family_size": 5,
-    "pointwise_any": {
-      "familywise_detection_rate": 0.0,
+  "shape_same_population": {
+    "heavy_tailed": {
+      "boundary_crossing_rate": 0.0033333333333333335,
+      "successes": 1,
+      "trials": 300,
+      "wilson_95": [
+        0.0005886577218511581,
+        0.018636693694531237
+      ]
+    },
+    "multimodal": {
+      "boundary_crossing_rate": 0.0,
       "successes": 0,
       "trials": 300,
       "wilson_95": [
         8.673617379884035e-19,
         0.012642971224546034
       ]
+    }
+  },
+  "metric_family_validation": {
+    "results": {
+      "mmd2_off_manifold": {
+        "same_population_gap": -0.2163045042747929,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity": 0.0,
+            "gap": -0.2163045042747929,
+            "crosses": false
+          },
+          {
+            "severity": 0.5,
+            "gap": 4.935201594997539,
+            "crosses": true
+          },
+          {
+            "severity": 1.0,
+            "gap": 19.083524939413433,
+            "crosses": true
+          },
+          {
+            "severity": 2.0,
+            "gap": 55.46692338844701,
+            "crosses": true
+          },
+          {
+            "severity": 4.0,
+            "gap": 85.83420791105519,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 85.83420791105519,
+        "changed_crosses": true
+      },
+      "density_off_manifold": {
+        "same_population_gap": -0.09567799406136496,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity": 0.0,
+            "gap": -0.09567799406136496,
+            "crosses": false
+          },
+          {
+            "severity": 0.5,
+            "gap": 0.35631804684922563,
+            "crosses": false
+          },
+          {
+            "severity": 1.0,
+            "gap": 1.550643352029033,
+            "crosses": true
+          },
+          {
+            "severity": 2.0,
+            "gap": 5.021445067634441,
+            "crosses": true
+          },
+          {
+            "severity": 4.0,
+            "gap": 6.779940613658855,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 6.779940613658855,
+        "changed_crosses": true
+      },
+      "coverage_mode_removal": {
+        "same_population_gap": -0.9512761020881668,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity": 0.0,
+            "gap": -0.20881670533642632,
+            "crosses": false
+          },
+          {
+            "severity": 0.25,
+            "gap": 0.7656612529002336,
+            "crosses": false
+          },
+          {
+            "severity": 0.5,
+            "gap": 2.4825986078886326,
+            "crosses": true
+          },
+          {
+            "severity": 0.75,
+            "gap": 4.941995359628773,
+            "crosses": true
+          },
+          {
+            "severity": 0.9,
+            "gap": 6.658932714617175,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 6.658932714617175,
+        "changed_crosses": true
+      },
+      "diversity_duplication": {
+        "same_population_gap": 0.12986463045260568,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity": 0.0,
+            "gap": 0.12986463045260568,
+            "crosses": false
+          },
+          {
+            "severity": 0.5,
+            "gap": 0.5617506242092594,
+            "crosses": false
+          },
+          {
+            "severity": 0.9,
+            "gap": 0.31447730784414063,
+            "crosses": false
+          },
+          {
+            "severity": 0.98,
+            "gap": 4.008935136545588,
+            "crosses": true
+          },
+          {
+            "severity": 0.9958333333333333,
+            "gap": 16.570555362255458,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.8999999999999998,
+        "monotonic_response": true,
+        "changed_gap": 16.570555362255458,
+        "changed_crosses": true
+      },
+      "diversity_contraction": {
+        "same_population_gap": 0.12986463045260568,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity": 0.0,
+            "gap": 0.12986463045260568,
+            "crosses": false
+          },
+          {
+            "severity": 0.25,
+            "gap": 4.239148159976912,
+            "crosses": true
+          },
+          {
+            "severity": 0.5,
+            "gap": 8.349617227403092,
+            "crosses": true
+          },
+          {
+            "severity": 0.75,
+            "gap": 12.460086294829276,
+            "crosses": true
+          },
+          {
+            "severity": 0.95,
+            "gap": 15.748461548770221,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 15.748461548770221,
+        "changed_crosses": true
+      },
+      "diversity_expansion": {
+        "same_population_gap": 0.12986463045260568,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity": 0.0,
+            "gap": 0.12986463045260568,
+            "crosses": false
+          },
+          {
+            "severity": 0.25,
+            "gap": 2.995730458299631,
+            "crosses": true
+          },
+          {
+            "severity": 0.5,
+            "gap": 7.106199525725816,
+            "crosses": true
+          },
+          {
+            "severity": 1.0,
+            "gap": 15.327137660578181,
+            "crosses": true
+          },
+          {
+            "severity": 2.0,
+            "gap": 31.76901393028291,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 31.76901393028291,
+        "changed_crosses": true
+      },
+      "curve_mae": {
+        "same_population_gap": -0.09938402840335056,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "severity_scale_increment": 0.0,
+            "gap": -0.09938402840335056,
+            "crosses": false
+          },
+          {
+            "severity_scale_increment": 0.03,
+            "gap": 4.316413385816632,
+            "crosses": true
+          },
+          {
+            "severity_scale_increment": 0.06,
+            "gap": 8.705860851124374,
+            "crosses": true
+          },
+          {
+            "severity_scale_increment": 0.12,
+            "gap": 17.117120824234952,
+            "crosses": true
+          },
+          {
+            "severity_scale_increment": 0.2,
+            "gap": 27.173214732919593,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 27.173214732919593,
+        "changed_crosses": true,
+        "source": "radial profiles derived from synthetic 2-D Gaussian fields"
+      },
+      "log_psd": {
+        "same_population_gap": -0.055846137513251695,
+        "same_population_crosses": false,
+        "severity_curve": [
+          {
+            "blur_sigma_pixels": 0.0,
+            "gap": -0.055846137513251695,
+            "crosses": false
+          },
+          {
+            "blur_sigma_pixels": 0.5,
+            "gap": 10.271154788838752,
+            "crosses": true
+          },
+          {
+            "blur_sigma_pixels": 1.0,
+            "gap": 482.507978722623,
+            "crosses": true
+          },
+          {
+            "blur_sigma_pixels": 2.0,
+            "gap": 2160.62061577841,
+            "crosses": true
+          },
+          {
+            "blur_sigma_pixels": 4.0,
+            "gap": 3240.5081222295844,
+            "crosses": true
+          }
+        ],
+        "severity_rank_correlation": 0.9999999999999999,
+        "monotonic_response": true,
+        "changed_gap": 3240.5081222295844,
+        "changed_crosses": true,
+        "source": "radial log-power curves derived from synthetic 2-D texture fields"
+      },
+      "scalar_heavy_tail": {
+        "same_population_gap": 0.05541874579978681,
+        "same_population_crosses": false,
+        "changed_gap": 10.69631226824183,
+        "changed_crosses": true
+      },
+      "scalar_multimodal": {
+        "same_population_gap": -0.22910448572181824,
+        "same_population_crosses": false,
+        "changed_gap": 7.871883590227081,
+        "changed_crosses": true
+      }
     },
-    "bonferroni_any": {
-      "familywise_detection_rate": 0.0,
-      "successes": 0,
-      "trials": 300,
-      "wilson_95": [
-        8.673617379884035e-19,
-        0.012642971224546034
+    "all_same_population_within_reference": true,
+    "all_controls_cross_reference": true,
+    "all_severity_curves_monotonic": true,
+    "mmd2_non_negative": true
+  },
+  "reference_stability": {
+    "point": {
+      "q50": 0.3835270333954829,
+      "q95": 0.7210265478617669,
+      "model_median": 0.3639182386539107,
+      "gap": -0.0581002161516623
+    },
+    "conditional_mc_intervals": {
+      "reference_q50": [
+        0.3570520017798293,
+        0.4114817027435709
+      ],
+      "reference_q95": [
+        0.6490974373376744,
+        0.7799345976430638
+      ],
+      "reference_upper": [
+        0.6490974373376744,
+        0.7799345976430638
+      ],
+      "model_median": [
+        0.3351644278080823,
+        0.3937351105665857
+      ],
+      "reference_gap": [
+        -0.1811118143528812,
+        0.03573512872540938
       ]
     },
-    "all_boundaries_resolved": true,
-    "minimum_resamples": 99
+    "summary_points_inside_mc_intervals": true,
+    "delete_group_gap_range": [
+      -0.31445578641124594,
+      0.23813383204125046
+    ],
+    "delete_group_gaps": [
+      0.07165938862986641,
+      -0.14006696834014198,
+      0.005169295101312077,
+      -0.008623635250104747,
+      -0.1460555834808559,
+      -0.31445578641124594,
+      0.23813383204125046,
+      -0.1915304727312232
+    ],
+    "delete_group_all_finite": true,
+    "correct_block_reference_width": 0.337499514466284,
+    "frame_iid_reference_width": 0.17765223795271745,
+    "block_misspecification_changes_reference": true,
+    "degenerate_gap_fails_closed": true
+  },
+  "independent_seed_interval_validation": {
+    "conditional_target": {
+      "reference_q50": 0.16479770944584188,
+      "reference_q95": 0.33559953752492555,
+      "model_median": 0.17607163601906975,
+      "reference_gap": 0.06600588939837274
+    },
+    "target_resamples": 5000,
+    "independent_seed_repetitions": 24,
+    "resamples_per_repetition": 200,
+    "coverage": {
+      "reference_q50": {
+        "target_coverage": 0.9583333333333334,
+        "successes": 23,
+        "trials": 24,
+        "wilson_95": [
+          0.7975819352134406,
+          0.9926065438344942
+        ],
+        "target": 0.16479770944584188
+      },
+      "reference_q95": {
+        "target_coverage": 0.9583333333333334,
+        "successes": 23,
+        "trials": 24,
+        "wilson_95": [
+          0.7975819352134406,
+          0.9926065438344942
+        ],
+        "target": 0.33559953752492555
+      },
+      "model_median": {
+        "target_coverage": 0.9583333333333334,
+        "successes": 23,
+        "trials": 24,
+        "wilson_95": [
+          0.7975819352134406,
+          0.9926065438344942
+        ],
+        "target": 0.17607163601906975
+      },
+      "reference_gap": {
+        "target_coverage": 0.9166666666666666,
+        "successes": 22,
+        "trials": 24,
+        "wilson_95": [
+          0.741511978067893,
+          0.9768411847029567
+        ],
+        "target": 0.06600588939837274
+      }
+    },
+    "replicates": [
+      {
+        "seed": 85011789,
+        "intervals": {
+          "reference_q50": [
+            0.1486314147878877,
+            0.16958621726441092
+          ],
+          "reference_q95": [
+            0.30215002907189786,
+            0.3869030741893179
+          ],
+          "model_median": [
+            0.16659632822243034,
+            0.18772645806038016
+          ],
+          "reference_gap": [
+            0.014162115533070395,
+            0.17871654671716
+          ]
+        }
+      },
+      {
+        "seed": 85011790,
+        "intervals": {
+          "reference_q50": [
+            0.1515916265875906,
+            0.17939905007825094
+          ],
+          "reference_q95": [
+            0.3031810157644031,
+            0.42764107039645116
+          ],
+          "model_median": [
+            0.16413847800184111,
+            0.1914541063315336
+          ],
+          "reference_gap": [
+            -0.035380308774357494,
+            0.19617836840243535
+          ]
+        }
+      },
+      {
+        "seed": 85011791,
+        "intervals": {
+          "reference_q50": [
+            0.15130595995700175,
+            0.1702002574398012
+          ],
+          "reference_q95": [
+            0.2916587476267909,
+            0.34758485889104845
+          ],
+          "model_median": [
+            0.15454689942192754,
+            0.1786695285915501
+          ],
+          "reference_gap": [
+            -0.06404063511096716,
+            0.11643801495346176
+          ]
+        }
+      },
+      {
+        "seed": 85011792,
+        "intervals": {
+          "reference_q50": [
+            0.14884708763355187,
+            0.16848648676086977
+          ],
+          "reference_q95": [
+            0.29082599805565773,
+            0.4241751424987994
+          ],
+          "model_median": [
+            0.16366465634124236,
+            0.1902347613771546
+          ],
+          "reference_gap": [
+            0.021402948549052888,
+            0.2357325493040055
+          ]
+        }
+      },
+      {
+        "seed": 85011793,
+        "intervals": {
+          "reference_q50": [
+            0.15573856463298216,
+            0.17288954026234093
+          ],
+          "reference_q95": [
+            0.2838483904378023,
+            0.3500792228303442
+          ],
+          "model_median": [
+            0.16243454270206428,
+            0.1870390414306575
+          ],
+          "reference_gap": [
+            -0.02420509597969517,
+            0.18622624417781397
+          ]
+        }
+      },
+      {
+        "seed": 85011794,
+        "intervals": {
+          "reference_q50": [
+            0.14776260476559233,
+            0.1735588639078238
+          ],
+          "reference_q95": [
+            0.30141381430221315,
+            0.3570230685227255
+          ],
+          "model_median": [
+            0.16398600369629107,
+            0.18818003650499202
+          ],
+          "reference_gap": [
+            0.0037055430234345654,
+            0.2091420985723481
+          ]
+        }
+      },
+      {
+        "seed": 85011795,
+        "intervals": {
+          "reference_q50": [
+            0.144587776890337,
+            0.16732262952688326
+          ],
+          "reference_q95": [
+            0.29839649824260156,
+            0.3801436858500382
+          ],
+          "model_median": [
+            0.16067693812870096,
+            0.17671488893612286
+          ],
+          "reference_gap": [
+            -0.00019749719600158354,
+            0.17073674641369907
+          ]
+        }
+      },
+      {
+        "seed": 85011796,
+        "intervals": {
+          "reference_q50": [
+            0.15579569442211078,
+            0.1800563089914711
+          ],
+          "reference_q95": [
+            0.29090092252890215,
+            0.346516885176628
+          ],
+          "model_median": [
+            0.17119796425393882,
+            0.20312237443562106
+          ],
+          "reference_gap": [
+            0.0014851040848781632,
+            0.25365112535031703
+          ]
+        }
+      },
+      {
+        "seed": 85011797,
+        "intervals": {
+          "reference_q50": [
+            0.1479121506290304,
+            0.17325589861711893
+          ],
+          "reference_q95": [
+            0.29015080880573485,
+            0.3902856240133833
+          ],
+          "model_median": [
+            0.16607795736212194,
+            0.1906186634305587
+          ],
+          "reference_gap": [
+            -0.008716966975554762,
+            0.22100631121449493
+          ]
+        }
+      },
+      {
+        "seed": 85011798,
+        "intervals": {
+          "reference_q50": [
+            0.1579309125471587,
+            0.17763074103465787
+          ],
+          "reference_q95": [
+            0.2804771629540281,
+            0.34032426630905055
+          ],
+          "model_median": [
+            0.1531333748594585,
+            0.17849475932981743
+          ],
+          "reference_gap": [
+            -0.136137355756465,
+            0.09304500796185058
+          ]
+        }
+      },
+      {
+        "seed": 85011799,
+        "intervals": {
+          "reference_q50": [
+            0.1541948764764294,
+            0.17945450267165072
+          ],
+          "reference_q95": [
+            0.3186091447073898,
+            0.41592372232875857
+          ],
+          "model_median": [
+            0.1744768408154541,
+            0.19694129024763202
+          ],
+          "reference_gap": [
+            0.01814912703690575,
+            0.19184800816492412
+          ]
+        }
+      },
+      {
+        "seed": 85011800,
+        "intervals": {
+          "reference_q50": [
+            0.14828949150536597,
+            0.17885569844163002
+          ],
+          "reference_q95": [
+            0.3057521981632596,
+            0.35837367176619944
+          ],
+          "model_median": [
+            0.16084764534647328,
+            0.18401394303686305
+          ],
+          "reference_gap": [
+            -0.0438664622167366,
+            0.16286036177661592
+          ]
+        }
+      },
+      {
+        "seed": 85011801,
+        "intervals": {
+          "reference_q50": [
+            0.16142715464467422,
+            0.18323242239745186
+          ],
+          "reference_q95": [
+            0.29612268656722857,
+            0.34119914991106765
+          ],
+          "model_median": [
+            0.16842452595859173,
+            0.191236123063909
+          ],
+          "reference_gap": [
+            -0.06630264475191239,
+            0.14638898701036626
+          ]
+        }
+      },
+      {
+        "seed": 85011802,
+        "intervals": {
+          "reference_q50": [
+            0.1491102317833814,
+            0.17365257557944697
+          ],
+          "reference_q95": [
+            0.3114193467418727,
+            0.3609145746303798
+          ],
+          "model_median": [
+            0.16079089841903016,
+            0.18422023519409525
+          ],
+          "reference_gap": [
+            -0.039177434828036324,
+            0.16441045041691715
+          ]
+        }
+      },
+      {
+        "seed": 85011803,
+        "intervals": {
+          "reference_q50": [
+            0.15066667470026263,
+            0.1722733526339989
+          ],
+          "reference_q95": [
+            0.28457856279425203,
+            0.43538550287950484
+          ],
+          "model_median": [
+            0.16919833426503833,
+            0.19059850652487068
+          ],
+          "reference_gap": [
+            0.013466074632821885,
+            0.1836796860616373
+          ]
+        }
+      },
+      {
+        "seed": 85011804,
+        "intervals": {
+          "reference_q50": [
+            0.1513454674067331,
+            0.17774934332236988
+          ],
+          "reference_q95": [
+            0.2867524580383067,
+            0.3348175879428472
+          ],
+          "model_median": [
+            0.16682784238170806,
+            0.18603561778211608
+          ],
+          "reference_gap": [
+            -0.03564483710067379,
+            0.20332657364563703
+          ]
+        }
+      },
+      {
+        "seed": 85011805,
+        "intervals": {
+          "reference_q50": [
+            0.14148694058910033,
+            0.1672406873547177
+          ],
+          "reference_q95": [
+            0.3195587192781171,
+            0.39075100189358025
+          ],
+          "model_median": [
+            0.18313017934558676,
+            0.20382231186572455
+          ],
+          "reference_gap": [
+            0.10171839519495712,
+            0.27855279261414917
+          ]
+        }
+      },
+      {
+        "seed": 85011806,
+        "intervals": {
+          "reference_q50": [
+            0.14847919036010007,
+            0.16845934855536127
+          ],
+          "reference_q95": [
+            0.3019882259475542,
+            0.37879099605132743
+          ],
+          "model_median": [
+            0.16542803334680753,
+            0.18941255739646368
+          ],
+          "reference_gap": [
+            0.030567014208187946,
+            0.20222964039506142
+          ]
+        }
+      },
+      {
+        "seed": 85011807,
+        "intervals": {
+          "reference_q50": [
+            0.14553252002325068,
+            0.17538837425768328
+          ],
+          "reference_q95": [
+            0.28983877406444175,
+            0.4205370084504141
+          ],
+          "model_median": [
+            0.1569898312287803,
+            0.17699038968197828
+          ],
+          "reference_gap": [
+            -0.06992447258240597,
+            0.12547910126145556
+          ]
+        }
+      },
+      {
+        "seed": 85011808,
+        "intervals": {
+          "reference_q50": [
+            0.14883982739058782,
+            0.17487545994601353
+          ],
+          "reference_q95": [
+            0.3008345053964864,
+            0.4002634357982656
+          ],
+          "model_median": [
+            0.1626776948355563,
+            0.1853123397888691
+          ],
+          "reference_gap": [
+            -0.029562454684916785,
+            0.16126006884646177
+          ]
+        }
+      },
+      {
+        "seed": 85011809,
+        "intervals": {
+          "reference_q50": [
+            0.15180446003875228,
+            0.17340040404885065
+          ],
+          "reference_q95": [
+            0.282922479614661,
+            0.37651493660990726
+          ],
+          "model_median": [
+            0.15725851728487855,
+            0.18145859188202101
+          ],
+          "reference_gap": [
+            -0.06365685277999948,
+            0.14898165414664516
+          ]
+        }
+      },
+      {
+        "seed": 85011810,
+        "intervals": {
+          "reference_q50": [
+            0.14762502622983037,
+            0.1717046236435882
+          ],
+          "reference_q95": [
+            0.2882865807683044,
+            0.35034002033058737
+          ],
+          "model_median": [
+            0.1728042723700185,
+            0.20156262282369874
+          ],
+          "reference_gap": [
+            0.06608800175986902,
+            0.30809762427527015
+          ]
+        }
+      },
+      {
+        "seed": 85011811,
+        "intervals": {
+          "reference_q50": [
+            0.15231076500797786,
+            0.1741076293603138
+          ],
+          "reference_q95": [
+            0.3179623918299998,
+            0.3748620643204422
+          ],
+          "model_median": [
+            0.15798853127653706,
+            0.18050548743652495
+          ],
+          "reference_gap": [
+            -0.03323005976320645,
+            0.12197138853242555
+          ]
+        }
+      },
+      {
+        "seed": 85011812,
+        "intervals": {
+          "reference_q50": [
+            0.13924354280045836,
+            0.16218555455144917
+          ],
+          "reference_q95": [
+            0.28935447645068524,
+            0.35963870396558817
+          ],
+          "model_median": [
+            0.16460619592919964,
+            0.18634428273867196
+          ],
+          "reference_gap": [
+            0.04054439040405409,
+            0.23261211262886708
+          ]
+        }
+      }
+    ],
+    "all_target_coverages_at_least_0.80": true
   },
   "failure_paths": {
     "nineteen_blocks": {
@@ -501,15 +1640,25 @@
       "passed": true
     }
   },
-  "engine_parity_max_abs": 2.220446049250313e-16,
+  "engine_parity_max_abs": 3.3306690738754696e-16,
   "gates": {
     "reference_plan_invariants": true,
     "vectorized_engine_parity": true,
-    "pointwise_false_positive_upper_at_most_0.05_all_regimes": true,
-    "standard_shift_0.55_power_lower_at_least_0.80": true,
-    "standard_alternative_power_lower_at_least_0.80": true,
-    "simultaneous_familywise_upper_at_most_0.05": true,
-    "simultaneous_boundary_resolution": true,
+    "same_population_crossing_upper_at_most_reference_tail": true,
+    "heavy_tail_and_multimodal_crossing_upper_at_most_reference_tail": true,
+    "standard_shift_0.55_crossing_probability_lower_at_least_0.80": true,
+    "thin_strata_have_lower_standard_shift_crossing_probability": true,
+    "larger_location_shifts_cross_at_least_as_often": true,
+    "standard_alternative_crossing_probability_lower_at_least_0.80": true,
+    "metric_family_same_population_within_reference": true,
+    "metric_family_controls_cross_reference": true,
+    "metric_family_severity_curves_monotonic": true,
+    "mmd2_non_negative": true,
+    "summary_mc_intervals_contain_observed_summaries": true,
+    "summary_mc_intervals_cover_high_repetition_targets_across_seeds": true,
+    "delete_group_archive_sensitivity_is_finite": true,
+    "incorrect_frame_iid_blocks_change_reference": true,
+    "degenerate_reference_gap_fails_closed": true,
     "fewer_than_twenty_blocks_rejected": true
   }
 }

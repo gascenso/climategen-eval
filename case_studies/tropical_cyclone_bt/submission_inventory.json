@@ -35,40 +35,55 @@
     }
   },
   "evidence": {
-    "preregistration": {
-      "path": "case_studies/tropical_cyclone_bt/preregistration.yaml",
-      "bytes": 12539,
-      "sha256": "ec28e5af617eb433e35cea99d6467098f23b5bae68af788a355c5d5604106320"
+    "analysis_protocol": {
+      "path": "case_studies/tropical_cyclone_bt/analysis_protocol.yaml",
+      "bytes": 13346,
+      "sha256": "10335eda736531b05b97abcb93c73ffe0c1addd145cd78512b009962603a1ad2"
     },
-    "protocol_freeze": {
+    "protocol_rationale": {
       "path": "case_studies/tropical_cyclone_bt/protocol_freeze.md",
-      "bytes": 8346,
-      "sha256": "3080639e8085dd63506248ecaca09a8f4d4159923205535ee4ba4c83acff0cd9"
+      "bytes": 4192,
+      "sha256": "2797ce2f8f6cf486eaef65221b3445544a935946e30d7071319b23103220f3a2"
     },
     "evaluation_config": {
       "path": "case_studies/tropical_cyclone_bt/track1_config.template.yaml",
-      "bytes": 3407,
-      "sha256": "5fabee14f8b9e2c1908644bdd8a277bb6b87c6a6d9eec962131c3bae76d858df"
+      "bytes": 2144,
+      "sha256": "a07eb5b2a90bac0d5e96ce8538eed07581a40cb684b4f61c157e23cc4f0a35a2"
     },
     "sensitivity_controls": {
       "path": "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json",
-      "bytes": 22781,
-      "sha256": "0484fa4c02b465b150ae5247c2449e01082fde561d5d7ce1800cee4fb171db0d"
+      "bytes": 54056,
+      "sha256": "40f9c8172f2aa4a50c2e7e60de2ba185d8ccb0f171d32795efbdc86339af3fde"
     },
     "statistical_validation": {
       "path": "validation/statistical_validation_v0.2.json",
-      "bytes": 12912,
-      "sha256": "67ec4fc8407f97dbe6e04ea1c97c7d055c15d012576e1bda036452d6fedb4f82"
+      "bytes": 43407,
+      "sha256": "d111cf1b98c27e21695f784f8d1fe4daee4bfb672cf8fb82b83052bcb6c39ead"
+    },
+    "statistical_validation_stability_figure": {
+      "path": "validation/statistical_validation_v0.2_appendix.pdf",
+      "bytes": 40504,
+      "sha256": "cf9d2883e049a5618bb9ddaf7ca5d6b3f2312620bc3734c4ac4c72345f0297a1"
+    },
+    "continuous_wind_audit": {
+      "path": "outputs/tropical_cyclone_bt/audits/continuous_wind_response.json",
+      "bytes": 35724,
+      "sha256": "65b2212b6ee7d8bbeab3c645b4d007744d142f73511e721cde6cba5acfe17046"
+    },
+    "feature_robustness_audit": {
+      "path": "outputs/tropical_cyclone_bt/audits/feature_space_robustness.json",
+      "bytes": 169645,
+      "sha256": "3d89f5bd78fea9995d4ba0475ddd512521b502d6c902658012176fd74c1dfa51"
     },
     "final_report_manifest": {
       "path": "case_studies/tropical_cyclone_bt/final_results/manifest.json",
-      "bytes": 355,
-      "sha256": "d84ca2016bdb704362894b3e8c09243242b288761e52c9f203ded901077c04ae"
+      "bytes": 472,
+      "sha256": "0596cc40224ab4adaf09bbd2598d155666214f0007c7e6640be24786b724c840"
     },
     "paper_bundle_manifest": {
       "path": "case_studies/tropical_cyclone_bt/paper_results/manifest.json",
-      "bytes": 9666,
-      "sha256": "f634d498e899431de2bcff7e94eae052e41c3b86239aa8cdd7555a2a365ca7b4"
+      "bytes": 12503,
+      "sha256": "bc6cc08d6100a2e60e2846bd59f5addd5267ceeb7c55771ab8fe91f9188044f5"
     },
     "partition_summary": {
       "path": "case_studies/tropical_cyclone_bt/partition_summary.json",

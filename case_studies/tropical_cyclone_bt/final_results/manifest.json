@@ -1,13 +1,16 @@
 {
-  "schema": "gauge_climate.artifact_manifest.v1",
+  "schema": "gauge_climate.artifact_manifest.v2",
+  "report_schema": "gauge_climate.evaluation.v3",
+  "package_version": "0.2.0",
+  "config_hash": "c8daf1bdd2c79cf2",
   "artifacts": {
     "evaluation.json": {
-      "sha256": "0deb6105130a97a9a71ecbd0c369f094b3d430a00de4a2877a1eba1cba8e6c01",
-      "bytes": 3163826
+      "sha256": "2b7f11272ec3788655d28e2149a60478e450dcbfe2a80621a2fe9733064f8e87",
+      "bytes": 2849326
     },
     "evaluation_full.html": {
-      "sha256": "930cb539db03ffd5f2b715975a45dafa40a99c9dcc30a52053639554487bb34a",
-      "bytes": 89216
+      "sha256": "027d3597d63074f25c913b1770d2a7acc7d08051b69d425d40063b9414223da6",
+      "bytes": 96752
     }
   }
 }

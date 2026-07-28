@@ -1,139 +1,86 @@
-# TC scientific protocol freeze
+# TC v0.2 analysis-protocol rationale
 
-Frozen on 2026-07-15 before running the final GAUGE analysis. This document
-freezes scientific choices; it does not
-assert that required artifacts or positive controls already exist. Any change
-after final outcomes are inspected must be logged as an amendment and the
-affected result labeled exploratory.
+The machine-readable contract is
+[`analysis_protocol.yaml`](analysis_protocol.yaml). This note explains its
+status and the choices most likely to be misunderstood.
 
-## Data and estimand
+## Status
 
-- All intensity labels and continuous targets are IBTrACS `USA_WIND` one-minute
-  sustained winds. Mixed-period `WMO_WIND` is prohibited.
-- Raw Kelvin archives remain checksum-preserved, but every GAUGE analysis view is
-  clipped lazily to 170--325 K before metrics or train-fitted features. These are
-  the generator-training 0.05th/99.95th-percentile preprocessing limits, not
-  claims about the physically possible BT range.
-- Train, validation, and test partitions are storm-disjoint. The existing
-  corrected test split is retained unchanged.
-- The evaluation targets the block-balanced distribution: sample a storm uniformly,
-  then a frame uniformly within that storm. Every registered stratum uses all
-  available generated rows (6,000 globally; 1,000 per native class).
-- Native TS/C1--C5 strata are reported. `C4_plus=[C4,C5]` was additionally
-  registered to stabilize an extreme-tail descriptive row when the C5 test
-  reference is thin (85 frames, 22 storms). It does not replace the separate
-  C4/C5 rows and is not the standard major-hurricane grouping; that terminology
-  was corrected in the amendment below.
+GAUGE and the TC example were developed iteratively, and the held-out archive
+had already been examined before the submission-readiness revision. The v0.2
+document is therefore a versioned analysis protocol with an amendment log, not
+an untouched prospective preregistration. The empirical-reference contract,
+six native conditions, metric definitions, controls, and secondary audits were
+fixed before the clean v0.2 rerun.
 
-## Registered metrics and controls
+## Data population
 
-The joint primary detection family contains the seven scalar physical
-functionals across global, six native-class, and C4+ strata (56 cells). Curve,
-feature-space, dependence, admissibility, and memorization results remain
-registered diagnostics rather than members of this primary simultaneous family.
+- All labels and continuous conditions are IBTrACS `USA_WIND` one-minute
+  sustained winds.
+- Train, validation, and test are storm disjoint.
+- The default population gives every eligible storm equal weight and then every
+  frame within that storm equal conditional weight.
+- Primary results use TS and Categories 1–5 separately. There is no C4+ pooled
+  fidelity family.
+- The naturally imbalanced real mixture and class-balanced generated bank are
+  compared globally only as a dataset-composition audit.
 
-The train-fit feature space uses seven standardized scalar functionals plus 20
-EOF coefficients fitted to a deterministic 512-frame training subset. MMD
-bandwidth and all normalization are training-only. The localized copying test
-uses eight train-fit regions, whole-test-storm resampling, and the exact-copyist
-positive control.
+## Representation
 
-Sensitivity sweeps are frozen in `preregistration.yaml`. Failure of an expected
-metric response withholds interpretation for that metric; it does not authorize
-changing the perturbation after seeing final model results.
+Raw arrays remain checksum preserved. All metric inputs use the generator's
+declared 170–325 K clipping representation. Those endpoints are training
+preprocessing quantiles, not physical limits; contact with them is reported as
+a preprocessing saturation audit.
 
-The controls use 80 deterministically selected training storms and a
-block-balanced sample size of 1,000, matching a native-class evaluation cell.
-Real-reference boundaries use 500 whole-block resamples at the 95th percentile.
-Warm shift, Gaussian blur, and center jitter are paired severity sweeps. Full
-phase shuffling must both trigger the registered structure metrics and preserve
-each image's discrete Fourier power to the declared numerical threshold. The
-localized copying procedure must detect an exact-copyist control using the same
-512-frame feature-fit limit and eight regions as the registered analysis.
+The radial PSD removes each field's spatial mean, applies a separable Hann
+window, divides power by window energy, excludes the zero mode, and uses 24
+nonempty discrete-support-aware radial wavenumber bins. Its scalar discrepancy
+is mean squared log10-power difference in `dex²`.
 
-For severity sweeps, response validity and resolution are separate: a metric
-passes its response contract when the Spearman severity trend is at least 0.8.
-Whether the maximum frozen severity exceeds the real-reference boundary is
-reported separately and may reveal limited sensitivity at this N. Binary phase
-and copyist positive controls still require boundary crossing or copying
-detection, respectively.
+## Empirical reference
 
-Amendment, before any final test or generated outcome was inspected: naïve
-geometric PSD edges produced empty low-frequency bins on the 256×256 discrete
-Fourier grid. The frozen implementation therefore selects 24 distinct observed
-radial wavenumbers nearest the log-spaced targets and uses geometric-midpoint
-boundaries. This retains 24 ordered bins in physical cycles/km while guaranteeing
-that every bin is defined.
+Each metric and native condition is evaluated against event-disjoint real
+subsets with matching sample size and weighting. The stored q50 and q95 are
+finite-archive reference summaries, not hypothesis-test thresholds. Their
+paired-bootstrap Monte Carlo intervals and split-half stability are reported.
+Unstable or degenerate references fail closed as `REFERENCE_UNRESOLVED`.
 
-Amendment after a training-only calibration failure, before final test or
-generated outcomes: the raw archive spans approximately 117--348 K, whereas the
-generator training pipeline clips real fields to 170--325 K before normalization.
-GAUGE had incorrectly treated those preprocessing quantiles as raw support while
-feeding unclipped real fields to metrics and EOFs. All analysis inputs now use a
-lazy 170--325 K clipped view, exactly matching the learned field representation;
-raw files and checksums remain unchanged. Boundary saturation is reported as a
-diagnostic rather than calling raw values outside the preprocessing quantiles
-physically inadmissible.
+The seven functional W1 results use 2,000 repetitions. Paper-facing curve and
+feature metrics use 1,000, with 2,000 for coverage; exploratory dependence
+summaries use 200. Quadratic feature estimators use a deterministic matched cap
+of 256 fields per side and record this effective count.
 
-## Reference validation and final-run amendments
+## Controls and copying
 
-The final runner retains all 2,000 draws for functional W1 and the preregistered
-simultaneous family. Secondary curve, feature-space, dependence, and admissibility
-diagnostics use 200 draws; quadratic feature-set metrics use deterministic matched
-subsamples of 256 fields per side per draw. Each cell reports these effective
-counts. Complete partition plans are deterministic and recorded by seed and
-SHA-256 with a three-draw preview, avoiding an unusably large JSON expansion.
-This computational amendment followed an aborted invocation that produced no
-metric or report output and changes no primary estimand or decision rule.
+Controls use reserved training storms only. Each metric has a specific
+sensitivity or invariance control and reports its complete severity response,
+monotonicity, and first empirical-reference crossing. A failed control withholds
+affirmative interpretation but does not hide the raw result.
 
-The first completed final-output audit exposed a separate target-mixture issue
-already visible in the frozen manifests: generated data contain exactly 1,000
-fields per class, while the real test archive follows its natural, strongly
-imbalanced intensity distribution. All global rows are retained as supplied-bank
-composition checks, but conditional-model fidelity is concluded only from the
-native-class and predeclared C4+ rows. The same mixture cannot be allowed to
-confound memorization, so the superseding final run tests copying within joint
-intensity-class-by-feature-region cells and controls multiplicity across all
-supported cells. The original completed report and its SHA-256 are retained;
-no physical metric or conclusion rule was changed after seeing its values.
+The memorization representation is training fitted. The nearest-neighbour
+reference includes every diffusion-training field, while the EOF basis,
+standardisation, and MMD bandwidth use their separately declared training-only
+fit sets. Regional copying summaries are descriptive central ranges, not
+multiplicity-adjusted tests. Resolution is shown with copied fractions from 1%
+to 100%.
 
-Superseding computational amendment on 2026-07-23, after auditing the migrated
-v2 report and before a clean current-engine rerun: diagnostics displayed
-in the paper-facing profile use 1,000 reference draws, except feature coverage,
-which uses the full 2,000 after its 1,000-draw stability ratio was 0.257 against
-the frozen 0.25 threshold. Exploratory
-pairwise-dependence cells retain 200. A failed split-half boundary-stability
-check now withholds the categorical conclusion while retaining the raw estimate
-and gap. Block-balanced frame draws are generated in vectorized batches per
-selected block rather than one Python call per frame; this is the same sampling
-distribution but changes the deterministic RNG stream. The complete report,
-controls, checksums, and figures must therefore be regenerated. The amendment
-does not change the data, estimand, metric definitions, or detection rule, and
-any resulting categorical change must remain visible.
+## Secondary audits
 
-The generic Monte Carlo gate validates whole-block partition invariants,
-pointwise false-positive behavior, simultaneous boundaries, unequal block
-sizes, and controlled-shift power. The TC training-only response and copyist
-controls pass their registered contracts. Shift resolution remains a design
-sensitivity result, never an equivalence verdict.
+The class-conditional comparison remains primary. A descriptive continuous-wind
+audit estimates within-class functional slopes: real fields receive inverse
+storm-frequency weights and storm-bootstrap intervals, whereas generated fields
+receive equal weights and sample-bootstrap intervals conditional on the fixed
+bank. Synthetic responsive and wind-ignoring generators validate the slope
+engine. No equivalence or fidelity verdict is attached to this audit.
 
-Framework-scope amendment on 2026-07-21, after the final run: the separate
-application-materiality verdict branch was retired from GAUGE v1. Requiring
-user-chosen thresholds conflicts with the one-call adoption goal; inferring
-them from the real-reference boundary or corruption lanes would be circular or
-arbitrary. This changes no raw discrepancy, reference envelope, gap,
-sensitivity control, memorization result, or detection conclusion. The earlier
-implementation remains transparent in Git history.
+Feature-space findings are also repeated post hoc across EOF fit sizes 256, 512,
+and 1024, ranks 10, 20, and 40, and training-fitted low-pass representations at
+16, 32, and 64 km. The registered rank-20, 512-field representation remains the
+primary analysis; the variants reveal whether a qualitative pattern depends on
+one reasonable representation choice.
 
-## External gates still blocking the archival release
+## Remaining external gates
 
-- Independently review the real-reference engine, simultaneous inference, and
-  interpretation wording; the frozen training-only sensitivity and copyist
-  controls have passed.
-- Archive permission-cleared real/generated artifacts and record their
-  persistent identifiers.
-- Have an independent user reproduce the frozen workflow from the archive.
-- Preserve this record in Git history and record any amendments.
-
-The literature survey is a separate manuscript workstream and is not part of
-this scientific/data-processing freeze.
+Independent statistical review, permission-cleared permanent artifact
+deposition, and clean-room reproduction remain open. Literature-review
+reconstruction is a separate user-owned workstream.

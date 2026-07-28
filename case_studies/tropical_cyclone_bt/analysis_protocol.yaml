@@ -1,0 +1,325 @@
+schema: gauge_climate.tc_bt_analysis_protocol.v2
+status: VERSIONED_METHOD_DEVELOPMENT_PROTOCOL
+analysis_run_permitted: true
+
+scope:
+  field: storm-centered infrared brightness temperature
+  sample_shape: [256, 256]
+  channels: 1
+  field_units: K
+  analysis_preprocessing:
+    operation: clip
+    range_k: [170.0, 325.0]
+    fit_source: generator_training_config
+    raw_archives_preserved: true
+    rationale: >-
+      The generator was trained on real fields clipped to the 0.05th and 99.95th
+      percentile limits before normalization. GAUGE evaluates the same declared
+      field representation while retaining raw archives for provenance.
+  pixel_size_km: 8.0
+  classes: [TS, C1, C2, C3, C4, C5]
+  excluded_class_claims: [TD]
+
+estimand:
+  primary: block_balanced
+  block: storm_id
+  sampling_description: uniformly sample a storm, then uniformly sample an eligible frame
+  secondary_frame_weighted: false
+  n_eval: all_available_generated_samples_per_registered_stratum
+
+partitions:
+  storm_disjoint_required: true
+  wind_source: USA_WIND
+  wind_averaging_period: 1-minute
+  mixed_wmo_wind_labels_prohibited: true
+  train_manifest_sha256: f8717849b8ca295f85c4e7bbfd116d0a5d20e88f201d7a55e464240c568a267a
+  validation_manifest_sha256: c64ad082f47d60956a31233f571e347a00cd3304fa90dc2db22289dba456a3ed
+  test_manifest_sha256: edd7d0f6bf3ec37c5332b53ee57afd9f690f32a6d98def7d3af60cdcb53fd89e
+  thin_stratum: C5
+  aggregate_conditions: []
+  temporal_shift_analysis: descriptive_secondary_only_no_endpoint_switching
+
+models:
+  candidates: [baseline_ztsnr]
+  primary: baseline_ztsnr
+  secondary: []
+  checkpoint_selection_rule: weights_ema_best_val; selected without final GAUGE test metrics
+  manuscript_name: TC brightness-temperature diffusion model
+  generated_bank:
+    status: fixed_no_generator_retraining
+    samples_per_native_class: 1000
+    total_samples: 6000
+    intensity_mix: class_balanced
+    continuous_condition: USA_WIND_1-minute_kt
+    sample_policy: use_every_available_sample_within_each_native_class
+
+functionals:
+  - {id: min_core_bt, units: K, support: [170.0, 325.0]}
+  - {id: cold_frac_220, units: percent, support: [0.0, 100.0]}
+  - {id: r_maxgrad, units: km, support: [0.0, 500.0]}
+  - {id: axisym, units: K, support: [0.0, 155.0]}
+  - {id: dav, units: degree_squared, support: [0.0, 8100.0]}
+  - {id: eye_contrast, units: K, support: [-155.0, 155.0]}
+  - {id: p01_bt, units: K, support: [170.0, 325.0]}
+
+curve_metrics:
+  radial_profile:
+    radius_km: 500.0
+    bins: 32
+    center: image_center
+    mask: none_within_grid
+    missing_values: reject
+    discrepancy: mean_absolute_difference_between_sample_mean_profiles
+    units: K
+  radial_psd:
+    detrending: subtract_per_image_spatial_mean
+    window: separable_hann
+    normalization: divide_by_window_energy
+    coordinates: physical_cycles_per_km
+    radial_bins: 24_discrete_support_aware_log_targets
+    zero_mode: excluded
+    missing_values: reject
+    discrepancy: mean_squared_difference_between_sample_mean_log10_power
+    units: dex_squared
+
+feature_space:
+  fit_split: training_only
+  scalar_standardization: training_mean_sd
+  eof_components: 20
+  eof_fit_sample_count: 512
+  mmd_bandwidth_rule: training_only_median_distance
+  mmd_bandwidth_fit_sample_count: 512
+  set_metric_samples_per_reference_draw: 256
+  set_metric_sampling: deterministic_matched_without_replacement
+  memorization_regions: 8
+  memorization_query_strata: intensity_class_by_feature_region
+
+feature_metrics:
+  mmd_squared:
+    estimator: nonnegative_biased_v_statistic
+    kernel: gaussian
+    bandwidth: training_only_median_pairwise_distance
+  density_departure:
+    estimator: absolute_difference_from_naeem_density_equal_to_one
+    real_manifold_neighbours: 5
+  coverage_deficit:
+    estimator: one_minus_naeem_coverage
+    real_manifold_neighbours: 5
+  diversity_departure:
+    estimator: absolute_relative_difference_in_mean_pairwise_feature_distance
+    signed_direction_retained: true
+  preprocessing_saturation:
+    estimator: absolute_difference_in_pixel_contact_rate_at_170_or_325_K
+    interpretation: preprocessing_audit_not_physical_admissibility
+
+reference_computation:
+  reference_quantile: 0.95
+  comparison_interval: 0.95
+  summary_bootstrap_resamples: 1000
+  summary_interval_interpretation: >-
+    Paired bootstrap over stored real-reference and model-reference repetitions,
+    conditional on the fixed real archive and generated bank.
+  primary_functional_resamples: 2000
+  secondary_diagnostic_resamples: 200
+  headline_diagnostic_resamples:
+    default_count: 1000
+    metric_overrides:
+      feature_coverage_deficit: 2000
+    metrics:
+      - radial_profile_mae
+      - radial_log_psd_mse
+      - feature_mmd2
+      - feature_density
+      - feature_coverage_deficit
+      - feature_diversity_departure
+      - preprocessing_boundary_saturation
+  complete_partition_record: deterministic_seed_plus_sha256_and_three_draw_preview
+
+secondary_audits:
+  continuous_wind_response:
+    status: descriptive_no_equivalence_or_fidelity_verdict
+    functionals: [min_core_bt, cold_frac_220, r_maxgrad, axisym, dav, eye_contrast, p01_bt]
+    within_native_class: true
+    real_weighting: inverse_storm_frequency
+    generated_weighting: equal_sample
+    real_interval: storm_bootstrap
+    generated_interval: sample_bootstrap_conditional_on_fixed_bank
+    resamples: 2000
+    synthetic_validation: responsive_and_wind_ignoring_generators
+  feature_space_robustness:
+    status: post_hoc_no_verdict
+    eof_fit_sample_counts: [256, 512, 1024]
+    eof_ranks: [10, 20, 40]
+    physical_low_pass_scales_km: [16.0, 32.0, 64.0]
+    reference_resamples: 100
+    set_metric_samples_per_draw: 256
+
+sensitivity_lanes:
+  status: VERSIONED
+  design:
+    seed: 1789
+    control_block_count: 80
+    n_control: 1000
+    sampling_estimand: block_balanced
+    reference_resamples: 500
+    reference_boundary_quantile: 0.95
+    sweep_pass_rule: >-
+      Spearman severity rank correlation at least 0.8; whether maximum severity
+      exceeds the real-reference boundary is reported separately as resolution
+    minimum_blocks_per_half: 10
+    feature_fit_samples: 512
+    feature_mapping: exact_registered_training_fitted_representation_and_bandwidth
+    copyist_resamples: 1000
+    copy_fraction_resamples: 400
+    batch_size: 64
+    phase_power_relative_threshold: 0.00001
+  controls:
+    warm_shift:
+      expected: minimum_and_lower_tail_temperature_response
+      kelvin: [0.0, 0.5, 1.0, 2.0, 4.0, 8.0]
+    threshold_warming:
+      expected: cold_cloud_fraction_response
+      kelvin: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0]
+      threshold_k: 220.0
+      half_width_k: 15.0
+    threshold_cooling:
+      expected: cold_cloud_fraction_response
+      kelvin: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0]
+      threshold_k: 220.0
+      half_width_k: 15.0
+    eye_contrast:
+      expected: eye_minus_eyewall_contrast_response
+      kelvin: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0]
+    blur:
+      expected: psd_and_gradient_response
+      sigma_pixels: [0.0, 0.5, 1.0, 2.0, 4.0, 8.0]
+    center_jitter:
+      expected: radial_structure_response
+      pixels: [0, 1, 2, 4, 8, 16]
+    radial_warp:
+      expected: radial_scale_response
+      fractional_dilation: [0.0, 0.05, 0.10, 0.20, 0.35, 0.50]
+    phase_shuffle:
+      expected: structure_response_with_unwindowed_fourier_power_preserved
+      severity: full
+    psd_quarter_turn:
+      expected: radial_hann_windowed_psd_invariance
+      rotation_degrees: 90
+    checkerboard:
+      expected: high_frequency_psd_and_feature_distribution_response
+      kelvin: [0.0, 0.5, 1.0, 2.0, 4.0, 8.0]
+    feature_eof_excursion:
+      expected: feature_mmd_and_density_response
+      standard_deviations: [0.0, 1.0, 2.0, 4.0, 8.0, 16.0]
+    feature_mode_removal:
+      expected: coverage_response
+      retained_fraction: [1.0, 0.75, 0.50, 0.25, 0.10]
+    feature_contraction:
+      expected: diversity_response
+      contraction: [0.0, 0.25, 0.50, 0.75, 0.95]
+    feature_expansion:
+      expected: diversity_response
+      expansion: [0.0, 0.25, 0.50, 1.0, 2.0]
+    boundary_spikes:
+      expected: preprocessing_saturation_response
+      sample_fraction: [0.0, 0.01, 0.05, 0.10, 0.25, 0.50]
+    copy_fraction:
+      expected: localized_copying_response
+      fractions: [0.01, 0.05, 0.10, 0.25, 0.50, 1.00]
+  interpretation_rule: >-
+    Raw gaps remain visible. A failed control withholds affirmative
+    interpretation; a monotone response below the reference range is labelled
+    as limited resolution rather than passed.
+
+exclusions:
+  corrupt_or_missing_fields: reject_before_run_and_report_count
+  failed_generator_samples: report_and_count_as_admissibility_failures
+  posthoc_endpoint_switching: prohibited
+  posthoc_stratum_merging: prohibited
+
+protocol_record:
+  original_freeze_at_utc: "2026-07-15T19:57:32Z"
+  base_commit: b765b73
+  binding: git_commit_containing_this_record
+  approvers: [project_owner]
+  final_evaluation_authorized_at_utc: "2026-07-16T06:29:36Z"
+  rationale_document: case_studies/tropical_cyclone_bt/protocol_freeze.md
+  amendments:
+    - date: "2026-07-28"
+      stage: checkerboard_control_mapping_correction_before_final_evaluation
+      change: >-
+        Restrict the checkerboard-artifact response contract to radial log-PSD
+        discrepancy and feature MMD squared. Feature density remains controlled
+        by the independent training-EOF excursion.
+      reason: >-
+        The first exact-representation v0.2 control run showed that a
+        checkerboard artifact is not a monotone perturbation of Naeem density,
+        whose local-manifold occupancy can change in either direction. The same
+        run confirmed monotone checkerboard responses for PSD and MMD squared
+        and a strong monotone density response to the registered EOF excursion.
+        Treating checkerboard as an additional required density control was
+        therefore an over-broad metric-control mapping rather than evidence
+        that the density implementation was unresponsive.
+    - date: "2026-07-28"
+      stage: v0.2_clean_rerun_provenance_completion
+      change: >-
+        Record the exact biased MMD estimator, curve and feature discrepancies,
+        generated-bank policy, reference-summary settings, continuous-wind audit,
+        and post-hoc feature-space robustness variants in the machine-readable
+        protocol.
+      reason: >-
+        A pre-rerun provenance audit found that these choices were already fixed
+        in code and manuscript methods but were not yet represented in the
+        checksummed protocol.
+    - date: "2026-07-28"
+      stage: submission_readiness_stress_test_after_initial_manuscript
+      change: >-
+        Recast GAUGE as empirical reference calibration, remove joint verdicts
+        and the C4+ aggregate, replace coarse controls with metric-specific
+        sensitivity and invariance controls, and add conditional Monte Carlo
+        summary uncertainty.
+      reason: >-
+        External-style methodological stress testing showed that the earlier
+        manuscript overstated the real-reference boundary as formal inference
+        and described incomplete controls too favourably. The test archive had
+        already been examined, so this document is a transparent versioned
+        method-development protocol rather than a prospective preregistration.
+    - date: "2026-07-28"
+      stage: control_and_copying_contract_revision
+      change: >-
+        Replace broad controls with metric-specific sensitivity and invariance
+        curves; replace multiplicity-adjusted copying decisions with descriptive
+        regional central ranges and a copied-fraction resolution curve; use the
+        complete diffusion-training archive as the nearest-neighbour reference.
+      reason: >-
+        The earlier implementation did not validate every feature metric and
+        overstated the inferential meaning of regional copying intervals.
+    - date: "2026-07-23"
+      stage: numerical_stability_audit
+      change: >-
+        Use 1,000 real-reference repetitions for paper-facing curve and feature
+        diagnostics and 2,000 for feature coverage; retain 200 for exploratory
+        dependence summaries; fail closed when split-half reference stability
+        exceeds 0.25.
+      reason: >-
+        Initial diagnostic budgets left some empirical reference quantiles
+        numerically unstable. The amendment changed computation, not the field
+        archive, metric definitions, or native conditions.
+    - date: "2026-07-16"
+      stage: target_mixture_audit
+      change: >-
+        Label global rows as dataset-composition audits when real and generated
+        condition proportions differ; match copying queries by intensity and
+        training-fitted feature region.
+      reason: >-
+        The held-out real archive has a natural intensity mixture whereas the
+        generated bank contains 1,000 fields per class.
+    - date: "2026-07-15"
+      stage: representation_and_psd_corrections
+      change: >-
+        Apply the generator-training 170--325 K clipping lazily to every
+        analysis input and use discrete-support-aware radial PSD bins.
+      reason: >-
+        Training-only calibration exposed a representation mismatch and empty
+        low-wavenumber bins under naïve geometric edges. Raw archives remain
+        unchanged and checksummed.

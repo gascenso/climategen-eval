@@ -48,7 +48,7 @@ feature_metrics:
     n_resamples: 1000
     min_real_blocks: 5
 
-tc_admissibility: true
+tc_preprocessing_saturation_audit: true
 sensitivity_results: control_results/sensitivity_lanes.json
 
 evaluation:
@@ -63,79 +63,19 @@ evaluation:
     feature_coverage_deficit: 2000
     feature_diversity_departure: 1000
     preprocessing_boundary_saturation: 1000
-  sensitivity_resamples: 200
-  alpha: 0.05
-  confidence: 0.95
+  reference_quantile: 0.95
+  comparison_interval: 0.95
+  summary_bootstrap_resamples: 1000
   estimand: block_balanced
   seed: 1789
   min_blocks_per_half: 10
   warn_blocks_per_half: 30
-  shift_power: 0.80
-  shift_grid_size: 33
   reference_stability_threshold: 0.25
   transform_batch_size: 128
-  simultaneous_family:
-    - global:w1:min_core_bt
-    - global:w1:cold_frac_220
-    - global:w1:r_maxgrad
-    - global:w1:axisym
-    - global:w1:dav
-    - global:w1:eye_contrast
-    - global:w1:p01_bt
-    - 0:w1:min_core_bt
-    - 0:w1:cold_frac_220
-    - 0:w1:r_maxgrad
-    - 0:w1:axisym
-    - 0:w1:dav
-    - 0:w1:eye_contrast
-    - 0:w1:p01_bt
-    - 1:w1:min_core_bt
-    - 1:w1:cold_frac_220
-    - 1:w1:r_maxgrad
-    - 1:w1:axisym
-    - 1:w1:dav
-    - 1:w1:eye_contrast
-    - 1:w1:p01_bt
-    - 2:w1:min_core_bt
-    - 2:w1:cold_frac_220
-    - 2:w1:r_maxgrad
-    - 2:w1:axisym
-    - 2:w1:dav
-    - 2:w1:eye_contrast
-    - 2:w1:p01_bt
-    - 3:w1:min_core_bt
-    - 3:w1:cold_frac_220
-    - 3:w1:r_maxgrad
-    - 3:w1:axisym
-    - 3:w1:dav
-    - 3:w1:eye_contrast
-    - 3:w1:p01_bt
-    - 4:w1:min_core_bt
-    - 4:w1:cold_frac_220
-    - 4:w1:r_maxgrad
-    - 4:w1:axisym
-    - 4:w1:dav
-    - 4:w1:eye_contrast
-    - 4:w1:p01_bt
-    - 5:w1:min_core_bt
-    - 5:w1:cold_frac_220
-    - 5:w1:r_maxgrad
-    - 5:w1:axisym
-    - 5:w1:dav
-    - 5:w1:eye_contrast
-    - 5:w1:p01_bt
-    - C4_plus:w1:min_core_bt
-    - C4_plus:w1:cold_frac_220
-    - C4_plus:w1:r_maxgrad
-    - C4_plus:w1:axisym
-    - C4_plus:w1:dav
-    - C4_plus:w1:eye_contrast
-    - C4_plus:w1:p01_bt
   include_partitions: true
 
 conditional: true
-conditional_groups:
-  C4_plus: [4, 5]
+conditional_groups: {}
 outputs:
   json: ../../outputs/tropical_cyclone_bt/gauge_track1/evaluation.json
   html: ../../outputs/tropical_cyclone_bt/gauge_track1/evaluation.html

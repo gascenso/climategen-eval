@@ -1,0 +1,1210 @@
+{
+  "schema": "gauge_climate.tc_bt_continuous_wind_audit.v1",
+  "interpretation": "Descriptive secondary audit only; no equivalence or fidelity verdict. Slopes are changes in each functional per 10 kt within the native class.",
+  "real_weighting": "Inverse storm-frequency weights, implemented as equal means of storm-specific first and cross moments.",
+  "generated_weighting": "Equal sample weights.",
+  "intervals": {
+    "level": 0.95,
+    "real": "storm bootstrap",
+    "generated": "sample bootstrap conditional on the fixed sample bank",
+    "resamples": 2000
+  },
+  "inputs": {
+    "config": "/home/guidoascenso/CMCC/projects/climategen-eval/case_studies/tropical_cyclone_bt/track1_config.template.yaml",
+    "config_sha256": "a07eb5b2a90bac0d5e96ce8538eed07581a40cb684b4f61c157e23cc4f0a35a2",
+    "functional_cache": "/home/guidoascenso/CMCC/projects/climategen-eval/outputs/tropical_cyclone_bt/presentation/functionals.npz",
+    "functional_cache_sha256": "d87b99e8da05d20dc35c27e94982f76f90e61f003b2c256a25374e036254e037",
+    "real_manifest": "/home/guidoascenso/CMCC/projects/climategen-eval/data/tropical_cyclone_bt/real_test/manifest.json",
+    "generated_manifest": "/home/guidoascenso/CMCC/projects/climategen-eval/data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000/manifest.json"
+  },
+  "synthetic_validation": {
+    "event_blocked_real_engine": {
+      "responsive_expected_per_10kt": 5.0,
+      "responsive_estimate_per_10kt": 5.004941474616702,
+      "responsive_interval_95_per_10kt": [
+        4.913278123748789,
+        5.099304326830293
+      ],
+      "wind_ignoring_estimate_per_10kt": 0.006117293434511046,
+      "wind_ignoring_interval_95_per_10kt": [
+        -0.0670530692210196,
+        0.07697557773614983
+      ]
+    },
+    "fixed_generated_bank_engine": {
+      "responsive_expected_per_10kt": 5.0,
+      "responsive_estimate_per_10kt": 5.016930280112338,
+      "responsive_interval_95_per_10kt": [
+        4.9384186311724205,
+        5.102087369193044
+      ],
+      "wind_ignoring_estimate_per_10kt": -0.0027481820475489574,
+      "wind_ignoring_interval_95_per_10kt": [
+        -0.07768020787065334,
+        0.0721932925303973
+      ]
+    },
+    "responsive_expected_per_10kt": 5.0,
+    "responsive_estimate_per_10kt": 5.004941474616702,
+    "responsive_interval_95_per_10kt": [
+      4.913278123748789,
+      5.099304326830293
+    ],
+    "wind_ignoring_estimate_per_10kt": 0.006117293434511046,
+    "wind_ignoring_interval_95_per_10kt": [
+      -0.0670530692210196,
+      0.07697557773614983
+    ],
+    "passed": true
+  },
+  "functionals": {
+    "min_core_bt": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": -1.053928496608312,
+          "interval_95_per_10kt": [
+            -1.9676692392155977,
+            -0.1529729658698558
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.1852870189057279,
+          "interval_95_per_10kt": [
+            -2.1266017968190614,
+            -0.2746189961919188
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": -1.0113598094714469,
+          "interval_95_per_10kt": [
+            -2.3414340612189575,
+            0.2821462757417806
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.07609203999916725,
+          "interval_95_per_10kt": [
+            -1.2627163203208094,
+            1.1286626330038834
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": -1.3423622326451405,
+          "interval_95_per_10kt": [
+            -3.724474727865491,
+            0.9722683073357915
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.0159913116909453,
+          "interval_95_per_10kt": [
+            -1.5111776947797988,
+            1.4404958418595286
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": -0.3479861810580442,
+          "interval_95_per_10kt": [
+            -2.0472056094103595,
+            1.3792574411161724
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.150955384302141,
+          "interval_95_per_10kt": [
+            -2.235130048338913,
+            -0.0609556824495534
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": -0.9626133360668733,
+          "interval_95_per_10kt": [
+            -1.9053482268530983,
+            0.06745067032331768
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.5235750106247111,
+          "interval_95_per_10kt": [
+            -1.0537765165952986,
+            0.0006556256433449843
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": -1.1341286623784808,
+          "interval_95_per_10kt": [
+            -2.7287877901176945,
+            1.1656438830348064
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.11162169314075959,
+          "interval_95_per_10kt": [
+            -0.5369009914978229,
+            0.3036772004663663
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ],
+    "cold_frac_220": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": 3.681083969287159,
+          "interval_95_per_10kt": [
+            1.613141679409347,
+            5.816780833720022
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 3.1040028067799073,
+          "interval_95_per_10kt": [
+            0.94707100017284,
+            5.371138492633655
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": 4.654788832131127,
+          "interval_95_per_10kt": [
+            0.8220125537530637,
+            8.328865005377283
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 1.8654539683020566,
+          "interval_95_per_10kt": [
+            -1.52712163887301,
+            5.049410757138325
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": 8.1201922301403,
+          "interval_95_per_10kt": [
+            1.438122568851545,
+            14.36821449978979
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 2.8844811032196263,
+          "interval_95_per_10kt": [
+            -1.5418488743374201,
+            7.562725762270301
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": 5.920524545793531,
+          "interval_95_per_10kt": [
+            0.4488025524318782,
+            11.898529280213907
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 6.4263124296391085,
+          "interval_95_per_10kt": [
+            2.4500126995120084,
+            10.131528164101022
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": 2.2107418612014196,
+          "interval_95_per_10kt": [
+            -1.6292786472164569,
+            6.091365209399612
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 2.7404589498392147,
+          "interval_95_per_10kt": [
+            0.8657533615010933,
+            4.589572750149863
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": 2.5960141568848787,
+          "interval_95_per_10kt": [
+            -0.9143003153880377,
+            6.335194561464108
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.8830690693794787,
+          "interval_95_per_10kt": [
+            -3.2483680579671823,
+            -0.5618388790642002
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ],
+    "r_maxgrad": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": 10.752494985285054,
+          "interval_95_per_10kt": [
+            3.8002156091345785,
+            17.3459094642696
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 7.335926153475838,
+          "interval_95_per_10kt": [
+            -1.893655354078581,
+            16.2853912110466
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": -0.39883942154239893,
+          "interval_95_per_10kt": [
+            -15.985968922454838,
+            15.416505941601782
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.5655110915849095,
+          "interval_95_per_10kt": [
+            -15.711304426526247,
+            11.431312676780616
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": 24.20924630967031,
+          "interval_95_per_10kt": [
+            -8.275903385086542,
+            55.04136098244984
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 2.183135176368852,
+          "interval_95_per_10kt": [
+            -20.153213112739692,
+            25.403976766715488
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": -36.47883631645453,
+          "interval_95_per_10kt": [
+            -72.53102930339762,
+            1.7663838790506343
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -11.20860833585257,
+          "interval_95_per_10kt": [
+            -33.968351617053685,
+            9.784347051331208
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": -23.53301665331584,
+          "interval_95_per_10kt": [
+            -53.490582412113476,
+            7.737560668711166
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -10.320125680076554,
+          "interval_95_per_10kt": [
+            -24.113451864756605,
+            4.103479633387455
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": -21.15955567426876,
+          "interval_95_per_10kt": [
+            -66.04153687227479,
+            17.12402654116285
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 19.93076801718063,
+          "interval_95_per_10kt": [
+            9.114606140710583,
+            30.349898948028645
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ],
+    "axisym": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": -1.1449385028838868,
+          "interval_95_per_10kt": [
+            -1.4278911942059245,
+            -0.8696875815964501
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.9223405017452391,
+          "interval_95_per_10kt": [
+            -1.2807803651170298,
+            -0.5593723720373298
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": -0.758511942041487,
+          "interval_95_per_10kt": [
+            -1.292393579504129,
+            -0.17728083850980794
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.8517493092744846,
+          "interval_95_per_10kt": [
+            -1.3401503309312615,
+            -0.36850227166803556
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": -0.8858550686012405,
+          "interval_95_per_10kt": [
+            -1.852466763904364,
+            0.0544135105948282
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.1993658676009908,
+          "interval_95_per_10kt": [
+            -1.8712622292672716,
+            -0.4958327641222242
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": 0.018613526690505235,
+          "interval_95_per_10kt": [
+            -0.7541252642434938,
+            0.8293054481515635
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.6110316344571032,
+          "interval_95_per_10kt": [
+            -1.1969847358067942,
+            -0.06818931317677021
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": 0.03678365991674333,
+          "interval_95_per_10kt": [
+            -0.614477902410612,
+            0.6378019712443607
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.16819382451988688,
+          "interval_95_per_10kt": [
+            -0.48471170895975263,
+            0.12992318857658147
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": -0.3138296390493738,
+          "interval_95_per_10kt": [
+            -0.8225749775134039,
+            0.26553962016520494
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 0.3581020617321239,
+          "interval_95_per_10kt": [
+            0.12671734557955608,
+            0.5975899351599034
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ],
+    "dav": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": 40.22548802607922,
+          "interval_95_per_10kt": [
+            17.36760067566718,
+            63.43642778921193
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 37.32113350756871,
+          "interval_95_per_10kt": [
+            6.100849107211287,
+            67.61764124621699
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": 57.138163037806656,
+          "interval_95_per_10kt": [
+            5.5340469028234,
+            109.17804115489152
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 51.539643516843334,
+          "interval_95_per_10kt": [
+            4.741770191481979,
+            98.41012421961068
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": 37.65058912574522,
+          "interval_95_per_10kt": [
+            -74.0399271919852,
+            146.9561401053723
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -6.3461786641408775,
+          "interval_95_per_10kt": [
+            -83.3918399868244,
+            70.12488525818064
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": -26.66533926850047,
+          "interval_95_per_10kt": [
+            -108.41050915521679,
+            56.227974020829556
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 38.687345405529,
+          "interval_95_per_10kt": [
+            -29.160942086773787,
+            102.03243742308945
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": -47.94613326525979,
+          "interval_95_per_10kt": [
+            -127.72675697108986,
+            26.36212288967238
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 9.517763461472626,
+          "interval_95_per_10kt": [
+            -30.10478831191278,
+            47.372951163809546
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": 70.43808541090891,
+          "interval_95_per_10kt": [
+            -56.86928483385531,
+            234.82702184748834
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -54.29316182921624,
+          "interval_95_per_10kt": [
+            -88.26779955036122,
+            -21.04879617722396
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ],
+    "eye_contrast": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": 0.28037916605180757,
+          "interval_95_per_10kt": [
+            -0.07798386202013333,
+            0.636194706658031
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 0.5536375275538784,
+          "interval_95_per_10kt": [
+            0.021156941981465144,
+            1.1117220860481456
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": 0.6239948991107541,
+          "interval_95_per_10kt": [
+            -0.05619043210337007,
+            1.3769601484227345
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 0.8427921861557826,
+          "interval_95_per_10kt": [
+            0.01498987820633336,
+            1.6428732329666034
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": -0.1973579693006186,
+          "interval_95_per_10kt": [
+            -2.6736806697173967,
+            2.0930061241699165
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 1.2101933304153807,
+          "interval_95_per_10kt": [
+            -0.27153238375395017,
+            2.6061095773277545
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": 0.6900809123546585,
+          "interval_95_per_10kt": [
+            -1.41448565852201,
+            3.079482048088815
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 0.5494536123502504,
+          "interval_95_per_10kt": [
+            -1.0540031546685094,
+            2.044978980693267
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": 1.1942831307043413,
+          "interval_95_per_10kt": [
+            -1.1672509424851694,
+            3.4784661553545178
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 0.8015982446036533,
+          "interval_95_per_10kt": [
+            -0.11834713908928574,
+            1.783865137949917
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": -0.3257886413206375,
+          "interval_95_per_10kt": [
+            -3.5223901912772857,
+            5.072790279833469
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.652902582344748,
+          "interval_95_per_10kt": [
+            -2.49974546847761,
+            -0.7101286879886051
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ],
+    "p01_bt": [
+      {
+        "condition": "TS",
+        "real": {
+          "estimate_per_10kt": -0.9108453703720899,
+          "interval_95_per_10kt": [
+            -1.8080840960589686,
+            0.012274308365654345
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 3942,
+          "storms": 368,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.7103612968244659,
+          "interval_95_per_10kt": [
+            -1.637677669931636,
+            0.21095365727779558
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C1",
+        "real": {
+          "estimate_per_10kt": -1.2173784924540942,
+          "interval_95_per_10kt": [
+            -2.6210291965029313,
+            0.19659104667104005
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1318,
+          "storms": 211,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.07963564389253452,
+          "interval_95_per_10kt": [
+            -1.3438584516087981,
+            1.106129466313043
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C2",
+        "real": {
+          "estimate_per_10kt": -1.132008875305715,
+          "interval_95_per_10kt": [
+            -3.2658024852169194,
+            0.8839391979191148
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 700,
+          "storms": 149,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.2539477198137927,
+          "interval_95_per_10kt": [
+            -1.7522601950464745,
+            1.397552655096385
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C3",
+        "real": {
+          "estimate_per_10kt": -1.322147390776448,
+          "interval_95_per_10kt": [
+            -2.958454750832118,
+            0.37649444739702354
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 505,
+          "storms": 106,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -1.213945719707854,
+          "interval_95_per_10kt": [
+            -2.468169641626227,
+            -0.014218938935781238
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C4",
+        "real": {
+          "estimate_per_10kt": -1.3861914954726697,
+          "interval_95_per_10kt": [
+            -2.439701792221827,
+            -0.3186799314629863
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 461,
+          "storms": 76,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": -0.8614725361808715,
+          "interval_95_per_10kt": [
+            -1.4310824049738102,
+            -0.26130888505056094
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      },
+      {
+        "condition": "C5",
+        "real": {
+          "estimate_per_10kt": -1.3283750826976866,
+          "interval_95_per_10kt": [
+            -2.7595869998365274,
+            0.9326753738278464
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 85,
+          "storms": 22,
+          "weighting": "inverse storm frequency within condition"
+        },
+        "generated": {
+          "estimate_per_10kt": 0.13558380039724002,
+          "interval_95_per_10kt": [
+            -0.3032318914376468,
+            0.5661673222948684
+          ],
+          "valid_resamples": 2000,
+          "warning": null,
+          "samples": 1000,
+          "independent_blocks": null,
+          "weighting": "equal sample weight"
+        }
+      }
+    ]
+  }
+}

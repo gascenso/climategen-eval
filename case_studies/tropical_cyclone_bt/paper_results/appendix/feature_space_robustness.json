@@ -1,0 +1,4581 @@
+{
+  "schema": "gauge_climate.tc_bt_feature_robustness.v1",
+  "status": "POST_HOC_ROBUSTNESS_ANALYSIS",
+  "interpretation": "No verdict is attached to these variants. They assess whether the class-wise feature-metric pattern depends materially on EOF fit sample count, rank, or the spatial scales retained by the EOFs.",
+  "registered_variant": "fit512_rank20_scale0km",
+  "methods": {
+    "eof_solver": "scipy sparse truncated SVD (largest singular triplets)",
+    "registered_baseline_solver": "exact gauge_climate TrainFittedFeatureSpace full SVD",
+    "fit_source": "training split only",
+    "physical_features": "The seven registered physical functionals are unchanged across low-pass variants; only the EOF component is low-pass filtered.",
+    "reference_resamples": 100,
+    "metric_sample_cap": 256,
+    "low_pass_scale_definition": "Gaussian standard deviation in kilometres"
+  },
+  "inputs": {
+    "config": "/home/guidoascenso/CMCC/projects/climategen-eval/case_studies/tropical_cyclone_bt/track1_config.template.yaml",
+    "config_sha256": "a07eb5b2a90bac0d5e96ce8538eed07581a40cb684b4f61c157e23cc4f0a35a2",
+    "functional_cache": "/home/guidoascenso/CMCC/projects/climategen-eval/outputs/tropical_cyclone_bt/presentation/functionals.npz",
+    "functional_cache_sha256": "d87b99e8da05d20dc35c27e94982f76f90e61f003b2c256a25374e036254e037"
+  },
+  "variants": {
+    "fit256_rank10_scale0km": {
+      "fit_size": 256,
+      "rank": 10,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 5.596452069874178,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006309090996077682,
+                "model_reference_interval_95": [
+                  0.0040696262519349215,
+                  0.012081409398850095
+                ],
+                "real_reference_q50": 0.004500075357014799,
+                "real_reference_q95": 0.011687178154212673,
+                "reference_gap": 0.25170304225621853,
+                "reference_percentile": 0.78
+              },
+              "feature_density": {
+                "model_reference_median": 0.26601562500000003,
+                "model_reference_interval_95": [
+                  0.14679687499999997,
+                  0.36056640625
+                ],
+                "real_reference_q50": 0.09062499999999996,
+                "real_reference_q95": 0.19460937500000003,
+                "reference_gap": 1.6867017280240417,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.078125,
+                "model_reference_interval_95": [
+                  0.03310546875,
+                  0.12890625
+                ],
+                "real_reference_q50": 0.0703125,
+                "real_reference_q95": 0.1171875,
+                "reference_gap": 0.16666666666666666,
+                "reference_percentile": 0.62
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07140559389971168,
+                "model_reference_interval_95": [
+                  0.040157300722839843,
+                  0.1030555472556212
+                ],
+                "real_reference_q50": 0.023214952081807905,
+                "real_reference_q95": 0.05036855589665976,
+                "reference_gap": 1.7747420249074106,
+                "reference_percentile": 0.98
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006534371277560291,
+                "model_reference_interval_95": [
+                  0.0036059670336748284,
+                  0.010486551362038523
+                ],
+                "real_reference_q50": 0.0061820536924105385,
+                "real_reference_q95": 0.01096459970423491,
+                "reference_gap": 0.0736673696977891,
+                "reference_percentile": 0.59
+              },
+              "feature_density": {
+                "model_reference_median": 0.2515625000000001,
+                "model_reference_interval_95": [
+                  0.10783203125000002,
+                  0.3594140625
+                ],
+                "real_reference_q50": 0.14023437500000008,
+                "real_reference_q95": 0.28457031250000003,
+                "reference_gap": 0.7713125845737485,
+                "reference_percentile": 0.88
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.1640625,
+                "model_reference_interval_95": [
+                  0.10732421875,
+                  0.24609375
+                ],
+                "real_reference_q50": 0.158203125,
+                "real_reference_q95": 0.2189453125,
+                "reference_gap": 0.0964630225080386,
+                "reference_percentile": 0.55
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07133661344313147,
+                "model_reference_interval_95": [
+                  0.029984607017564884,
+                  0.10395397204843154
+                ],
+                "real_reference_q50": 0.01783514486629073,
+                "real_reference_q95": 0.05492739540681374,
+                "reference_gap": 1.4423893885433234,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.007311673048133627,
+                "model_reference_interval_95": [
+                  0.004682508863233759,
+                  0.011254210031840338
+                ],
+                "real_reference_q50": 0.0071066212401520445,
+                "real_reference_q95": 0.012136545144188146,
+                "reference_gap": 0.040766383725416785,
+                "reference_percentile": 0.54
+              },
+              "feature_density": {
+                "model_reference_median": 0.37929687500000003,
+                "model_reference_interval_95": [
+                  0.23958984375,
+                  0.49353515624999994
+                ],
+                "real_reference_q50": 0.20742187500000003,
+                "real_reference_q95": 0.3869921875,
+                "reference_gap": 0.9571459647596262,
+                "reference_percentile": 0.94
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.228515625,
+                "model_reference_interval_95": [
+                  0.14248046875,
+                  0.3125
+                ],
+                "real_reference_q50": 0.259765625,
+                "real_reference_q95": 0.3634765625,
+                "reference_gap": -0.30131826741996237,
+                "reference_percentile": 0.2
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08495794198746176,
+                "model_reference_interval_95": [
+                  0.045722133440117704,
+                  0.13318660049029926
+                ],
+                "real_reference_q50": 0.027405033240353593,
+                "real_reference_q95": 0.06467498430829316,
+                "reference_gap": 1.5442174485873272,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.012174617826324119,
+                "model_reference_interval_95": [
+                  0.008630412911347068,
+                  0.01806834679146945
+                ],
+                "real_reference_q50": 0.008933647968845215,
+                "real_reference_q95": 0.015246257471103997,
+                "reference_gap": 0.513412061417583,
+                "reference_percentile": 0.74
+              },
+              "feature_density": {
+                "model_reference_median": 0.5445312499999999,
+                "model_reference_interval_95": [
+                  0.40990234375,
+                  0.651640625
+                ],
+                "real_reference_q50": 0.285546875,
+                "real_reference_q95": 0.4613671875,
+                "reference_gap": 1.4730059986669624,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.2734375,
+                "model_reference_interval_95": [
+                  0.1951171875,
+                  0.3671875
+                ],
+                "real_reference_q50": 0.345703125,
+                "real_reference_q95": 0.4572265625,
+                "reference_gap": -0.6479859894921192,
+                "reference_percentile": 0.1
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.1305743553831894,
+                "model_reference_interval_95": [
+                  0.08817362540087839,
+                  0.17201969765322325
+                ],
+                "real_reference_q50": 0.027494443325788487,
+                "real_reference_q95": 0.07276867368431385,
+                "reference_gap": 2.2767899363747097,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.015548289911934021,
+                "model_reference_interval_95": [
+                  0.010087779341739728,
+                  0.021680562321056647
+                ],
+                "real_reference_q50": 0.012255120265227348,
+                "real_reference_q95": 0.022208201386344145,
+                "reference_gap": 0.3308693666446435,
+                "reference_percentile": 0.67
+              },
+              "feature_density": {
+                "model_reference_median": 0.5453124999999999,
+                "model_reference_interval_95": [
+                  0.38814453125,
+                  0.6199804687499999
+                ],
+                "real_reference_q50": 0.411328125,
+                "real_reference_q95": 0.5461718750000001,
+                "reference_gap": 0.9936268829663947,
+                "reference_percentile": 0.94
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.38671875,
+                "model_reference_interval_95": [
+                  0.27919921875,
+                  0.4749023437499999
+                ],
+                "real_reference_q50": 0.462890625,
+                "real_reference_q95": 0.555078125,
+                "reference_gap": -0.8262711864406782,
+                "reference_percentile": 0.03
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.11596807249158003,
+                "model_reference_interval_95": [
+                  0.0774403566873026,
+                  0.15195257912963853
+                ],
+                "real_reference_q50": 0.024485048453141367,
+                "real_reference_q95": 0.06060048749652292,
+                "reference_gap": 2.5330724604662853,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.045710222154216384,
+                "model_reference_interval_95": [
+                  0.032859964200243195,
+                  0.07589337574975259
+                ],
+                "real_reference_q50": 0.04097871969340783,
+                "real_reference_q95": 0.07350911902804835,
+                "reference_gap": 0.14544864365590923,
+                "reference_percentile": 0.56
+              },
+              "feature_density": {
+                "model_reference_median": 0.923828125,
+                "model_reference_interval_95": [
+                  0.8353710937500001,
+                  0.97701171875
+                ],
+                "real_reference_q50": 0.8441406250000001,
+                "real_reference_q95": 0.9651953125,
+                "reference_gap": 0.6582768635043559,
+                "reference_percentile": 0.85
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.90234375,
+                "model_reference_interval_95": [
+                  0.84560546875,
+                  0.9708007812499999
+                ],
+                "real_reference_q50": 0.94140625,
+                "real_reference_q95": 0.98046875,
+                "reference_gap": -1.0,
+                "reference_percentile": 0.13
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.17367055813594956,
+                "model_reference_interval_95": [
+                  0.09789508256286118,
+                  0.27299435831421964
+                ],
+                "real_reference_q50": 0.047821651339996385,
+                "real_reference_q95": 0.14497300275741642,
+                "reference_gap": 1.2953901820184812,
+                "reference_percentile": 0.98
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.3097091538324378,
+          "median_absolute_gap_change": 0.3966149166986913
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.8990440435987213,
+          "median_absolute_gap_change": 0.28519280720952783
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.888900535326356,
+          "median_absolute_gap_change": 0.21021184289406267
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.6200548994094178,
+          "median_absolute_gap_change": 0.19789128367747244
+        }
+      }
+    },
+    "fit256_rank20_scale0km": {
+      "fit_size": 256,
+      "rank": 20,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 7.139280859545126,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005545127065016753,
+                "model_reference_interval_95": [
+                  0.0037211903956716587,
+                  0.008434629910087277
+                ],
+                "real_reference_q50": 0.0044207543760120815,
+                "real_reference_q95": 0.006778343396040897,
+                "reference_gap": 0.47691632402959216,
+                "reference_percentile": 0.72
+              },
+              "feature_density": {
+                "model_reference_median": 0.28906250000000006,
+                "model_reference_interval_95": [
+                  0.15021484375,
+                  0.407890625
+                ],
+                "real_reference_q50": 0.10039062499999996,
+                "real_reference_q95": 0.21507812499999998,
+                "reference_gap": 1.645095367847412,
+                "reference_percentile": 0.99
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.0703125,
+                "model_reference_interval_95": [
+                  0.03310546875,
+                  0.109375
+                ],
+                "real_reference_q50": 0.06640625,
+                "real_reference_q95": 0.11347656249999999,
+                "reference_gap": 0.08298755186721994,
+                "reference_percentile": 0.57
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06394237114660006,
+                "model_reference_interval_95": [
+                  0.03936048086856182,
+                  0.0938261342838475
+                ],
+                "real_reference_q50": 0.014500535538771286,
+                "real_reference_q95": 0.04562262559480574,
+                "reference_gap": 1.5886412358170718,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005541322643809576,
+                "model_reference_interval_95": [
+                  0.0037242891506547525,
+                  0.008380198275727495
+                ],
+                "real_reference_q50": 0.005630118067643242,
+                "real_reference_q95": 0.009373445961215709,
+                "reference_gap": -0.023720984738241243,
+                "reference_percentile": 0.45
+              },
+              "feature_density": {
+                "model_reference_median": 0.300390625,
+                "model_reference_interval_95": [
+                  0.1474218750000001,
+                  0.41722656249999995
+                ],
+                "real_reference_q50": 0.158203125,
+                "real_reference_q95": 0.34089843749999993,
+                "reference_gap": 0.7782766730810353,
+                "reference_percentile": 0.9
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.1796875,
+                "model_reference_interval_95": [
+                  0.10712890625,
+                  0.2662109374999998
+                ],
+                "real_reference_q50": 0.15625,
+                "real_reference_q95": 0.2150390625,
+                "reference_gap": 0.398671096345515,
+                "reference_percentile": 0.71
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.053997938097302356,
+                "model_reference_interval_95": [
+                  0.02055680995698388,
+                  0.08175646956784612
+                ],
+                "real_reference_q50": 0.0184462457120399,
+                "real_reference_q95": 0.050749862239772785,
+                "reference_gap": 1.1005483659930484,
+                "reference_percentile": 0.96
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006336244209223962,
+                "model_reference_interval_95": [
+                  0.004115295463996216,
+                  0.0092180175502856
+                ],
+                "real_reference_q50": 0.007262939104542898,
+                "real_reference_q95": 0.012406917884050761,
+                "reference_gap": -0.18015138379081627,
+                "reference_percentile": 0.28
+              },
+              "feature_density": {
+                "model_reference_median": 0.36054687500000004,
+                "model_reference_interval_95": [
+                  0.22789062499999999,
+                  0.48169921874999994
+                ],
+                "real_reference_q50": 0.20351562499999998,
+                "real_reference_q95": 0.413828125,
+                "reference_gap": 0.74665676077266,
+                "reference_percentile": 0.88
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.2265625,
+                "model_reference_interval_95": [
+                  0.1521484375,
+                  0.33203125
+                ],
+                "real_reference_q50": 0.2734375,
+                "real_reference_q95": 0.351953125,
+                "reference_gap": -0.5970149253731345,
+                "reference_percentile": 0.26
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08178921923086124,
+                "model_reference_interval_95": [
+                  0.05666831644341129,
+                  0.12606290695144562
+                ],
+                "real_reference_q50": 0.020438833624426667,
+                "real_reference_q95": 0.05456103904137674,
+                "reference_gap": 1.7979607372024966,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.009411283304886053,
+                "model_reference_interval_95": [
+                  0.0066391752699835,
+                  0.014233127767504121
+                ],
+                "real_reference_q50": 0.00822775132190634,
+                "real_reference_q95": 0.013352972366610349,
+                "reference_gap": 0.23092310998033536,
+                "reference_percentile": 0.66
+              },
+              "feature_density": {
+                "model_reference_median": 0.516015625,
+                "model_reference_interval_95": [
+                  0.391796875,
+                  0.6127343749999999
+                ],
+                "real_reference_q50": 0.31796875,
+                "real_reference_q95": 0.4939453125,
+                "reference_gap": 1.125416204217536,
+                "reference_percentile": 0.97
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.28515625,
+                "model_reference_interval_95": [
+                  0.18154296875,
+                  0.3772460937499999
+                ],
+                "real_reference_q50": 0.365234375,
+                "real_reference_q95": 0.4611328125,
+                "reference_gap": -0.835030549898167,
+                "reference_percentile": 0.11
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.11275090984669434,
+                "model_reference_interval_95": [
+                  0.07596564275731296,
+                  0.1458833367595086
+                ],
+                "real_reference_q50": 0.021413368021294565,
+                "real_reference_q95": 0.056956650859528224,
+                "reference_gap": 2.56975536674819,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.011752996298366014,
+                "model_reference_interval_95": [
+                  0.008331887353275119,
+                  0.016423444265455233
+                ],
+                "real_reference_q50": 0.011060329025385784,
+                "real_reference_q95": 0.016451266695656306,
+                "reference_gap": 0.12848734586565366,
+                "reference_percentile": 0.62
+              },
+              "feature_density": {
+                "model_reference_median": 0.5578125,
+                "model_reference_interval_95": [
+                  0.41861328124999997,
+                  0.63189453125
+                ],
+                "real_reference_q50": 0.42929687499999997,
+                "real_reference_q95": 0.6020703124999999,
+                "reference_gap": 0.7438390232873624,
+                "reference_percentile": 0.85
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.380859375,
+                "model_reference_interval_95": [
+                  0.2734375,
+                  0.48642578124999997
+                ],
+                "real_reference_q50": 0.462890625,
+                "real_reference_q95": 0.578515625,
+                "reference_gap": -0.7094594594594595,
+                "reference_percentile": 0.04
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.09844408926790305,
+                "model_reference_interval_95": [
+                  0.07034843617430558,
+                  0.13634940518150213
+                ],
+                "real_reference_q50": 0.022745080097912374,
+                "real_reference_q95": 0.056614970996510756,
+                "reference_gap": 2.2349941839677814,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.0375628921454807,
+                "model_reference_interval_95": [
+                  0.02575092095459533,
+                  0.05666708127453827
+                ],
+                "real_reference_q50": 0.04110592870152108,
+                "real_reference_q95": 0.06638643742887473,
+                "reference_gap": -0.1401489421851228,
+                "reference_percentile": 0.38
+              },
+              "feature_density": {
+                "model_reference_median": 0.920703125,
+                "model_reference_interval_95": [
+                  0.81748046875,
+                  0.98009765625
+                ],
+                "real_reference_q50": 0.869921875,
+                "real_reference_q95": 0.9726953125,
+                "reference_gap": 0.4941087039148612,
+                "reference_percentile": 0.73
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.890625,
+                "model_reference_interval_95": [
+                  0.79873046875,
+                  0.9551757812499999
+                ],
+                "real_reference_q50": 0.9453125,
+                "real_reference_q95": 0.9728515625,
+                "reference_gap": -1.9858156028368763,
+                "reference_percentile": 0.08
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.1472321197397698,
+                "model_reference_interval_95": [
+                  0.09028729168168687,
+                  0.20962097254303888
+                ],
+                "real_reference_q50": 0.036744871898281795,
+                "real_reference_q95": 0.11122850299105135,
+                "reference_gap": 1.4833762293875798,
+                "reference_percentile": 1.0
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.9076246393444537,
+          "median_absolute_gap_change": 0.1541794305905726
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.8511099763803557,
+          "median_absolute_gap_change": 0.17228417502777
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9791342866204394,
+          "median_absolute_gap_change": 0.1443627848443291
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.4860160537950391,
+          "median_absolute_gap_change": 0.429626955002696
+        }
+      }
+    },
+    "fit256_rank40_scale0km": {
+      "fit_size": 256,
+      "rank": 40,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 9.481455735429062,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.00502301855831766,
+                "model_reference_interval_95": [
+                  0.003428840847200737,
+                  0.007319786397078918
+                ],
+                "real_reference_q50": 0.004104448593286958,
+                "real_reference_q95": 0.005848466567588373,
+                "reference_gap": 0.5266975332628926,
+                "reference_percentile": 0.83
+              },
+              "feature_density": {
+                "model_reference_median": 0.26484374999999993,
+                "model_reference_interval_95": [
+                  0.11339843750000002,
+                  0.37519531249999993
+                ],
+                "real_reference_q50": 0.10273437499999993,
+                "real_reference_q95": 0.2909765625,
+                "reference_gap": 0.861174517534758,
+                "reference_percentile": 0.89
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.0625,
+                "model_reference_interval_95": [
+                  0.02919921875,
+                  0.11533203124999997
+                ],
+                "real_reference_q50": 0.0625,
+                "real_reference_q95": 0.1171875,
+                "reference_gap": 0.0,
+                "reference_percentile": 0.54
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05059613470890989,
+                "model_reference_interval_95": [
+                  0.02770558799171984,
+                  0.0780597062089204
+                ],
+                "real_reference_q50": 0.01415582260812459,
+                "real_reference_q95": 0.04359161670361272,
+                "reference_gap": 1.2379591996932335,
+                "reference_percentile": 0.98
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.004925158946095132,
+                "model_reference_interval_95": [
+                  0.003513589037835907,
+                  0.0065502631711081335
+                ],
+                "real_reference_q50": 0.005107474243293719,
+                "real_reference_q95": 0.0069819097638359135,
+                "reference_gap": -0.09726410708747746,
+                "reference_percentile": 0.45
+              },
+              "feature_density": {
+                "model_reference_median": 0.2421875,
+                "model_reference_interval_95": [
+                  0.10818359375000007,
+                  0.39781249999999996
+                ],
+                "real_reference_q50": 0.16640625000000003,
+                "real_reference_q95": 0.36992187499999996,
+                "reference_gap": 0.37236084452975043,
+                "reference_percentile": 0.7
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.158203125,
+                "model_reference_interval_95": [
+                  0.0859375,
+                  0.22861328124999997
+                ],
+                "real_reference_q50": 0.162109375,
+                "real_reference_q95": 0.24609375,
+                "reference_gap": -0.046511627906976744,
+                "reference_percentile": 0.47
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.03719004979255236,
+                "model_reference_interval_95": [
+                  0.008001089396289879,
+                  0.06663456698572286
+                ],
+                "real_reference_q50": 0.01953171052607172,
+                "real_reference_q95": 0.04870352460568539,
+                "reference_gap": 0.6053219459814442,
+                "reference_percentile": 0.84
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005325242828890908,
+                "model_reference_interval_95": [
+                  0.003949908380289646,
+                  0.007615793555762727
+                ],
+                "real_reference_q50": 0.006256213108234099,
+                "real_reference_q95": 0.009713538312621749,
+                "reference_gap": -0.2692747208627373,
+                "reference_percentile": 0.19
+              },
+              "feature_density": {
+                "model_reference_median": 0.38789062500000004,
+                "model_reference_interval_95": [
+                  0.16962890625,
+                  0.5459765624999997
+                ],
+                "real_reference_q50": 0.24414062500000006,
+                "real_reference_q95": 0.5008203124999999,
+                "reference_gap": 0.5600365241211386,
+                "reference_percentile": 0.81
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.2109375,
+                "model_reference_interval_95": [
+                  0.1248046875,
+                  0.3052734374999998
+                ],
+                "real_reference_q50": 0.25390625,
+                "real_reference_q95": 0.3634765625,
+                "reference_gap": -0.3921568627450981,
+                "reference_percentile": 0.25
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05959310345117386,
+                "model_reference_interval_95": [
+                  0.027369121050426992,
+                  0.09432740524708429
+                ],
+                "real_reference_q50": 0.021739203563055143,
+                "real_reference_q95": 0.0568083730065887,
+                "reference_gap": 1.0794067977306672,
+                "reference_percentile": 0.95
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.00753007487900037,
+                "model_reference_interval_95": [
+                  0.0057322633923334865,
+                  0.010641703149606168
+                ],
+                "real_reference_q50": 0.007674295515379792,
+                "real_reference_q95": 0.010258165235150817,
+                "reference_gap": -0.05581575389652473,
+                "reference_percentile": 0.46
+              },
+              "feature_density": {
+                "model_reference_median": 0.541796875,
+                "model_reference_interval_95": [
+                  0.4287890625,
+                  0.6465820312499999
+                ],
+                "real_reference_q50": 0.326953125,
+                "real_reference_q95": 0.5282812499999999,
+                "reference_gap": 1.0671323244082267,
+                "reference_percentile": 0.97
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.3203125,
+                "model_reference_interval_95": [
+                  0.22841796875,
+                  0.42060546874999977
+                ],
+                "real_reference_q50": 0.36328125,
+                "real_reference_q95": 0.4689453125,
+                "reference_gap": -0.40665434380776344,
+                "reference_percentile": 0.25
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08050045128895478,
+                "model_reference_interval_95": [
+                  0.05273849811575494,
+                  0.1207752093104006
+                ],
+                "real_reference_q50": 0.020411357541393338,
+                "real_reference_q95": 0.052961371856547555,
+                "reference_gap": 1.8460542955763288,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.00870754237066329,
+                "model_reference_interval_95": [
+                  0.0064711033974792385,
+                  0.011225550223722474
+                ],
+                "real_reference_q50": 0.010259090084486666,
+                "real_reference_q95": 0.013713280868116358,
+                "reference_gap": -0.44917834914520754,
+                "reference_percentile": 0.32
+              },
+              "feature_density": {
+                "model_reference_median": 0.530859375,
+                "model_reference_interval_95": [
+                  0.32701171874999996,
+                  0.6682421875
+                ],
+                "real_reference_q50": 0.4468749999999999,
+                "real_reference_q95": 0.6209374999999999,
+                "reference_gap": 0.4824955116696595,
+                "reference_percentile": 0.76
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.369140625,
+                "model_reference_interval_95": [
+                  0.2734375,
+                  0.48828125
+                ],
+                "real_reference_q50": 0.453125,
+                "real_reference_q95": 0.5669921874999999,
+                "reference_gap": -0.7375643224699834,
+                "reference_percentile": 0.08
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06823371544429291,
+                "model_reference_interval_95": [
+                  0.03729314458457549,
+                  0.1098481332520439
+                ],
+                "real_reference_q50": 0.017915162065302415,
+                "real_reference_q95": 0.05392809309348226,
+                "reference_gap": 1.3972357134612734,
+                "reference_percentile": 0.97
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.030552794741436573,
+                "model_reference_interval_95": [
+                  0.023213503877551944,
+                  0.04330608731661868
+                ],
+                "real_reference_q50": 0.04086708473171763,
+                "real_reference_q95": 0.05544482215268561,
+                "reference_gap": -0.7075370952590647,
+                "reference_percentile": 0.09
+              },
+              "feature_density": {
+                "model_reference_median": 0.871875,
+                "model_reference_interval_95": [
+                  0.7380078125,
+                  0.9743359375
+                ],
+                "real_reference_q50": 0.895703125,
+                "real_reference_q95": 0.9844140625,
+                "reference_gap": -0.26860413914575204,
+                "reference_percentile": 0.46
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.85546875,
+                "model_reference_interval_95": [
+                  0.74775390625,
+                  0.95146484375
+                ],
+                "real_reference_q50": 0.943359375,
+                "real_reference_q95": 0.9845703125,
+                "reference_gap": -2.1327014218009457,
+                "reference_percentile": 0.0
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08164334345770974,
+                "model_reference_interval_95": [
+                  0.04314204046232735,
+                  0.13068470050927936
+                ],
+                "real_reference_q50": 0.031683795827404826,
+                "real_reference_q95": 0.07948281920874174,
+                "reference_gap": 1.0452001755711933,
+                "reference_percentile": 0.96
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.931247939504997,
+          "median_absolute_gap_change": 0.1900895887029603
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9787717547648225,
+          "median_absolute_gap_change": 0.2624070072235854
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.975452325933865,
+          "median_absolute_gap_change": 0.31023025285185474
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.6340954772159155,
+          "median_absolute_gap_change": 0.1620640394715308
+        }
+      }
+    },
+    "fit512_rank10_scale0km": {
+      "fit_size": 512,
+      "rank": 10,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 5.580319894842165,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.007028805022204043,
+                "model_reference_interval_95": [
+                  0.003837946571468137,
+                  0.010951333362791294
+                ],
+                "real_reference_q50": 0.004744155518305204,
+                "real_reference_q95": 0.008322648681201849,
+                "reference_gap": 0.6384389741433817,
+                "reference_percentile": 0.87
+              },
+              "feature_density": {
+                "model_reference_median": 0.2546875,
+                "model_reference_interval_95": [
+                  0.1425585937500001,
+                  0.3193554687499999
+                ],
+                "real_reference_q50": 0.07656249999999998,
+                "real_reference_q95": 0.18703125000000004,
+                "reference_gap": 1.612446958981612,
+                "reference_percentile": 0.99
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.078125,
+                "model_reference_interval_95": [
+                  0.03515625,
+                  0.12109375
+                ],
+                "real_reference_q50": 0.072265625,
+                "real_reference_q95": 0.12109375,
+                "reference_gap": 0.12,
+                "reference_percentile": 0.63
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06487997878384244,
+                "model_reference_interval_95": [
+                  0.0375861834281202,
+                  0.09389370364035911
+                ],
+                "real_reference_q50": 0.016658553916266805,
+                "real_reference_q95": 0.0428572990077888,
+                "reference_gap": 1.8406005592680184,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006226783940775582,
+                "model_reference_interval_95": [
+                  0.0039480995269320866,
+                  0.010240867258289378
+                ],
+                "real_reference_q50": 0.0062211781130342425,
+                "real_reference_q95": 0.00981052049202573,
+                "reference_gap": 0.0015617979979147725,
+                "reference_percentile": 0.5
+              },
+              "feature_density": {
+                "model_reference_median": 0.26249999999999996,
+                "model_reference_interval_95": [
+                  0.14375,
+                  0.3802148437499999
+                ],
+                "real_reference_q50": 0.13632812499999997,
+                "real_reference_q95": 0.30890625,
+                "reference_gap": 0.7311000452693525,
+                "reference_percentile": 0.86
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.17578125,
+                "model_reference_interval_95": [
+                  0.0935546875,
+                  0.2421875
+                ],
+                "real_reference_q50": 0.16015625,
+                "real_reference_q95": 0.2462890625,
+                "reference_gap": 0.18140589569161,
+                "reference_percentile": 0.66
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07422365133843967,
+                "model_reference_interval_95": [
+                  0.04556903654523991,
+                  0.11192504227641602
+                ],
+                "real_reference_q50": 0.01749231403393653,
+                "real_reference_q95": 0.05272030501342109,
+                "reference_gap": 1.6104051274891407,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.008035759283316901,
+                "model_reference_interval_95": [
+                  0.004943276683157066,
+                  0.010593417994581588
+                ],
+                "real_reference_q50": 0.006931067332845098,
+                "real_reference_q95": 0.012251172623502171,
+                "reference_gap": 0.20764475327430323,
+                "reference_percentile": 0.7
+              },
+              "feature_density": {
+                "model_reference_median": 0.42656249999999996,
+                "model_reference_interval_95": [
+                  0.30572265625,
+                  0.5541015625
+                ],
+                "real_reference_q50": 0.21718749999999998,
+                "real_reference_q95": 0.41046875,
+                "reference_gap": 1.0832659660468875,
+                "reference_percentile": 0.98
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.25390625,
+                "model_reference_interval_95": [
+                  0.1484375,
+                  0.33613281249999993
+                ],
+                "real_reference_q50": 0.2890625,
+                "real_reference_q95": 0.3478515625,
+                "reference_gap": -0.5980066445182726,
+                "reference_percentile": 0.25
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.10328100138337293,
+                "model_reference_interval_95": [
+                  0.07204995100106396,
+                  0.1485978504390275
+                ],
+                "real_reference_q50": 0.02433894880403381,
+                "real_reference_q95": 0.05909291745732456,
+                "reference_gap": 2.2714543299176375,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.01218447881098117,
+                "model_reference_interval_95": [
+                  0.008735839772265946,
+                  0.018382452562064052
+                ],
+                "real_reference_q50": 0.009756957134500421,
+                "real_reference_q95": 0.0152504236224616,
+                "reference_gap": 0.44189250663503876,
+                "reference_percentile": 0.81
+              },
+              "feature_density": {
+                "model_reference_median": 0.5515625,
+                "model_reference_interval_95": [
+                  0.44837890625,
+                  0.6527929687499999
+                ],
+                "real_reference_q50": 0.27968750000000003,
+                "real_reference_q95": 0.42679687499999996,
+                "reference_gap": 1.8481147105682425,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.28515625,
+                "model_reference_interval_95": [
+                  0.20888671875,
+                  0.38320312499999987
+                ],
+                "real_reference_q50": 0.34375,
+                "real_reference_q95": 0.4453125,
+                "reference_gap": -0.5769230769230769,
+                "reference_percentile": 0.08
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.14181468324659663,
+                "model_reference_interval_95": [
+                  0.10269679412747729,
+                  0.18888441933624814
+                ],
+                "real_reference_q50": 0.02580307443280705,
+                "real_reference_q95": 0.07025085283209916,
+                "reference_gap": 2.610065406905404,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.014259625085990546,
+                "model_reference_interval_95": [
+                  0.010103652265638812,
+                  0.021039276326611962
+                ],
+                "real_reference_q50": 0.01206780948877162,
+                "real_reference_q95": 0.01909741071123043,
+                "reference_gap": 0.31179799932552565,
+                "reference_percentile": 0.69
+              },
+              "feature_density": {
+                "model_reference_median": 0.54765625,
+                "model_reference_interval_95": [
+                  0.43669921875,
+                  0.63873046875
+                ],
+                "real_reference_q50": 0.39921874999999996,
+                "real_reference_q95": 0.5481640624999999,
+                "reference_gap": 0.9965906110674011,
+                "reference_percentile": 0.95
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.3671875,
+                "model_reference_interval_95": [
+                  0.26171875,
+                  0.47529296874999977
+                ],
+                "real_reference_q50": 0.46875,
+                "real_reference_q95": 0.558984375,
+                "reference_gap": -1.1255411255411258,
+                "reference_percentile": 0.04
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.1185887703678592,
+                "model_reference_interval_95": [
+                  0.0768119909945183,
+                  0.16502856395622884
+                ],
+                "real_reference_q50": 0.028067880604826068,
+                "real_reference_q95": 0.0679834468968528,
+                "reference_gap": 2.267809232638019,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.04332791481854281,
+                "model_reference_interval_95": [
+                  0.029048995749458288,
+                  0.06632847664174576
+                ],
+                "real_reference_q50": 0.04906258600773361,
+                "real_reference_q95": 0.08266365441283845,
+                "reference_gap": -0.17066931086987577,
+                "reference_percentile": 0.34
+              },
+              "feature_density": {
+                "model_reference_median": 0.9117187499999999,
+                "model_reference_interval_95": [
+                  0.80345703125,
+                  0.9773828125
+                ],
+                "real_reference_q50": 0.866796875,
+                "real_reference_q95": 0.9673046875,
+                "reference_gap": 0.44694908666925676,
+                "reference_percentile": 0.67
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.884765625,
+                "model_reference_interval_95": [
+                  0.80244140625,
+                  0.9728515624999999
+                ],
+                "real_reference_q50": 0.9375,
+                "real_reference_q95": 0.980859375,
+                "reference_gap": -1.216216216216217,
+                "reference_percentile": 0.04
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.15720901653573116,
+                "model_reference_interval_95": [
+                  0.09264665388215382,
+                  0.24633520821376192
+                ],
+                "real_reference_q50": 0.047879345591780365,
+                "real_reference_q95": 0.13563592758005882,
+                "reference_gap": 1.2458287283631195,
+                "reference_percentile": 0.97
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.8857709680522384,
+          "median_absolute_gap_change": 0.27001018321877696
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9403826330752972,
+          "median_absolute_gap_change": 0.3339024665069668
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.898757750852463,
+          "median_absolute_gap_change": 0.10491815309091052
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.5167946232276881,
+          "median_absolute_gap_change": 0.45780111559810677
+        }
+      }
+    },
+    "fit512_rank20_scale0km": {
+      "fit_size": 512,
+      "rank": 20,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": false,
+      "implementation": "exact_registered_train_fitted_feature_space",
+      "feature_space_manifest": {
+        "schema": "gauge_climate.feature_space.v1",
+        "fit_source": "train",
+        "source_fingerprint": "e61c0b78bb0e1321",
+        "sample_shape": [
+          256,
+          256
+        ],
+        "fit_indices": [
+          179,
+          181,
+          296,
+          378,
+          413,
+          428,
+          488,
+          492,
+          884,
+          970,
+          1070,
+          1199,
+          1304,
+          1572,
+          1601,
+          1623,
+          1734,
+          1773,
+          1804,
+          1856,
+          2225,
+          2274,
+          2340,
+          2475,
+          2692,
+          2883,
+          2887,
+          3043,
+          3096,
+          3135,
+          3137,
+          3153,
+          3156,
+          3524,
+          3682,
+          3689,
+          3817,
+          3834,
+          3896,
+          3962,
+          3963,
+          4031,
+          4223,
+          4421,
+          4455,
+          4514,
+          4596,
+          4623,
+          4670,
+          4757,
+          4905,
+          4988,
+          5097,
+          5121,
+          5129,
+          5173,
+          5195,
+          5377,
+          5491,
+          5494,
+          5563,
+          5680,
+          5959,
+          5963,
+          5999,
+          6006,
+          6423,
+          6454,
+          6552,
+          6673,
+          6682,
+          6740,
+          6877,
+          6970,
+          6978,
+          6998,
+          7039,
+          7061,
+          7288,
+          7423,
+          7436,
+          7459,
+          7538,
+          7742,
+          8009,
+          8136,
+          8152,
+          8192,
+          8238,
+          8364,
+          8464,
+          9084,
+          9119,
+          9162,
+          9219,
+          9303,
+          9382,
+          9483,
+          9602,
+          9637,
+          9676,
+          9770,
+          9786,
+          9787,
+          9810,
+          9818,
+          9941,
+          9954,
+          9960,
+          10009,
+          10053,
+          10067,
+          10163,
+          10242,
+          10292,
+          10322,
+          10329,
+          10380,
+          10389,
+          10411,
+          10546,
+          10641,
+          10952,
+          11092,
+          11258,
+          11327,
+          11362,
+          11479,
+          11524,
+          11557,
+          11628,
+          11650,
+          11726,
+          11982,
+          11985,
+          12002,
+          12045,
+          12114,
+          12141,
+          12257,
+          12284,
+          12304,
+          12359,
+          12418,
+          12461,
+          13112,
+          13207,
+          13237,
+          13260,
+          13580,
+          13881,
+          13934,
+          13974,
+          14005,
+          14208,
+          14244,
+          14278,
+          14483,
+          14572,
+          14657,
+          14659,
+          14924,
+          14979,
+          15124,
+          15185,
+          15360,
+          15517,
+          15532,
+          15688,
+          15770,
+          15804,
+          15822,
+          15980,
+          16065,
+          16144,
+          16178,
+          16196,
+          16224,
+          16231,
+          16567,
+          16796,
+          16840,
+          16873,
+          16905,
+          17383,
+          17487,
+          17592,
+          17779,
+          17823,
+          17995,
+          18015,
+          18119,
+          18186,
+          18340,
+          18382,
+          18570,
+          18626,
+          18657,
+          18747,
+          18867,
+          18914,
+          18944,
+          18971,
+          19055,
+          19147,
+          19163,
+          19240,
+          19377,
+          19419,
+          19429,
+          19439,
+          19479,
+          19545,
+          19727,
+          19802,
+          19871,
+          20041,
+          20092,
+          20201,
+          20424,
+          20439,
+          20553,
+          20615,
+          20938,
+          21155,
+          21181,
+          21204,
+          21244,
+          21266,
+          21295,
+          21540,
+          21670,
+          21730,
+          21832,
+          21873,
+          21887,
+          22061,
+          22269,
+          22363,
+          22387,
+          22477,
+          22516,
+          22524,
+          22575,
+          22788,
+          23052,
+          23184,
+          23382,
+          23670,
+          23771,
+          23825,
+          23883,
+          24012,
+          24089,
+          24201,
+          24206,
+          24617,
+          24812,
+          24885,
+          25085,
+          25179,
+          25335,
+          25427,
+          25725,
+          25936,
+          26003,
+          26006,
+          26133,
+          26241,
+          26284,
+          26305,
+          26379,
+          26393,
+          26699,
+          26753,
+          26769,
+          27019,
+          27058,
+          27120,
+          27258,
+          27374,
+          27425,
+          27429,
+          27482,
+          27545,
+          27669,
+          27732,
+          27736,
+          27754,
+          28133,
+          28221,
+          28225,
+          28388,
+          28552,
+          29155,
+          29188,
+          29368,
+          29375,
+          29466,
+          29504,
+          29526,
+          29692,
+          29715,
+          29858,
+          29891,
+          29922,
+          29957,
+          29991,
+          30020,
+          30306,
+          30352,
+          30476,
+          30530,
+          30758,
+          30876,
+          31105,
+          31161,
+          31236,
+          31330,
+          31404,
+          31409,
+          31501,
+          31572,
+          31580,
+          31595,
+          31649,
+          31681,
+          31868,
+          31889,
+          31907,
+          32088,
+          32171,
+          32191,
+          32247,
+          32271,
+          32289,
+          32291,
+          32396,
+          32446,
+          32515,
+          32745,
+          32973,
+          33076,
+          33246,
+          33539,
+          33599,
+          33618,
+          33649,
+          33682,
+          33714,
+          34051,
+          34194,
+          34314,
+          34341,
+          34342,
+          34406,
+          34451,
+          34469,
+          34478,
+          34668,
+          34672,
+          34858,
+          34897,
+          34947,
+          34957,
+          35333,
+          35353,
+          35510,
+          35514,
+          35632,
+          36124,
+          36140,
+          36265,
+          36317,
+          36359,
+          36411,
+          36491,
+          36535,
+          36542,
+          36568,
+          36655,
+          36803,
+          36836,
+          36958,
+          36961,
+          37102,
+          37262,
+          37403,
+          37453,
+          37787,
+          37854,
+          37965,
+          37972,
+          38205,
+          38244,
+          38281,
+          38476,
+          38497,
+          38585,
+          38834,
+          38925,
+          39026,
+          39071,
+          39193,
+          39223,
+          39232,
+          39567,
+          39670,
+          39812,
+          39866,
+          39923,
+          40126,
+          40181,
+          40308,
+          40834,
+          40941,
+          40947,
+          41113,
+          41155,
+          41211,
+          41272,
+          41340,
+          41458,
+          41563,
+          41579,
+          41757,
+          41765,
+          41973,
+          41981,
+          42117,
+          42323,
+          42617,
+          42675,
+          42767,
+          42815,
+          42894,
+          42920,
+          43402,
+          43411,
+          43412,
+          43520,
+          43538,
+          43561,
+          43748,
+          43763,
+          43971,
+          44026,
+          44119,
+          44160,
+          44176,
+          44396,
+          44464,
+          44489,
+          44525,
+          44612,
+          44785,
+          44856,
+          44889,
+          45198,
+          45483,
+          45653,
+          45686,
+          46187,
+          46457,
+          46678,
+          46865,
+          46968,
+          46973,
+          46983,
+          47002,
+          47331,
+          47542,
+          47602,
+          47641,
+          47773,
+          47827,
+          47835,
+          47859,
+          47909,
+          48116,
+          48165,
+          48339,
+          48404,
+          48564,
+          48633,
+          48644,
+          49002,
+          49205,
+          49286,
+          49472,
+          49528,
+          49588,
+          49698,
+          49768,
+          49947,
+          50070,
+          50139,
+          50293,
+          50551,
+          50594,
+          50800,
+          50807,
+          50885,
+          50903,
+          50905,
+          51008,
+          51215,
+          51281,
+          51678,
+          51680,
+          51740,
+          51832
+        ],
+        "functional_ids": [
+          "min_core_bt",
+          "cold_frac_220",
+          "r_maxgrad",
+          "axisym",
+          "dav",
+          "eye_contrast",
+          "p01_bt"
+        ],
+        "n_eof": 20,
+        "provenance_hash": "de9a195347afebb0"
+      },
+      "evaluation": {
+        "bandwidth": 7.157103175814326,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006180340599573286,
+                "model_reference_interval_95": [
+                  0.004034363681824188,
+                  0.009618018817807605
+                ],
+                "real_reference_q50": 0.0047178284533939685,
+                "real_reference_q95": 0.006657560114354166,
+                "reference_gap": 0.7539765296481017,
+                "reference_percentile": 0.88
+              },
+              "feature_density": {
+                "model_reference_median": 0.30585937500000004,
+                "model_reference_interval_95": [
+                  0.174609375,
+                  0.41005859374999987
+                ],
+                "real_reference_q50": 0.12617187500000004,
+                "real_reference_q95": 0.25312500000000004,
+                "reference_gap": 1.4153846153846155,
+                "reference_percentile": 0.98
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.0703125,
+                "model_reference_interval_95": [
+                  0.03125,
+                  0.12890625
+                ],
+                "real_reference_q50": 0.0703125,
+                "real_reference_q95": 0.12890625,
+                "reference_gap": 0.0,
+                "reference_percentile": 0.54
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05895534467743324,
+                "model_reference_interval_95": [
+                  0.03374785899741349,
+                  0.08232217691641097
+                ],
+                "real_reference_q50": 0.013197877125276758,
+                "real_reference_q95": 0.037826395554149135,
+                "reference_gap": 1.8579058129016126,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005384832889968161,
+                "model_reference_interval_95": [
+                  0.0037624912640994044,
+                  0.00819956660640238
+                ],
+                "real_reference_q50": 0.005708284997301916,
+                "real_reference_q95": 0.00886284042709062,
+                "reference_gap": -0.10253492592945815,
+                "reference_percentile": 0.38
+              },
+              "feature_density": {
+                "model_reference_median": 0.28398437499999996,
+                "model_reference_interval_95": [
+                  0.16218749999999998,
+                  0.41023437500000004
+                ],
+                "real_reference_q50": 0.162109375,
+                "real_reference_q95": 0.33999999999999997,
+                "reference_gap": 0.6851119894598154,
+                "reference_percentile": 0.87
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.1796875,
+                "model_reference_interval_95": [
+                  0.1052734375,
+                  0.25595703124999997
+                ],
+                "real_reference_q50": 0.16015625,
+                "real_reference_q95": 0.234375,
+                "reference_gap": 0.2631578947368421,
+                "reference_percentile": 0.73
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.057217825455772364,
+                "model_reference_interval_95": [
+                  0.029512993352806032,
+                  0.08616691578105794
+                ],
+                "real_reference_q50": 0.017619636345704515,
+                "real_reference_q95": 0.04555832744188403,
+                "reference_gap": 1.4173244184471732,
+                "reference_percentile": 0.96
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006725305430845485,
+                "model_reference_interval_95": [
+                  0.004444464854261476,
+                  0.009239671190524209
+                ],
+                "real_reference_q50": 0.007165940001830906,
+                "real_reference_q95": 0.010952288558685063,
+                "reference_gap": -0.1163745398420258,
+                "reference_percentile": 0.39
+              },
+              "feature_density": {
+                "model_reference_median": 0.3609375,
+                "model_reference_interval_95": [
+                  0.19787109375000006,
+                  0.4758007812499998
+                ],
+                "real_reference_q50": 0.24296874999999996,
+                "real_reference_q95": 0.4296875,
+                "reference_gap": 0.6317991631799166,
+                "reference_percentile": 0.8
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.208984375,
+                "model_reference_interval_95": [
+                  0.12890625,
+                  0.29892578124999997
+                ],
+                "real_reference_q50": 0.26953125,
+                "real_reference_q95": 0.3556640625,
+                "reference_gap": -0.7029478458049887,
+                "reference_percentile": 0.15
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07289684304253907,
+                "model_reference_interval_95": [
+                  0.04619021580963639,
+                  0.10877077584889598
+                ],
+                "real_reference_q50": 0.017628616841340483,
+                "real_reference_q95": 0.06165010617981079,
+                "reference_gap": 1.2554828796512294,
+                "reference_percentile": 0.98
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.008975998270344232,
+                "model_reference_interval_95": [
+                  0.006053039671917004,
+                  0.012224569407437746
+                ],
+                "real_reference_q50": 0.008656913822311041,
+                "real_reference_q95": 0.01313935235846636,
+                "reference_gap": 0.0711854597579996,
+                "reference_percentile": 0.59
+              },
+              "feature_density": {
+                "model_reference_median": 0.53828125,
+                "model_reference_interval_95": [
+                  0.40597656250000014,
+                  0.6457031249999998
+                ],
+                "real_reference_q50": 0.2890625,
+                "real_reference_q95": 0.45718749999999997,
+                "reference_gap": 1.4823420074349447,
+                "reference_percentile": 0.99
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.296875,
+                "model_reference_interval_95": [
+                  0.21279296875,
+                  0.375
+                ],
+                "real_reference_q50": 0.35546875,
+                "real_reference_q95": 0.44140625,
+                "reference_gap": -0.6818181818181818,
+                "reference_percentile": 0.16
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.09828198396549759,
+                "model_reference_interval_95": [
+                  0.0647114968894372,
+                  0.1388250308304589
+                ],
+                "real_reference_q50": 0.022091818072005498,
+                "real_reference_q95": 0.06321728712695113,
+                "reference_gap": 1.8526272804742558,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.011796153996637138,
+                "model_reference_interval_95": [
+                  0.008284915418621858,
+                  0.015903443309116222
+                ],
+                "real_reference_q50": 0.011931382961766546,
+                "real_reference_q95": 0.018647876019792328,
+                "reference_gap": -0.020133865093155727,
+                "reference_percentile": 0.48
+              },
+              "feature_density": {
+                "model_reference_median": 0.525390625,
+                "model_reference_interval_95": [
+                  0.35843749999999996,
+                  0.6449218749999999
+                ],
+                "real_reference_q50": 0.42617187500000003,
+                "real_reference_q95": 0.5690234375,
+                "reference_gap": 0.6945583811867653,
+                "reference_percentile": 0.83
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.359375,
+                "model_reference_interval_95": [
+                  0.265625,
+                  0.4827148437499999
+                ],
+                "real_reference_q50": 0.46484375,
+                "real_reference_q95": 0.5625,
+                "reference_gap": -1.08,
+                "reference_percentile": 0.04
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08471146496279514,
+                "model_reference_interval_95": [
+                  0.0530201515950581,
+                  0.11662414190925068
+                ],
+                "real_reference_q50": 0.019165222247013225,
+                "real_reference_q95": 0.061582075931342205,
+                "reference_gap": 1.5452877104837728,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.03476089041885799,
+                "model_reference_interval_95": [
+                  0.02463681768494726,
+                  0.05326335634625026
+                ],
+                "real_reference_q50": 0.04248497058336387,
+                "real_reference_q95": 0.062460847920502965,
+                "reference_gap": -0.38667038419110067,
+                "reference_percentile": 0.22
+              },
+              "feature_density": {
+                "model_reference_median": 0.904296875,
+                "model_reference_interval_95": [
+                  0.7663671875,
+                  0.9930078125
+                ],
+                "real_reference_q50": 0.9195312499999999,
+                "real_reference_q95": 0.9769921874999999,
+                "reference_gap": -0.26512576478585825,
+                "reference_percentile": 0.45
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.875,
+                "model_reference_interval_95": [
+                  0.796875,
+                  0.9611328124999999
+                ],
+                "real_reference_q50": 0.953125,
+                "real_reference_q95": 0.9845703125,
+                "reference_gap": -2.4844720496894377,
+                "reference_percentile": 0.0
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.1238161933767623,
+                "model_reference_interval_95": [
+                  0.07184554846740812,
+                  0.18426670437016546
+                ],
+                "real_reference_q50": 0.035267084783597524,
+                "real_reference_q95": 0.109781908725081,
+                "reference_gap": 1.1883421835996342,
+                "reference_percentile": 0.98
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.9999999999999999,
+          "median_absolute_gap_change": 0.0
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9999999999999998,
+          "median_absolute_gap_change": 0.0
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9999999999999999,
+          "median_absolute_gap_change": 0.0
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.9999999999999998,
+          "median_absolute_gap_change": 0.0
+        }
+      }
+    },
+    "fit512_rank40_scale0km": {
+      "fit_size": 512,
+      "rank": 40,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 9.502097054749118,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.00498382724684765,
+                "model_reference_interval_95": [
+                  0.003566252300078382,
+                  0.00697635396243344
+                ],
+                "real_reference_q50": 0.0040736221660472305,
+                "real_reference_q95": 0.006005299829868693,
+                "reference_gap": 0.4711992574370554,
+                "reference_percentile": 0.82
+              },
+              "feature_density": {
+                "model_reference_median": 0.25390625,
+                "model_reference_interval_95": [
+                  0.11988281250000005,
+                  0.39337890625000005
+                ],
+                "real_reference_q50": 0.09726562500000008,
+                "real_reference_q95": 0.3024218750000001,
+                "reference_gap": 0.763518659558263,
+                "reference_percentile": 0.87
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.0546875,
+                "model_reference_interval_95": [
+                  0.01953125,
+                  0.0959960937499999
+                ],
+                "real_reference_q50": 0.0625,
+                "real_reference_q95": 0.12109375,
+                "reference_gap": -0.13333333333333333,
+                "reference_percentile": 0.41
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05211671922989425,
+                "model_reference_interval_95": [
+                  0.03020966091156113,
+                  0.08442171211386597
+                ],
+                "real_reference_q50": 0.013282491913856387,
+                "real_reference_q95": 0.036000801916701526,
+                "reference_gap": 1.709380112832972,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.004734990636658387,
+                "model_reference_interval_95": [
+                  0.003513162848929263,
+                  0.00666670700474754
+                ],
+                "real_reference_q50": 0.005205491946101093,
+                "real_reference_q95": 0.007832549382170095,
+                "reference_gap": -0.17909821954511218,
+                "reference_percentile": 0.31
+              },
+              "feature_density": {
+                "model_reference_median": 0.251171875,
+                "model_reference_interval_95": [
+                  0.07050781249999996,
+                  0.39505859374999996
+                ],
+                "real_reference_q50": 0.1781250000000001,
+                "real_reference_q95": 0.3493359374999999,
+                "reference_gap": 0.42664841432808565,
+                "reference_percentile": 0.67
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.16796875,
+                "model_reference_interval_95": [
+                  0.09560546875,
+                  0.24873046874999977
+                ],
+                "real_reference_q50": 0.1484375,
+                "real_reference_q95": 0.21875,
+                "reference_gap": 0.2777777777777778,
+                "reference_percentile": 0.67
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.03929539969666773,
+                "model_reference_interval_95": [
+                  0.01175660110536253,
+                  0.07841866949842582
+                ],
+                "real_reference_q50": 0.015575252587723853,
+                "real_reference_q95": 0.04896922969852171,
+                "reference_gap": 0.7103121329407042,
+                "reference_percentile": 0.86
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005828848502747674,
+                "model_reference_interval_95": [
+                  0.004145572244019913,
+                  0.00765076700643616
+                ],
+                "real_reference_q50": 0.006903836285319542,
+                "real_reference_q95": 0.010072239537677885,
+                "reference_gap": -0.33928376439196006,
+                "reference_percentile": 0.16
+              },
+              "feature_density": {
+                "model_reference_median": 0.41835937500000003,
+                "model_reference_interval_95": [
+                  0.24693359375000004,
+                  0.571875
+                ],
+                "real_reference_q50": 0.252734375,
+                "real_reference_q95": 0.52,
+                "reference_gap": 0.6197018415667934,
+                "reference_percentile": 0.83
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.21484375,
+                "model_reference_interval_95": [
+                  0.12890625,
+                  0.29892578124999997
+                ],
+                "real_reference_q50": 0.251953125,
+                "real_reference_q95": 0.38378906249999994,
+                "reference_gap": -0.2814814814814816,
+                "reference_percentile": 0.24
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05909206069082584,
+                "model_reference_interval_95": [
+                  0.022635818533072748,
+                  0.09938677009525357
+                ],
+                "real_reference_q50": 0.02105829530841724,
+                "real_reference_q95": 0.06178288659982845,
+                "reference_gap": 0.9339262636241581,
+                "reference_percentile": 0.93
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.007967247611894712,
+                "model_reference_interval_95": [
+                  0.0059639288931858546,
+                  0.010877225619511615
+                ],
+                "real_reference_q50": 0.008297575701149529,
+                "real_reference_q95": 0.012069447544327783,
+                "reference_gap": -0.08757670010773101,
+                "reference_percentile": 0.42
+              },
+              "feature_density": {
+                "model_reference_median": 0.48671875000000003,
+                "model_reference_interval_95": [
+                  0.33941406249999995,
+                  0.6125390625
+                ],
+                "real_reference_q50": 0.30039062499999997,
+                "real_reference_q95": 0.5100390624999999,
+                "reference_gap": 0.8887646730016777,
+                "reference_percentile": 0.92
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.30078125,
+                "model_reference_interval_95": [
+                  0.1912109375,
+                  0.38671875
+                ],
+                "real_reference_q50": 0.35546875,
+                "real_reference_q95": 0.48046875,
+                "reference_gap": -0.4375,
+                "reference_percentile": 0.21
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07634973907877807,
+                "model_reference_interval_95": [
+                  0.03850178697710416,
+                  0.11622766912939551
+                ],
+                "real_reference_q50": 0.02250920915257132,
+                "real_reference_q95": 0.05772722898014044,
+                "reference_gap": 1.5287778867129742,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.008656029972249568,
+                "model_reference_interval_95": [
+                  0.006997985503955218,
+                  0.011389485596947723
+                ],
+                "real_reference_q50": 0.011072424830625982,
+                "real_reference_q95": 0.015041587332516981,
+                "reference_gap": -0.6087921210646298,
+                "reference_percentile": 0.15
+              },
+              "feature_density": {
+                "model_reference_median": 0.55859375,
+                "model_reference_interval_95": [
+                  0.36632812499999995,
+                  0.6648828125
+                ],
+                "real_reference_q50": 0.43906249999999997,
+                "real_reference_q95": 0.656328125,
+                "reference_gap": 0.5501618122977346,
+                "reference_percentile": 0.78
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.39453125,
+                "model_reference_interval_95": [
+                  0.2732421875,
+                  0.50390625
+                ],
+                "real_reference_q50": 0.484375,
+                "real_reference_q95": 0.601953125,
+                "reference_gap": -0.7641196013289038,
+                "reference_percentile": 0.06
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06246803537851753,
+                "model_reference_interval_95": [
+                  0.0322562126398507,
+                  0.1146661144159051
+                ],
+                "real_reference_q50": 0.022908968259952256,
+                "real_reference_q95": 0.06743859566397836,
+                "reference_gap": 0.8883763333485376,
+                "reference_percentile": 0.92
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.030803414844485122,
+                "model_reference_interval_95": [
+                  0.023194882842321667,
+                  0.04258682706572856
+                ],
+                "real_reference_q50": 0.03928042523345965,
+                "real_reference_q95": 0.05772278848129815,
+                "reference_gap": -0.45964881371524097,
+                "reference_percentile": 0.14
+              },
+              "feature_density": {
+                "model_reference_median": 0.84765625,
+                "model_reference_interval_95": [
+                  0.68810546875,
+                  0.9833007812499999
+                ],
+                "real_reference_q50": 0.883984375,
+                "real_reference_q95": 0.9698828125,
+                "reference_gap": -0.422919508867668,
+                "reference_percentile": 0.31
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.84765625,
+                "model_reference_interval_95": [
+                  0.73994140625,
+                  0.9339843749999999
+                ],
+                "real_reference_q50": 0.94140625,
+                "real_reference_q95": 0.9845703125,
+                "reference_gap": -2.1719457013574637,
+                "reference_percentile": 0.0
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08552976431762693,
+                "model_reference_interval_95": [
+                  0.043524835337035064,
+                  0.14197291550804902
+                ],
+                "real_reference_q50": 0.0312189658159156,
+                "real_reference_q95": 0.0981890654428028,
+                "reference_gap": 0.8109708482486204,
+                "reference_percentile": 0.9
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.873494907832457,
+          "median_absolute_gap_change": 0.19083569220783245
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9345452447592961,
+          "median_absolute_gap_change": 0.20812865960676977
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9817942018520441,
+          "median_absolute_gap_change": 0.2784222650750779
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.8729138618158891,
+          "median_absolute_gap_change": 0.3506103645561477
+        }
+      }
+    },
+    "fit1024_rank10_scale0km": {
+      "fit_size": 1024,
+      "rank": 10,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 5.5715898242205055,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006194135752994323,
+                "model_reference_interval_95": [
+                  0.0037740007878991123,
+                  0.010691793537451708
+                ],
+                "real_reference_q50": 0.004747774997257315,
+                "real_reference_q95": 0.007638106157269675,
+                "reference_gap": 0.500413508233023,
+                "reference_percentile": 0.79
+              },
+              "feature_density": {
+                "model_reference_median": 0.269921875,
+                "model_reference_interval_95": [
+                  0.15970703125000002,
+                  0.36179687499999996
+                ],
+                "real_reference_q50": 0.08359375000000002,
+                "real_reference_q95": 0.20972656250000005,
+                "reference_gap": 1.4772375348405073,
+                "reference_percentile": 0.99
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.064453125,
+                "model_reference_interval_95": [
+                  0.02919921875,
+                  0.10361328124999997
+                ],
+                "real_reference_q50": 0.064453125,
+                "real_reference_q95": 0.11738281249999999,
+                "reference_gap": 0.0,
+                "reference_percentile": 0.5
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07136967211470058,
+                "model_reference_interval_95": [
+                  0.037243497272705366,
+                  0.10832475546270817
+                ],
+                "real_reference_q50": 0.020081550287045058,
+                "real_reference_q95": 0.056606198409617656,
+                "reference_gap": 1.4042057751121482,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006471234950407578,
+                "model_reference_interval_95": [
+                  0.003908174743655029,
+                  0.009870518638650379
+                ],
+                "real_reference_q50": 0.006341391703911459,
+                "real_reference_q95": 0.010277330000378436,
+                "reference_gap": 0.032989146860526515,
+                "reference_percentile": 0.51
+              },
+              "feature_density": {
+                "model_reference_median": 0.265234375,
+                "model_reference_interval_95": [
+                  0.15152343750000005,
+                  0.35384765624999986
+                ],
+                "real_reference_q50": 0.17734375000000002,
+                "real_reference_q95": 0.3041796874999999,
+                "reference_gap": 0.6929473360024645,
+                "reference_percentile": 0.87
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.171875,
+                "model_reference_interval_95": [
+                  0.09560546875,
+                  0.25410156249999993
+                ],
+                "real_reference_q50": 0.1640625,
+                "real_reference_q95": 0.2228515625,
+                "reference_gap": 0.13289036544850502,
+                "reference_percentile": 0.63
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.0774175194513601,
+                "model_reference_interval_95": [
+                  0.03969726990737614,
+                  0.115879937724263
+                ],
+                "real_reference_q50": 0.017413207933113295,
+                "real_reference_q95": 0.05891697978884277,
+                "reference_gap": 1.4457556225691182,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.008694668451473597,
+                "model_reference_interval_95": [
+                  0.005167660188365075,
+                  0.012674915578903457
+                ],
+                "real_reference_q50": 0.007565027175895245,
+                "real_reference_q95": 0.013294651082140915,
+                "reference_gap": 0.1971580149173436,
+                "reference_percentile": 0.66
+              },
+              "feature_density": {
+                "model_reference_median": 0.39257812499999994,
+                "model_reference_interval_95": [
+                  0.27371093750000003,
+                  0.51923828125
+                ],
+                "real_reference_q50": 0.20820312500000004,
+                "real_reference_q95": 0.36210937499999996,
+                "reference_gap": 1.1979695431472082,
+                "reference_percentile": 0.96
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.23828125,
+                "model_reference_interval_95": [
+                  0.148046875,
+                  0.3515625
+                ],
+                "real_reference_q50": 0.2734375,
+                "real_reference_q95": 0.367578125,
+                "reference_gap": -0.3734439834024897,
+                "reference_percentile": 0.26
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.0981607452458787,
+                "model_reference_interval_95": [
+                  0.059839211158444365,
+                  0.14903198725076397
+                ],
+                "real_reference_q50": 0.024835347194857638,
+                "real_reference_q95": 0.06533987706272797,
+                "reference_gap": 1.8103011759478647,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.01342318280307575,
+                "model_reference_interval_95": [
+                  0.009245709477198133,
+                  0.017990458269426392
+                ],
+                "real_reference_q50": 0.009420395709148544,
+                "real_reference_q95": 0.016644162541678897,
+                "reference_gap": 0.5541135513817663,
+                "reference_percentile": 0.85
+              },
+              "feature_density": {
+                "model_reference_median": 0.548046875,
+                "model_reference_interval_95": [
+                  0.4344921875,
+                  0.6281640625
+                ],
+                "real_reference_q50": 0.2734375,
+                "real_reference_q95": 0.42031249999999987,
+                "reference_gap": 1.8696808510638319,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.30078125,
+                "model_reference_interval_95": [
+                  0.21259765625,
+                  0.40644531249999993
+                ],
+                "real_reference_q50": 0.36328125,
+                "real_reference_q95": 0.4455078125,
+                "reference_gap": -0.7600950118764846,
+                "reference_percentile": 0.11
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.13580342503311404,
+                "model_reference_interval_95": [
+                  0.0967388074420695,
+                  0.1715895462242662
+                ],
+                "real_reference_q50": 0.021068621648456576,
+                "real_reference_q95": 0.0629707037317619,
+                "reference_gap": 2.7381647326391505,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.01660011108807946,
+                "model_reference_interval_95": [
+                  0.011233054108927571,
+                  0.02335523624421887
+                ],
+                "real_reference_q50": 0.013218508309195798,
+                "real_reference_q95": 0.022417476286948977,
+                "reference_gap": 0.3676067562211049,
+                "reference_percentile": 0.72
+              },
+              "feature_density": {
+                "model_reference_median": 0.52109375,
+                "model_reference_interval_95": [
+                  0.39759765625000004,
+                  0.61171875
+                ],
+                "real_reference_q50": 0.409375,
+                "real_reference_q95": 0.55484375,
+                "reference_gap": 0.7679914070891518,
+                "reference_percentile": 0.9
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.3828125,
+                "model_reference_interval_95": [
+                  0.27734375,
+                  0.47080078124999997
+                ],
+                "real_reference_q50": 0.4765625,
+                "real_reference_q95": 0.57890625,
+                "reference_gap": -0.9160305343511455,
+                "reference_percentile": 0.07
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.12229783012942563,
+                "model_reference_interval_95": [
+                  0.08484213052409897,
+                  0.1604602124748794
+                ],
+                "real_reference_q50": 0.020442091827448383,
+                "real_reference_q95": 0.06169499917525349,
+                "reference_gap": 2.46905599751375,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.04481243086607922,
+                "model_reference_interval_95": [
+                  0.030845749976202663,
+                  0.06998029817677534
+                ],
+                "real_reference_q50": 0.045611712832434925,
+                "real_reference_q95": 0.08645503533508395,
+                "reference_gap": -0.01956946490589405,
+                "reference_percentile": 0.44
+              },
+              "feature_density": {
+                "model_reference_median": 0.9171875,
+                "model_reference_interval_95": [
+                  0.79564453125,
+                  0.98453125
+                ],
+                "real_reference_q50": 0.846484375,
+                "real_reference_q95": 0.948828125,
+                "reference_gap": 0.690839694656489,
+                "reference_percentile": 0.84
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.892578125,
+                "model_reference_interval_95": [
+                  0.8279296875,
+                  0.9590820312499999
+                ],
+                "real_reference_q50": 0.931640625,
+                "real_reference_q95": 0.97265625,
+                "reference_gap": -0.9523809523809523,
+                "reference_percentile": 0.06
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.17812204692644762,
+                "model_reference_interval_95": [
+                  0.11573826116986267,
+                  0.2799509720916112
+                ],
+                "real_reference_q50": 0.04475715703201316,
+                "real_reference_q95": 0.1149525029169375,
+                "reference_gap": 1.8999107164892093,
+                "reference_percentile": 0.98
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.727247974518744,
+          "median_absolute_gap_change": 0.34031673702228804
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.8131566453332121,
+          "median_absolute_gap_change": 0.23038593476563685
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.8448547595333287,
+          "median_absolute_gap_change": 0.14711849746859584
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.2514624865498727,
+          "median_absolute_gap_change": 0.6331934145931052
+        }
+      }
+    },
+    "fit1024_rank20_scale0km": {
+      "fit_size": 1024,
+      "rank": 20,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 7.153564182129415,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006175106710655798,
+                "model_reference_interval_95": [
+                  0.004271441927269049,
+                  0.009724745674673562
+                ],
+                "real_reference_q50": 0.004846975903202377,
+                "real_reference_q95": 0.0070705585224801965,
+                "reference_gap": 0.5972932131861932,
+                "reference_percentile": 0.84
+              },
+              "feature_density": {
+                "model_reference_median": 0.316796875,
+                "model_reference_interval_95": [
+                  0.1755859375,
+                  0.41183593749999997
+                ],
+                "real_reference_q50": 0.09414062499999998,
+                "real_reference_q95": 0.24070312500000007,
+                "reference_gap": 1.5191897654584212,
+                "reference_percentile": 0.99
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.078125,
+                "model_reference_interval_95": [
+                  0.03515625,
+                  0.12128906249999993
+                ],
+                "real_reference_q50": 0.0703125,
+                "real_reference_q95": 0.125,
+                "reference_gap": 0.14285714285714285,
+                "reference_percentile": 0.58
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05787294396821041,
+                "model_reference_interval_95": [
+                  0.030292570864192847,
+                  0.08608176015826847
+                ],
+                "real_reference_q50": 0.01880363961620185,
+                "real_reference_q95": 0.042454436716523485,
+                "reference_gap": 1.6519233658926973,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006088525479307494,
+                "model_reference_interval_95": [
+                  0.004175571448113841,
+                  0.009449866150007643
+                ],
+                "real_reference_q50": 0.006330666620769088,
+                "real_reference_q95": 0.010209841455518629,
+                "reference_gap": -0.06242078580539862,
+                "reference_percentile": 0.44
+              },
+              "feature_density": {
+                "model_reference_median": 0.330078125,
+                "model_reference_interval_95": [
+                  0.20386718749999996,
+                  0.44181640624999996
+                ],
+                "real_reference_q50": 0.1609375,
+                "real_reference_q95": 0.3289453125,
+                "reference_gap": 1.006742617995815,
+                "reference_percentile": 0.95
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.16796875,
+                "model_reference_interval_95": [
+                  0.11103515625,
+                  0.23828125
+                ],
+                "real_reference_q50": 0.15234375,
+                "real_reference_q95": 0.23476562499999998,
+                "reference_gap": 0.18957345971563985,
+                "reference_percentile": 0.67
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05416514012040885,
+                "model_reference_interval_95": [
+                  0.023618770146490643,
+                  0.08345645361998529
+                ],
+                "real_reference_q50": 0.015770267017652884,
+                "real_reference_q95": 0.04806758427279635,
+                "reference_gap": 1.1887944995382376,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.007388296280297024,
+                "model_reference_interval_95": [
+                  0.005198694351249511,
+                  0.010180680753014032
+                ],
+                "real_reference_q50": 0.008170806922481955,
+                "real_reference_q95": 0.01164221442017419,
+                "reference_gap": -0.22541595669915943,
+                "reference_percentile": 0.33
+              },
+              "feature_density": {
+                "model_reference_median": 0.35820312500000007,
+                "model_reference_interval_95": [
+                  0.18830078125,
+                  0.5016210937499999
+                ],
+                "real_reference_q50": 0.28867187499999997,
+                "real_reference_q95": 0.4198828125,
+                "reference_gap": 0.5299196189342074,
+                "reference_percentile": 0.8
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.208984375,
+                "model_reference_interval_95": [
+                  0.13671875,
+                  0.3069335937499999
+                ],
+                "real_reference_q50": 0.27734375,
+                "real_reference_q95": 0.379296875,
+                "reference_gap": -0.6704980842911878,
+                "reference_percentile": 0.12
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07615893072534852,
+                "model_reference_interval_95": [
+                  0.04238906057859727,
+                  0.10960297979498486
+                ],
+                "real_reference_q50": 0.02311936722079655,
+                "real_reference_q95": 0.054259686978832884,
+                "reference_gap": 1.7032440230760357,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.009238167861371438,
+                "model_reference_interval_95": [
+                  0.006610941498663164,
+                  0.013712388516227808
+                ],
+                "real_reference_q50": 0.008926275611838563,
+                "real_reference_q95": 0.013290227967079592,
+                "reference_gap": 0.07147013169341725,
+                "reference_percentile": 0.58
+              },
+              "feature_density": {
+                "model_reference_median": 0.534375,
+                "model_reference_interval_95": [
+                  0.4273046875,
+                  0.6161523437499999
+                ],
+                "real_reference_q50": 0.294921875,
+                "real_reference_q95": 0.47324218749999986,
+                "reference_gap": 1.3428258488499465,
+                "reference_percentile": 0.98
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.31640625,
+                "model_reference_interval_95": [
+                  0.2185546875,
+                  0.3984375
+                ],
+                "real_reference_q50": 0.359375,
+                "real_reference_q95": 0.4375,
+                "reference_gap": -0.55,
+                "reference_percentile": 0.15
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.09348849627842093,
+                "model_reference_interval_95": [
+                  0.06559572194491774,
+                  0.13553946905369824
+                ],
+                "real_reference_q50": 0.020833933783819203,
+                "real_reference_q95": 0.06051358957519055,
+                "reference_gap": 1.8310280431011459,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.012305899743170312,
+                "model_reference_interval_95": [
+                  0.009098767938163593,
+                  0.01839671839038701
+                ],
+                "real_reference_q50": 0.012387938947182153,
+                "real_reference_q95": 0.01894239393431175,
+                "reference_gap": -0.012516556170258897,
+                "reference_percentile": 0.49
+              },
+              "feature_density": {
+                "model_reference_median": 0.549609375,
+                "model_reference_interval_95": [
+                  0.4466796875000001,
+                  0.6301562499999999
+                ],
+                "real_reference_q50": 0.4375,
+                "real_reference_q95": 0.576796875,
+                "reference_gap": 0.8048233314638248,
+                "reference_percentile": 0.87
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.37109375,
+                "model_reference_interval_95": [
+                  0.28310546875,
+                  0.4670898437499999
+                ],
+                "real_reference_q50": 0.47265625,
+                "real_reference_q95": 0.5783203125,
+                "reference_gap": -0.9611829944547131,
+                "reference_percentile": 0.05
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.09220431238699678,
+                "model_reference_interval_95": [
+                  0.06014569720313782,
+                  0.12801535452468793
+                ],
+                "real_reference_q50": 0.019009641310021808,
+                "real_reference_q95": 0.05917145156009279,
+                "reference_gap": 1.8224943203810293,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.03686269625753669,
+                "model_reference_interval_95": [
+                  0.027104915642542148,
+                  0.055081286725660865
+                ],
+                "real_reference_q50": 0.04652698622124096,
+                "real_reference_q95": 0.06340424235392812,
+                "reference_gap": -0.5726221068001027,
+                "reference_percentile": 0.16
+              },
+              "feature_density": {
+                "model_reference_median": 0.900390625,
+                "model_reference_interval_95": [
+                  0.8103710937499999,
+                  0.9555468749999999
+                ],
+                "real_reference_q50": 0.88515625,
+                "real_reference_q95": 0.9766015625,
+                "reference_gap": 0.16659547202050431,
+                "reference_percentile": 0.59
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.91015625,
+                "model_reference_interval_95": [
+                  0.82998046875,
+                  0.97880859375
+                ],
+                "real_reference_q50": 0.947265625,
+                "real_reference_q95": 0.98828125,
+                "reference_gap": -0.9047619047619048,
+                "reference_percentile": 0.09
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.12558491621272716,
+                "model_reference_interval_95": [
+                  0.076199074305842,
+                  0.17572827494722912
+                ],
+                "real_reference_q50": 0.034492422413325396,
+                "real_reference_q95": 0.08740833651373946,
+                "reference_gap": 1.7214574357828012,
+                "reference_percentile": 1.0
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.9692103937206301,
+          "median_absolute_gap_change": 0.07457777849059657
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9478016890841291,
+          "median_absolute_gap_change": 0.12489055443102887
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.825308120861398,
+          "median_absolute_gap_change": 0.12531759368173434
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.217986384290752,
+          "median_absolute_gap_change": 0.25286826440309607
+        }
+      }
+    },
+    "fit1024_rank40_scale0km": {
+      "fit_size": 1024,
+      "rank": 40,
+      "low_pass_sigma_km": 0.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 9.544273643951007,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005363693648034018,
+                "model_reference_interval_95": [
+                  0.003891154273681141,
+                  0.007279079391804943
+                ],
+                "real_reference_q50": 0.00436817064420858,
+                "real_reference_q95": 0.006284207312934642,
+                "reference_gap": 0.5195740875289946,
+                "reference_percentile": 0.82
+              },
+              "feature_density": {
+                "model_reference_median": 0.24062499999999998,
+                "model_reference_interval_95": [
+                  0.04603515624999997,
+                  0.37013671875
+                ],
+                "real_reference_q50": 0.128125,
+                "real_reference_q95": 0.30183593749999993,
+                "reference_gap": 0.6476276141218801,
+                "reference_percentile": 0.88
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.052734375,
+                "model_reference_interval_95": [
+                  0.01748046875,
+                  0.10751953124999997
+                ],
+                "real_reference_q50": 0.0625,
+                "real_reference_q95": 0.1251953125,
+                "reference_gap": -0.15576323987538943,
+                "reference_percentile": 0.34
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05043119304215993,
+                "model_reference_interval_95": [
+                  0.028863731729878078,
+                  0.07520897138070728
+                ],
+                "real_reference_q50": 0.013293916878525991,
+                "real_reference_q95": 0.044427155883812006,
+                "reference_gap": 1.1928497435595606,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.0056324316308220546,
+                "model_reference_interval_95": [
+                  0.004234609769453451,
+                  0.007555761639280661
+                ],
+                "real_reference_q50": 0.005712747180187661,
+                "real_reference_q95": 0.007976800483917423,
+                "reference_gap": -0.03547423076713591,
+                "reference_percentile": 0.46
+              },
+              "feature_density": {
+                "model_reference_median": 0.237109375,
+                "model_reference_interval_95": [
+                  0.060039062500000025,
+                  0.38761718749999996
+                ],
+                "real_reference_q50": 0.17187500000000006,
+                "real_reference_q95": 0.406484375,
+                "reference_gap": 0.2780552780552779,
+                "reference_percentile": 0.69
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.1484375,
+                "model_reference_interval_95": [
+                  0.08779296875,
+                  0.22285156249999993
+                ],
+                "real_reference_q50": 0.142578125,
+                "real_reference_q95": 0.21914062499999998,
+                "reference_gap": 0.07653061224489797,
+                "reference_percentile": 0.54
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.04887535865213399,
+                "model_reference_interval_95": [
+                  0.018763875501227843,
+                  0.08026142739019046
+                ],
+                "real_reference_q50": 0.01696582285235093,
+                "real_reference_q95": 0.04513017424330007,
+                "reference_gap": 1.1329760574581338,
+                "reference_percentile": 0.97
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006149299717419399,
+                "model_reference_interval_95": [
+                  0.004363961688278189,
+                  0.008041263826579026
+                ],
+                "real_reference_q50": 0.0075120373941932606,
+                "real_reference_q95": 0.00972562617333078,
+                "reference_gap": -0.6156236829610356,
+                "reference_percentile": 0.21
+              },
+              "feature_density": {
+                "model_reference_median": 0.40742187499999993,
+                "model_reference_interval_95": [
+                  0.23552734375000003,
+                  0.5319726562499999
+                ],
+                "real_reference_q50": 0.24648437499999992,
+                "real_reference_q95": 0.5041015625,
+                "reference_gap": 0.6247156937073538,
+                "reference_percentile": 0.79
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.20703125,
+                "model_reference_interval_95": [
+                  0.1328125,
+                  0.3147460937499999
+                ],
+                "real_reference_q50": 0.263671875,
+                "real_reference_q95": 0.3595703125,
+                "reference_gap": -0.5906313645621182,
+                "reference_percentile": 0.18
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.057518165658664855,
+                "model_reference_interval_95": [
+                  0.03484393877793576,
+                  0.09265342500042105
+                ],
+                "real_reference_q50": 0.023555681174067256,
+                "real_reference_q95": 0.06235514490173094,
+                "reference_gap": 0.8753338634518971,
+                "reference_percentile": 0.93
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.007576482481453151,
+                "model_reference_interval_95": [
+                  0.005824825332955469,
+                  0.010279520135421575
+                ],
+                "real_reference_q50": 0.008787690933630077,
+                "real_reference_q95": 0.012435016323751635,
+                "reference_gap": -0.33208127123984377,
+                "reference_percentile": 0.2
+              },
+              "feature_density": {
+                "model_reference_median": 0.5078125,
+                "model_reference_interval_95": [
+                  0.34429687499999995,
+                  0.6438671874999999
+                ],
+                "real_reference_q50": 0.32695312499999996,
+                "real_reference_q95": 0.5569531249999999,
+                "reference_gap": 0.7863451086956524,
+                "reference_percentile": 0.89
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.3046875,
+                "model_reference_interval_95": [
+                  0.20107421875,
+                  0.39267578124999997
+                ],
+                "real_reference_q50": 0.35546875,
+                "real_reference_q95": 0.453125,
+                "reference_gap": -0.52,
+                "reference_percentile": 0.23
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06766369250631377,
+                "model_reference_interval_95": [
+                  0.035119071845427695,
+                  0.10183461441903506
+                ],
+                "real_reference_q50": 0.0179672382551731,
+                "real_reference_q95": 0.06466735941176684,
+                "reference_gap": 1.064161141777335,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.009507983368988726,
+                "model_reference_interval_95": [
+                  0.007234304897143823,
+                  0.012562050834524868
+                ],
+                "real_reference_q50": 0.011923171113050302,
+                "real_reference_q95": 0.016064599998990237,
+                "reference_gap": -0.583177403398399,
+                "reference_percentile": 0.18
+              },
+              "feature_density": {
+                "model_reference_median": 0.502734375,
+                "model_reference_interval_95": [
+                  0.30763671875000004,
+                  0.6486328124999999
+                ],
+                "real_reference_q50": 0.39140624999999996,
+                "real_reference_q95": 0.605078125,
+                "reference_gap": 0.5210237659963435,
+                "reference_percentile": 0.73
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.35546875,
+                "model_reference_interval_95": [
+                  0.2380859375,
+                  0.45166015624999983
+                ],
+                "real_reference_q50": 0.45703125,
+                "real_reference_q95": 0.558984375,
+                "reference_gap": -0.9961685823754791,
+                "reference_percentile": 0.06
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05431483206516774,
+                "model_reference_interval_95": [
+                  0.020261301461195085,
+                  0.09310641242339412
+                ],
+                "real_reference_q50": 0.0236263144752209,
+                "real_reference_q95": 0.06493692070165186,
+                "reference_gap": 0.7428726032665192,
+                "reference_percentile": 0.86
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.03392987918060031,
+                "model_reference_interval_95": [
+                  0.025538618127623314,
+                  0.04526242254988842
+                ],
+                "real_reference_q50": 0.044339605207804444,
+                "real_reference_q95": 0.05986788637008086,
+                "reference_gap": -0.6703720726343477,
+                "reference_percentile": 0.08
+              },
+              "feature_density": {
+                "model_reference_median": 0.838671875,
+                "model_reference_interval_95": [
+                  0.6921484375,
+                  0.94498046875
+                ],
+                "real_reference_q50": 0.883984375,
+                "real_reference_q95": 0.96953125,
+                "reference_gap": -0.5296803652968053,
+                "reference_percentile": 0.28
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.83984375,
+                "model_reference_interval_95": [
+                  0.73828125,
+                  0.93359375
+                ],
+                "real_reference_q50": 0.94140625,
+                "real_reference_q95": 0.9806640625,
+                "reference_gap": -2.5870646766169125,
+                "reference_percentile": 0.0
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06757957958482697,
+                "model_reference_interval_95": [
+                  0.025804040652734346,
+                  0.13153372696633886
+                ],
+                "real_reference_q50": 0.03507699105690587,
+                "real_reference_q95": 0.09255650788933399,
+                "reference_gap": 0.5654638438015569,
+                "reference_percentile": 0.85
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.8710839323640742,
+          "median_absolute_gap_change": 0.3434842097205452
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.8942394669061942,
+          "median_absolute_gap_change": 0.33580565595774226
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9878157940076904,
+          "median_absolute_gap_change": 0.13403986055912998
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.6894854641965097,
+          "median_absolute_gap_change": 0.6439672045700646
+        }
+      }
+    },
+    "fit512_rank20_scale16km": {
+      "fit_size": 512,
+      "rank": 20,
+      "low_pass_sigma_km": 16.0,
+      "low_pass_sigma_pixels": 2.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 7.157553943524817,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005867700334398096,
+                "model_reference_interval_95": [
+                  0.0039853916644456144,
+                  0.008913945764887958
+                ],
+                "real_reference_q50": 0.0043896632830027205,
+                "real_reference_q95": 0.007327142834946487,
+                "reference_gap": 0.5031650519634563,
+                "reference_percentile": 0.83
+              },
+              "feature_density": {
+                "model_reference_median": 0.31015625,
+                "model_reference_interval_95": [
+                  0.20072265625,
+                  0.39152343749999996
+                ],
+                "real_reference_q50": 0.10039062499999996,
+                "real_reference_q95": 0.20199218750000006,
+                "reference_gap": 2.0645905420991912,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.068359375,
+                "model_reference_interval_95": [
+                  0.02734375,
+                  0.11533203124999997
+                ],
+                "real_reference_q50": 0.06640625,
+                "real_reference_q95": 0.11738281249999999,
+                "reference_gap": 0.03831417624521074,
+                "reference_percentile": 0.54
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.0610603424681615,
+                "model_reference_interval_95": [
+                  0.03590443642305784,
+                  0.084600583781457
+                ],
+                "real_reference_q50": 0.01568636839377302,
+                "real_reference_q95": 0.03488070615889193,
+                "reference_gap": 2.3639249569133223,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005474276778665188,
+                "model_reference_interval_95": [
+                  0.003718136957403401,
+                  0.008117454544765522
+                ],
+                "real_reference_q50": 0.006331327816477383,
+                "real_reference_q95": 0.010034236276325447,
+                "reference_gap": -0.231453476937251,
+                "reference_percentile": 0.35
+              },
+              "feature_density": {
+                "model_reference_median": 0.308203125,
+                "model_reference_interval_95": [
+                  0.16289062500000004,
+                  0.41458984374999996
+                ],
+                "real_reference_q50": 0.16796875,
+                "real_reference_q95": 0.336015625,
+                "reference_gap": 0.8344955834495585,
+                "reference_percentile": 0.93
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.18359375,
+                "model_reference_interval_95": [
+                  0.10341796875,
+                  0.27773437499999987
+                ],
+                "real_reference_q50": 0.150390625,
+                "real_reference_q95": 0.22304687499999998,
+                "reference_gap": 0.4569892473118281,
+                "reference_percentile": 0.83
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05574942156492202,
+                "model_reference_interval_95": [
+                  0.022203507909267856,
+                  0.08569226304367004
+                ],
+                "real_reference_q50": 0.016939795134115976,
+                "real_reference_q95": 0.04883073461030057,
+                "reference_gap": 1.216948358005827,
+                "reference_percentile": 0.96
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006761259582348855,
+                "model_reference_interval_95": [
+                  0.005212854774294018,
+                  0.009046994110514543
+                ],
+                "real_reference_q50": 0.007473080161951362,
+                "real_reference_q95": 0.010342095309568233,
+                "reference_gap": -0.24810624656122013,
+                "reference_percentile": 0.37
+              },
+              "feature_density": {
+                "model_reference_median": 0.3609375,
+                "model_reference_interval_95": [
+                  0.17685546875000005,
+                  0.5125390624999999
+                ],
+                "real_reference_q50": 0.25429687500000003,
+                "real_reference_q95": 0.4158593749999999,
+                "reference_gap": 0.660058027079304,
+                "reference_percentile": 0.82
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.212890625,
+                "model_reference_interval_95": [
+                  0.140625,
+                  0.30673828124999997
+                ],
+                "real_reference_q50": 0.26171875,
+                "real_reference_q95": 0.3439453125,
+                "reference_gap": -0.5938242280285037,
+                "reference_percentile": 0.19
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07670911883256892,
+                "model_reference_interval_95": [
+                  0.044908528692791445,
+                  0.11094682709275863
+                ],
+                "real_reference_q50": 0.015761428966815982,
+                "real_reference_q95": 0.05118952368617624,
+                "reference_gap": 1.7203208456041268,
+                "reference_percentile": 0.98
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.009456364887265867,
+                "model_reference_interval_95": [
+                  0.007275968345519778,
+                  0.012359271708577653
+                ],
+                "real_reference_q50": 0.00882904134222362,
+                "real_reference_q95": 0.014069967213022016,
+                "reference_gap": 0.11969708416171147,
+                "reference_percentile": 0.64
+              },
+              "feature_density": {
+                "model_reference_median": 0.553125,
+                "model_reference_interval_95": [
+                  0.41416015624999997,
+                  0.6404882812499999
+                ],
+                "real_reference_q50": 0.319921875,
+                "real_reference_q95": 0.4594921875,
+                "reference_gap": 1.670864819479429,
+                "reference_percentile": 0.97
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.306640625,
+                "model_reference_interval_95": [
+                  0.21611328125,
+                  0.39267578124999997
+                ],
+                "real_reference_q50": 0.3671875,
+                "real_reference_q95": 0.46152343749999997,
+                "reference_gap": -0.6418219461697725,
+                "reference_percentile": 0.16
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.09983345685280542,
+                "model_reference_interval_95": [
+                  0.07049798736348081,
+                  0.1391535296251335
+                ],
+                "real_reference_q50": 0.019649487313661895,
+                "real_reference_q95": 0.06127479748966139,
+                "reference_gap": 1.9263272561840599,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.011403865019665615,
+                "model_reference_interval_95": [
+                  0.008118549082586973,
+                  0.01507725187548231
+                ],
+                "real_reference_q50": 0.012198664729146103,
+                "real_reference_q95": 0.019654613058970493,
+                "reference_gap": -0.10659941221711859,
+                "reference_percentile": 0.4
+              },
+              "feature_density": {
+                "model_reference_median": 0.536328125,
+                "model_reference_interval_95": [
+                  0.41945312500000004,
+                  0.6517578125
+                ],
+                "real_reference_q50": 0.436328125,
+                "real_reference_q95": 0.6004296874999998,
+                "reference_gap": 0.6093787193525361,
+                "reference_percentile": 0.83
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.3828125,
+                "model_reference_interval_95": [
+                  0.28310546875,
+                  0.4749023437499999
+                ],
+                "real_reference_q50": 0.48046875,
+                "real_reference_q95": 0.57421875,
+                "reference_gap": -1.0416666666666667,
+                "reference_percentile": 0.07
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08402287061367164,
+                "model_reference_interval_95": [
+                  0.05747754303550125,
+                  0.11757073109178948
+                ],
+                "real_reference_q50": 0.019565950674300114,
+                "real_reference_q95": 0.0631101342573323,
+                "reference_gap": 1.480264748022245,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.035248083948888675,
+                "model_reference_interval_95": [
+                  0.02493760582631943,
+                  0.0545211106313515
+                ],
+                "real_reference_q50": 0.04402211371817011,
+                "real_reference_q95": 0.0640711834343611,
+                "reference_gap": -0.43762777492841987,
+                "reference_percentile": 0.22
+              },
+              "feature_density": {
+                "model_reference_median": 0.915234375,
+                "model_reference_interval_95": [
+                  0.7899414062500001,
+                  0.97857421875
+                ],
+                "real_reference_q50": 0.908203125,
+                "real_reference_q95": 0.9876171875,
+                "reference_gap": 0.08853910477127448,
+                "reference_percentile": 0.56
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.896484375,
+                "model_reference_interval_95": [
+                  0.8005859375,
+                  0.9825195312499999
+                ],
+                "real_reference_q50": 0.953125,
+                "real_reference_q95": 0.98828125,
+                "reference_gap": -1.6111111111111112,
+                "reference_percentile": 0.01
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.1279305972150767,
+                "model_reference_interval_95": [
+                  0.0640216585181477,
+                  0.1890464723874238
+                ],
+                "real_reference_q50": 0.043333557515389365,
+                "real_reference_q95": 0.10438612818648647,
+                "reference_gap": 1.3856425498514908,
+                "reference_percentile": 0.99
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.9717123970139863,
+          "median_absolute_gap_change": 0.10769204906587786
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9384551266135346,
+          "median_absolute_gap_change": 0.16895320301711375
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9620289199906749,
+          "median_absolute_gap_change": 0.07455992671244716
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.7351506996542965,
+          "median_absolute_gap_change": 0.19883821334660146
+        }
+      }
+    },
+    "fit512_rank20_scale32km": {
+      "fit_size": 512,
+      "rank": 20,
+      "low_pass_sigma_km": 32.0,
+      "low_pass_sigma_pixels": 4.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 7.155608142725817,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005998488712528727,
+                "model_reference_interval_95": [
+                  0.0039009315007600574,
+                  0.00875949884850366
+                ],
+                "real_reference_q50": 0.00463334059480669,
+                "real_reference_q95": 0.006809177239429442,
+                "reference_gap": 0.6274129636964209,
+                "reference_percentile": 0.8
+              },
+              "feature_density": {
+                "model_reference_median": 0.3031250000000001,
+                "model_reference_interval_95": [
+                  0.18199218749999993,
+                  0.40394531249999993
+                ],
+                "real_reference_q50": 0.10039062500000007,
+                "real_reference_q95": 0.2478124999999999,
+                "reference_gap": 1.3751987281399063,
+                "reference_percentile": 0.99
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.0703125,
+                "model_reference_interval_95": [
+                  0.03701171875,
+                  0.11142578124999997
+                ],
+                "real_reference_q50": 0.064453125,
+                "real_reference_q95": 0.11347656249999999,
+                "reference_gap": 0.11952191235059764,
+                "reference_percentile": 0.61
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.056461128521973714,
+                "model_reference_interval_95": [
+                  0.031111828116860103,
+                  0.09320452926169309
+                ],
+                "real_reference_q50": 0.01572648118408254,
+                "real_reference_q95": 0.045318036684236084,
+                "reference_gap": 1.3765632339834184,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005867880955836902,
+                "model_reference_interval_95": [
+                  0.004064940673145662,
+                  0.008730951867106625
+                ],
+                "real_reference_q50": 0.006336496454274032,
+                "real_reference_q95": 0.009250020185182293,
+                "reference_gap": -0.16084149013986046,
+                "reference_percentile": 0.37
+              },
+              "feature_density": {
+                "model_reference_median": 0.31328125,
+                "model_reference_interval_95": [
+                  0.1872265625,
+                  0.4281249999999999
+                ],
+                "real_reference_q50": 0.18398437499999998,
+                "real_reference_q95": 0.3618359375,
+                "reference_gap": 0.7269931913024381,
+                "reference_percentile": 0.92
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.1796875,
+                "model_reference_interval_95": [
+                  0.1015625,
+                  0.26376953124999997
+                ],
+                "real_reference_q50": 0.158203125,
+                "real_reference_q95": 0.2265625,
+                "reference_gap": 0.3142857142857143,
+                "reference_percentile": 0.77
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.05906781298495212,
+                "model_reference_interval_95": [
+                  0.036123443198775515,
+                  0.09372072502012496
+                ],
+                "real_reference_q50": 0.016493346938755593,
+                "real_reference_q95": 0.05701435264323068,
+                "reference_gap": 1.0506764406761664,
+                "reference_percentile": 0.96
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.0072111069168399045,
+                "model_reference_interval_95": [
+                  0.005055157957946171,
+                  0.00979374575043728
+                ],
+                "real_reference_q50": 0.0076150102562932975,
+                "real_reference_q95": 0.011954430201563426,
+                "reference_gap": -0.09307772572083943,
+                "reference_percentile": 0.44
+              },
+              "feature_density": {
+                "model_reference_median": 0.34804687500000003,
+                "model_reference_interval_95": [
+                  0.2394921874999999,
+                  0.4760156249999999
+                ],
+                "real_reference_q50": 0.23359375,
+                "real_reference_q95": 0.3995703124999999,
+                "reference_gap": 0.6895740174158631,
+                "reference_percentile": 0.85
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.21875,
+                "model_reference_interval_95": [
+                  0.13857421875,
+                  0.31679687499999987
+                ],
+                "real_reference_q50": 0.26953125,
+                "real_reference_q95": 0.351953125,
+                "reference_gap": -0.6161137440758295,
+                "reference_percentile": 0.13
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07629992883324366,
+                "model_reference_interval_95": [
+                  0.0383635373460299,
+                  0.11003937997228144
+                ],
+                "real_reference_q50": 0.018328099300666867,
+                "real_reference_q95": 0.05404815152688727,
+                "reference_gap": 1.6229491817490234,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.009197079853238699,
+                "model_reference_interval_95": [
+                  0.006604652586384768,
+                  0.01261630226163513
+                ],
+                "real_reference_q50": 0.009171542004467903,
+                "real_reference_q95": 0.012627924412503698,
+                "reference_gap": 0.0073886062813600896,
+                "reference_percentile": 0.5
+              },
+              "feature_density": {
+                "model_reference_median": 0.5359375,
+                "model_reference_interval_95": [
+                  0.4171484375,
+                  0.6314843749999999
+                ],
+                "real_reference_q50": 0.29375,
+                "real_reference_q95": 0.4487499999999999,
+                "reference_gap": 1.5625000000000004,
+                "reference_percentile": 0.97
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.296875,
+                "model_reference_interval_95": [
+                  0.2265625,
+                  0.41220703124999997
+                ],
+                "real_reference_q50": 0.359375,
+                "real_reference_q95": 0.453125,
+                "reference_gap": -0.6666666666666666,
+                "reference_percentile": 0.13
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.09743852579216195,
+                "model_reference_interval_95": [
+                  0.06734235856035438,
+                  0.13683568648838484
+                ],
+                "real_reference_q50": 0.021637459995238806,
+                "real_reference_q95": 0.05530171020743391,
+                "reference_gap": 2.2516784220390478,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.011415222261978553,
+                "model_reference_interval_95": [
+                  0.007451935982400298,
+                  0.016078218309447796
+                ],
+                "real_reference_q50": 0.011964505178902463,
+                "real_reference_q95": 0.017320448463264845,
+                "reference_gap": -0.10255577547425454,
+                "reference_percentile": 0.44
+              },
+              "feature_density": {
+                "model_reference_median": 0.533984375,
+                "model_reference_interval_95": [
+                  0.4217578125,
+                  0.6239257812499999
+                ],
+                "real_reference_q50": 0.44140625,
+                "real_reference_q95": 0.596171875,
+                "reference_gap": 0.598182735991923,
+                "reference_percentile": 0.84
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.376953125,
+                "model_reference_interval_95": [
+                  0.28701171875,
+                  0.47080078124999997
+                ],
+                "real_reference_q50": 0.46875,
+                "real_reference_q95": 0.57421875,
+                "reference_gap": -0.8703703703703703,
+                "reference_percentile": 0.04
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08734155149295375,
+                "model_reference_interval_95": [
+                  0.05722139738028022,
+                  0.11949604481273837
+                ],
+                "real_reference_q50": 0.019184998262927522,
+                "real_reference_q95": 0.06184004870014473,
+                "reference_gap": 1.5978542407385963,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.03524705182567811,
+                "model_reference_interval_95": [
+                  0.02506612780231457,
+                  0.05341732728859589
+                ],
+                "real_reference_q50": 0.04411365819498636,
+                "real_reference_q95": 0.06510221664163766,
+                "reference_gap": -0.42244951657091556,
+                "reference_percentile": 0.17
+              },
+              "feature_density": {
+                "model_reference_median": 0.900390625,
+                "model_reference_interval_95": [
+                  0.79470703125,
+                  0.97931640625
+                ],
+                "real_reference_q50": 0.9214843749999999,
+                "real_reference_q95": 0.9939453125,
+                "reference_gap": -0.2911051212937991,
+                "reference_percentile": 0.42
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.890625,
+                "model_reference_interval_95": [
+                  0.79873046875,
+                  0.9611328124999999
+                ],
+                "real_reference_q50": 0.95703125,
+                "real_reference_q95": 0.988671875,
+                "reference_gap": -2.0987654320987668,
+                "reference_percentile": 0.01
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.11897946693316974,
+                "model_reference_interval_95": [
+                  0.07163495556227376,
+                  0.18100460685221684
+                ],
+                "real_reference_q50": 0.04124985194704334,
+                "real_reference_q95": 0.10025135716536848,
+                "reference_gap": 1.317417491274181,
+                "reference_percentile": 0.98
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.9952165565688689,
+          "median_absolute_gap_change": 0.06105170884352091
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9949771718166533,
+          "median_absolute_gap_change": 0.0498280280392846
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9967137401523366,
+          "median_absolute_gap_change": 0.10317800703987841
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.48448148620557274,
+          "median_absolute_gap_change": 0.36705713993440037
+        }
+      }
+    },
+    "fit512_rank20_scale64km": {
+      "fit_size": 512,
+      "rank": 20,
+      "low_pass_sigma_km": 64.0,
+      "low_pass_sigma_pixels": 8.0,
+      "post_hoc": true,
+      "evaluation": {
+        "bandwidth": 7.151683095322912,
+        "classes": {
+          "TS": {
+            "real_samples": 3942,
+            "generated_samples": 1000,
+            "real_storms": 368,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.005869589611721904,
+                "model_reference_interval_95": [
+                  0.003708531441593127,
+                  0.00924965852693421
+                ],
+                "real_reference_q50": 0.0047429900267766945,
+                "real_reference_q95": 0.008592485837215735,
+                "reference_gap": 0.2926615952899866,
+                "reference_percentile": 0.79
+              },
+              "feature_density": {
+                "model_reference_median": 0.30624999999999997,
+                "model_reference_interval_95": [
+                  0.1342578125,
+                  0.38662109374999987
+                ],
+                "real_reference_q50": 0.11328125,
+                "real_reference_q95": 0.23382812500000003,
+                "reference_gap": 1.6007777057679837,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.0703125,
+                "model_reference_interval_95": [
+                  0.0390625,
+                  0.1171875
+                ],
+                "real_reference_q50": 0.0625,
+                "real_reference_q95": 0.109375,
+                "reference_gap": 0.16666666666666666,
+                "reference_percentile": 0.63
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.06432284660602461,
+                "model_reference_interval_95": [
+                  0.03127894069949416,
+                  0.0879699252054459
+                ],
+                "real_reference_q50": 0.016099375637459112,
+                "real_reference_q95": 0.04181945170238695,
+                "reference_gap": 1.874935005900839,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C1": {
+            "real_samples": 1318,
+            "generated_samples": 1000,
+            "real_storms": 211,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.006091164838365026,
+                "model_reference_interval_95": [
+                  0.003978680096772591,
+                  0.009165598858557522
+                ],
+                "real_reference_q50": 0.006141767292467848,
+                "real_reference_q95": 0.00992481720806333,
+                "reference_gap": -0.013376100033524506,
+                "reference_percentile": 0.49
+              },
+              "feature_density": {
+                "model_reference_median": 0.28242187500000004,
+                "model_reference_interval_95": [
+                  0.17533203124999996,
+                  0.43166015625000004
+                ],
+                "real_reference_q50": 0.1382812499999999,
+                "real_reference_q95": 0.33523437500000003,
+                "reference_gap": 0.731852439508132,
+                "reference_percentile": 0.85
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.1875,
+                "model_reference_interval_95": [
+                  0.10712890625,
+                  0.27548828124999997
+                ],
+                "real_reference_q50": 0.158203125,
+                "real_reference_q95": 0.2345703125,
+                "reference_gap": 0.38363171355498726,
+                "reference_percentile": 0.74
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.056230524995239506,
+                "model_reference_interval_95": [
+                  0.028489797861656875,
+                  0.09124140650265614
+                ],
+                "real_reference_q50": 0.019103591042665458,
+                "real_reference_q95": 0.05568535846151184,
+                "reference_gap": 1.014902684375135,
+                "reference_percentile": 0.95
+              }
+            }
+          },
+          "C2": {
+            "real_samples": 700,
+            "generated_samples": 1000,
+            "real_storms": 149,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.007203807534100659,
+                "model_reference_interval_95": [
+                  0.005423019600082402,
+                  0.010531543597853969
+                ],
+                "real_reference_q50": 0.008330243264787152,
+                "real_reference_q95": 0.011712634854573023,
+                "reference_gap": -0.3330293671756095,
+                "reference_percentile": 0.36
+              },
+              "feature_density": {
+                "model_reference_median": 0.351171875,
+                "model_reference_interval_95": [
+                  0.19927734374999997,
+                  0.4766992187499998
+                ],
+                "real_reference_q50": 0.23828125,
+                "real_reference_q95": 0.44074218750000005,
+                "reference_gap": 0.5575921281111326,
+                "reference_percentile": 0.8
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.208984375,
+                "model_reference_interval_95": [
+                  0.13076171875,
+                  0.30283203124999997
+                ],
+                "real_reference_q50": 0.25,
+                "real_reference_q95": 0.34765625,
+                "reference_gap": -0.42,
+                "reference_percentile": 0.19
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.07843435827095369,
+                "model_reference_interval_95": [
+                  0.04565614960353846,
+                  0.11886672785058583
+                ],
+                "real_reference_q50": 0.01720122739333707,
+                "real_reference_q95": 0.053671021863775745,
+                "reference_gap": 1.6790094862544498,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C3": {
+            "real_samples": 505,
+            "generated_samples": 1000,
+            "real_storms": 106,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.009649508695553033,
+                "model_reference_interval_95": [
+                  0.007009996833397164,
+                  0.013101965907986816
+                ],
+                "real_reference_q50": 0.00903637031569493,
+                "real_reference_q95": 0.013244355016355479,
+                "reference_gap": 0.1457083196528388,
+                "reference_percentile": 0.56
+              },
+              "feature_density": {
+                "model_reference_median": 0.5355468750000001,
+                "model_reference_interval_95": [
+                  0.41550781249999996,
+                  0.63259765625
+                ],
+                "real_reference_q50": 0.30546875,
+                "real_reference_q95": 0.44226562500000005,
+                "reference_gap": 1.6818960593946317,
+                "reference_percentile": 1.0
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.298828125,
+                "model_reference_interval_95": [
+                  0.17744140625,
+                  0.3889648437499999
+                ],
+                "real_reference_q50": 0.3515625,
+                "real_reference_q95": 0.445703125,
+                "reference_gap": -0.5601659751037346,
+                "reference_percentile": 0.15
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.10058702971110434,
+                "model_reference_interval_95": [
+                  0.06067315513130968,
+                  0.13398260875306517
+                ],
+                "real_reference_q50": 0.021355493103049517,
+                "real_reference_q95": 0.05580849591423294,
+                "reference_gap": 2.2996990144016216,
+                "reference_percentile": 1.0
+              }
+            }
+          },
+          "C4": {
+            "real_samples": 461,
+            "generated_samples": 1000,
+            "real_storms": 76,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.011862316857411015,
+                "model_reference_interval_95": [
+                  0.008431436454526375,
+                  0.016456860567890617
+                ],
+                "real_reference_q50": 0.012433126826211005,
+                "real_reference_q95": 0.016980395991818453,
+                "reference_gap": -0.12552808026347356,
+                "reference_percentile": 0.4
+              },
+              "feature_density": {
+                "model_reference_median": 0.5367187499999999,
+                "model_reference_interval_95": [
+                  0.42298828125000004,
+                  0.62306640625
+                ],
+                "real_reference_q50": 0.44179687500000003,
+                "real_reference_q95": 0.5950390624999999,
+                "reference_gap": 0.61942391027275,
+                "reference_percentile": 0.87
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.375,
+                "model_reference_interval_95": [
+                  0.2849609375,
+                  0.4609375
+                ],
+                "real_reference_q50": 0.474609375,
+                "real_reference_q95": 0.570703125,
+                "reference_gap": -1.0365853658536588,
+                "reference_percentile": 0.04
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.08835220444763758,
+                "model_reference_interval_95": [
+                  0.05508394782570782,
+                  0.1166821509094309
+                ],
+                "real_reference_q50": 0.017838310670445667,
+                "real_reference_q95": 0.055422810508190305,
+                "reference_gap": 1.8761429334328292,
+                "reference_percentile": 0.99
+              }
+            }
+          },
+          "C5": {
+            "real_samples": 85,
+            "generated_samples": 1000,
+            "real_storms": 22,
+            "metrics": {
+              "feature_mmd2": {
+                "model_reference_median": 0.036239102205506635,
+                "model_reference_interval_95": [
+                  0.02400343446791937,
+                  0.05986447743591764
+                ],
+                "real_reference_q50": 0.045848376461886664,
+                "real_reference_q95": 0.07096125515928407,
+                "reference_gap": -0.38264327925798064,
+                "reference_percentile": 0.22
+              },
+              "feature_density": {
+                "model_reference_median": 0.902734375,
+                "model_reference_interval_95": [
+                  0.7582421875,
+                  0.9864257812499999
+                ],
+                "real_reference_q50": 0.9140625,
+                "real_reference_q95": 0.9735546875,
+                "reference_gap": -0.19041365725541745,
+                "reference_percentile": 0.42
+              },
+              "feature_coverage_deficit": {
+                "model_reference_median": 0.8984375,
+                "model_reference_interval_95": [
+                  0.804296875,
+                  0.9708007812499999
+                ],
+                "real_reference_q50": 0.953125,
+                "real_reference_q95": 0.9845703125,
+                "reference_gap": -1.7391304347826062,
+                "reference_percentile": 0.02
+              },
+              "feature_diversity_departure": {
+                "model_reference_median": 0.1211238356340858,
+                "model_reference_interval_95": [
+                  0.07418071744617898,
+                  0.19411411831331518
+                ],
+                "real_reference_q50": 0.03326050006390169,
+                "real_reference_q95": 0.09686247826085181,
+                "reference_gap": 1.3814560185236089,
+                "reference_percentile": 0.98
+              }
+            }
+          }
+        }
+      },
+      "comparison_with_registered": {
+        "feature_mmd2": {
+          "class_pattern_correlation_with_registered": 0.8536276810136029,
+          "median_absolute_gap_change": 0.09727652053312574
+        },
+        "feature_density": {
+          "class_pattern_correlation_with_registered": 0.9892745620949075,
+          "median_absolute_gap_change": 0.07492328922222803
+        },
+        "feature_coverage_deficit": {
+          "class_pattern_correlation_with_registered": 0.9801423778068391,
+          "median_absolute_gap_change": 0.14415943669055692
+        },
+        "feature_diversity_departure": {
+          "class_pattern_correlation_with_registered": 0.6921720521987751,
+          "median_absolute_gap_change": 0.3666384785105473
+        }
+      }
+    }
+  }
+}

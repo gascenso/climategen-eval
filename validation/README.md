@@ -1,37 +1,44 @@
 # Statistical validation artifacts
 
-Regenerate the current gate and its paper-ready PDF/PNG figure with:
+Regenerate the v0.2 validation report and paper-ready PDF/PNG with:
 
 ```bash
-MPLCONFIGDIR=/tmp/mpl-gauge python scripts/validate_gauge_statistics.py \
+MPLCONFIGDIR=/tmp/mpl-gauge PYTHONPATH=src \
+  python scripts/validate_gauge_statistics.py \
   --trials 300 --resamples 200 --jobs 4
 ```
 
-The gate uses Wilson Monte Carlo uncertainty and validates the scientific claims
-GAUGE actually exposes:
+The command writes the schema-v4 machine-readable report, the four-panel
+main-text figure (`statistical_validation_v0.2.{pdf,png}`), and a separate
+stability/finite-archive figure
+(`statistical_validation_v0.2_appendix.{pdf,png}`).
 
-- whole-block reference-plan invariants;
-- numerical parity between the vectorized validation calculation and the public
-  reference engine;
-- conservative pointwise false-positive behavior for balanced, severely
-  unequal, C5-like 22-block, and minimum-valid 20-block designs;
-- location-shift power curves in every block regime;
-- response to variance narrowing, excess variance, crossing CDFs, tail
-  contamination, and a train/test population shift;
-- at least 80% power for a declared controlled location shift;
-- familywise behavior and finite Bonferroni order-statistic boundaries for a
-  registered family; and
-- fail-closed behavior below the 20-block minimum.
+The harness uses neutral empirical-calibration quantities:
 
-The real-reference detector is expected to be conservative because both sides
-of its reference comparison inherit finite-block uncertainty. The observed rate
-is reported rather than described as exactly calibrated to `alpha`.
+- **same-population boundary-crossing rate** rather than false-positive rate;
+- **perturbation crossing probability** rather than statistical power.
 
-The C5-like regime deliberately records low power despite `N=1,000`: with only
-22 independent storms, drawing more frames cannot replace missing block-level
-information. This is a design-sensitivity result, not a defect hidden by the
-software.
+It covers:
 
-Joint claims require at least `family_size / alpha - 1` reference resamples.
-GAUGE withholds the simultaneous result when the empirical tail cannot resolve
-that boundary.
+- event-disjoint plan and fixed-sample-size invariants;
+- Gaussian, heavy-tailed, multimodal, shifted, narrowed, widened, crossing, and
+  tail-contaminated scalar populations;
+- curve MAE and log-PSD discrepancy under known spatial changes;
+- non-negative MMD², density, coverage, and diversity under feature-space
+  degenerations;
+- balanced, severely unequal, 22-event, and minimum-valid 20-event designs;
+- correct event identifiers versus intentionally wrong frame-IID identifiers;
+- multiple bank sizes and train/test population shifts;
+- reference-quantile and gap Monte Carlo stability;
+- grouped delete-event finite-archive sensitivity;
+- fail-closed behaviour for insufficient events or degenerate reference widths.
+
+Acceptance requires same-population crossing rates not to exceed the nominal 5%
+reference tail beyond Monte Carlo uncertainty, increasing crossing for
+increasing perturbations, expected monotonic control responses, visibly lower
+resolution with few events, and non-negative biased/V-statistic MMD² up to
+numerical tolerance.
+
+These simulations validate the behaviour of the empirical reference
+calculation. They do not turn the reference quantile into an exact
+hypothesis-test threshold.

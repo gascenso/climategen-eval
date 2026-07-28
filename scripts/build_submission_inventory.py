@@ -9,12 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = (
-    ROOT
-    / "case_studies"
-    / "tropical_cyclone_bt"
-    / "submission_inventory.json"
-)
+OUTPUT = ROOT / "case_studies" / "tropical_cyclone_bt" / "submission_inventory.json"
 
 DATASETS = {
     "real_train": (
@@ -36,25 +31,24 @@ DATASETS = {
 }
 
 EVIDENCE = {
-    "preregistration": "case_studies/tropical_cyclone_bt/preregistration.yaml",
-    "protocol_freeze": "case_studies/tropical_cyclone_bt/protocol_freeze.md",
+    "analysis_protocol": "case_studies/tropical_cyclone_bt/analysis_protocol.yaml",
+    "protocol_rationale": "case_studies/tropical_cyclone_bt/protocol_freeze.md",
     "evaluation_config": "case_studies/tropical_cyclone_bt/track1_config.template.yaml",
     "sensitivity_controls": (
         "case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json"
     ),
     "statistical_validation": "validation/statistical_validation_v0.2.json",
-    "final_report_manifest": (
-        "case_studies/tropical_cyclone_bt/final_results/manifest.json"
+    "statistical_validation_stability_figure": (
+        "validation/statistical_validation_v0.2_appendix.pdf"
     ),
-    "paper_bundle_manifest": (
-        "case_studies/tropical_cyclone_bt/paper_results/manifest.json"
+    "continuous_wind_audit": ("outputs/tropical_cyclone_bt/audits/continuous_wind_response.json"),
+    "feature_robustness_audit": (
+        "outputs/tropical_cyclone_bt/audits/feature_space_robustness.json"
     ),
-    "partition_summary": (
-        "case_studies/tropical_cyclone_bt/partition_summary.json"
-    ),
-    "vmax_support_audit": (
-        "case_studies/tropical_cyclone_bt/vmax_support_summary.json"
-    ),
+    "final_report_manifest": ("case_studies/tropical_cyclone_bt/final_results/manifest.json"),
+    "paper_bundle_manifest": ("case_studies/tropical_cyclone_bt/paper_results/manifest.json"),
+    "partition_summary": ("case_studies/tropical_cyclone_bt/partition_summary.json"),
+    "vmax_support_audit": ("case_studies/tropical_cyclone_bt/vmax_support_summary.json"),
 }
 
 
