@@ -1,302 +1,325 @@
-# GAUGE — scientific and implementation blueprint
+# GAUGE v0.2 scientific blueprint
 
 **GAUGE** (*Guidelines for the Assessment and Uniform reporting of Generative
-Earth-system models*) is a reference-aware protocol for evaluating generated
-geophysical fields. It turns a bank of generated samples, held-out real data,
-and training data into a compact paper-ready summary backed by reproducible
-uncertainty, sensitivity controls, and complete provenance.
+Earth-system models*) is an empirical reference-calibration framework for
+unpaired generated geophysical fields. It combines native-unit physical
+diagnostics, an event-aware real-versus-real reference, controlled degraded
+data, diversity and copying audits, and a compact paper-facing report.
 
-Working title: **“GAUGE: reference-aware evaluation of generative models for
-climate fields.”**
+This is the canonical v0.2 scientific contract. It supersedes the earlier
+testing-oriented blueprint.
 
-This document is the canonical scientific contract. Historical development
-plans are not part of the protocol.
+## 1. Problem, contribution, and scope
 
-## 1. Thesis, scope, and user promise
+No single image or distribution metric establishes the physical fidelity of a
+climate generative model. Computer-vision scores can be physically opaque;
+unreferenced histograms and spectra do not show how much finite real samples
+disagree; global summaries can hide conditional failures; and feature distances
+can miss mode loss or localized training replay.
 
-### 1.1 The problem
+GAUGE addresses this interpretation problem with four linked components:
 
-No single metric establishes the physical realism of generated climate or
-weather fields. Image-quality scores can be physically opaque; marginal
-histograms can hide spatial or conditional failures; diversity summaries can
-miss localized copying; and raw discrepancies are difficult to interpret
-without knowing how much two finite real samples disagree.
+1. scalar physical functionals reported through W1 in native units;
+2. an empirical real-reference distribution matched to sample size,
+   conditioning, event dependence, and weighting;
+3. metric-specific sensitivity, invariance, and copying controls;
+4. a layered report that makes the main result compact while preserving every
+   raw value, warning, and provenance record.
 
-GAUGE addresses this by combining four ideas:
+Version 0.2 covers unpaired sample-to-population fidelity for independent
+single- or multichannel two-dimensional gridded fields. It does not replace
+CRPS, reliability diagrams, rank histograms, FSS, SAL, or other methods for
+paired forecasts, downscaling cases, trajectories, or coupled systems. Those
+questions require complementary verification or future adapters.
 
-1. physically interpretable scalar functionals in native units;
-2. a dependence-matched real-reference envelope at the declared sample size;
-3. complementary structure, diversity, memorization, and admissibility checks;
-4. predeclared degraded-data controls showing that registered metrics respond
-   to failures they are supposed to detect.
+GAUGE does not certify physical correctness, define a universal tolerance, or
+rank models through an aggregate score.
 
-### 1.2 Scope
-
-Version 1 supports independent generated samples consisting of 2-D
-single-channel or multichannel gridded fields. Dependence among held-out real
-samples is represented through user-supplied blocks such as storms, days, or
-simulation members. Adapters may add domain-specific functionals and curve
-metrics.
-
-Arbitrary spatiotemporal trajectories, coupled multivariate systems, and
-probabilistic forecasts require specialized extensions. When a generator is
-itself a forecast, established probabilistic verification remains authoritative
-for calibration and forecast skill.
-
-GAUGE evaluates intrinsic fidelity. It does not claim that generated samples
-improve every possible use, certify a model as physically correct, or produce a
-universal model ranking.
-
-### 1.3 Streamlined-use contract
-
-The standard workflow must not require users to invent statistical thresholds:
-
-```python
-report = gauge_climate.evaluate(
-    train=train,
-    real=real,
-    generated=generated,
-    functionals=functionals,
-)
-```
-
-With scientifically named functionals and correctly declared dependence
-blocks, the default report includes native-unit discrepancies and uncertainty,
-the real-reference envelope, a reference-calibrated gap profile, condition
-audits, registered controls, diversity, memorization, admissibility, and full
-provenance. The command-line interface exposes the same evaluation and
-reporting objects. Folding every application-specific paper renderer into one
-command remains a usability target, not a scientific prerequisite for the
-protocol.
-
-GAUGE deliberately does not ask users to invent application thresholds. It
-reports what departure was measured, how uncertain it is, where it lies
-relative to finite-real variability, and which controlled failures the metrics
-can detect. It makes no universal application-equivalence claim.
-
-## 2. Data contract and estimand
+## 2. Data contract and population represented
 
 Inputs are:
 
-- `X_train`: real training fields, used only for fitting features, controls,
-  and the memorization reference;
-- `X_real`: held-out real fields, with dependence-block identifiers;
-- `X_gen`: generated fields, with labels when the generator is conditional;
-- `functionals`: scalar domain quantities with names, units, definitions, and
-  valid input domains;
-- optional domain adapters, strata, and controls.
+- `train`: real training fields used only to fit representations and controls
+  and to provide the training side of the copying audit;
+- `real`: held-out real fields with scientifically meaningful independent-event
+  identifiers;
+- `generated`: a fixed generated sample bank, with conditions when applicable;
+- scalar physical functionals and optional domain metrics;
+- an evaluation configuration and optional registered controls.
 
-No statistic, embedding, normalization, threshold, or control may be fitted to
-generated outcomes or held-out real outcomes unless its role explicitly
-requires held-out comparison and the operation is recorded.
+All fields from one physical event must stay in one data partition. An event
+identifier may denote a storm, day, simulation member, or another unit justified
+by the data-generating process. GAUGE validates identifiers and overlap but
+cannot infer whether the user's chosen event is scientifically correct.
 
-The default target is the **block-balanced distribution**: sample a block
-uniformly and then sample a frame uniformly within that block. This prevents a
-long storm or densely sampled period from silently dominating the population.
-An optional frame-weighted estimand samples frames uniformly. Pseudo-generated,
-reference, and generated comparisons must use the same weighting policy and
-evaluation sample size.
+The default population is **block balanced**: select an event uniformly, then a
+field uniformly from that event. This prevents long or densely observed events
+from dominating the result. The optional frame-weighted population selects a
+field uniformly. Generated, pseudo-generated-real, and real-reference samples
+use the same declared sample count and weighting policy.
 
-For a conditional generator, the distribution of conditions is part of the
-target. If real and generated label proportions differ, an as-provided global
-comparison is a composition check rather than a conditional-fidelity result.
-Conditional rows or a predeclared common-mixture comparison support fidelity
-claims.
+For conditional models, native-condition results are primary. If real and
+generated condition proportions differ, their as-provided global comparison is
+a dataset-composition audit, not a statement of conditional fidelity.
 
-## 3. Metric architecture
+## 3. Registered evidence
 
-### 3.1 Physically interpretable functionals
+### 3.1 Scalar physical functionals
 
-Each application registers approximately 5–10 scalar functionals spanning:
+An application registers approximately five to ten scientifically motivated
+scalar summaries spanning amplitude, spatial organisation or scale, and at
+least one important tail. Each functional has:
 
-- amplitude or intensity;
-- spatial organization or scale;
-- extremes or tails.
+- an identifier and plain-language definition;
+- physical units and valid support;
+- preprocessing and mask rules;
+- vocabulary for directional differences.
 
-At least one functional should explicitly target an important tail. Every
-functional has a physical definition, units, direction vocabulary, and valid
-input domain. GAUGE uses exact one-dimensional Wasserstein-1 distance between
-the real and generated functional distributions. W1 is a common currency only
-across scalar, physically interpretable functionals; its native unit remains
-the unit of the functional.
+GAUGE compares real and generated functional distributions with exact
+one-dimensional Wasserstein-1 distance. Its unit is the functional's unit. W1
+is a common reporting form only for such scalar functionals; it is not a
+universal distance for fields, curves, or multivariate processes.
 
-### 3.2 Complementary registered metrics
+### 3.2 Spatial and feature diagnostics
 
-The core registry supports:
+Applications may register curve distances such as radial profiles or spectra.
+Each curve metric fixes its coordinates, masks, detrending, window, normalising
+convention, binning, and missing-value policy.
 
-- functional W1;
-- training-fitted feature MMD²;
-- density, coverage, and two-sided diversity departure;
-- localized memorization;
-- hard and soft admissibility checks;
-- dependence closure among functionals.
+The core feature registry contains:
 
-Radial profiles, radial power spectra, and similar curve comparisons are domain
-adapters, not universal metrics. Every curve adapter fixes masks, detrending,
-windowing, normalization, physical coordinates, binning, and missing-value
-handling.
+- non-negative biased/V-statistic Gaussian-kernel MMD²;
+- density departure;
+- coverage deficit;
+- two-sided diversity departure.
 
-Feature standardization and optional EOF/PCA embeddings are fitted on training
-data only. A user-supplied training-fitted embedding is permitted and its
-provenance is recorded. No feature metric is presented as a physically
-interpretable native-unit discrepancy.
+Standardisation, EOF/PCA bases, kernels, and bandwidths are fitted on declared
+training data only. A user-provided embedding is permitted when its training
+provenance and valid domain are recorded. Feature metrics are useful
+complements but do not acquire physical units from the reference scaling.
+Feature-space controls must reuse the exact fitted representation and kernel
+parameters used by the reported model comparison; fitting a second
+control-specific representation would validate a different metric.
 
-### 3.3 Memorization
+### 3.3 Localized copying
 
-GAUGE fits the feature space and feature-space regions on training data only.
-Within each occupied region, it compares generated-to-training nearest-neighbor
-distances with held-out-real-to-training distances. When labels exist, the
-comparison is partitioned jointly by label and region. Uncertainty resamples
-generated queries and whole held-out blocks, with multiplicity control across
-supported cells.
+The copying audit partitions queries jointly by condition and a
+training-defined feature region. Within supported partitions it compares
+generated-to-training nearest-neighbour distances with
+held-out-real-to-training distances. Resampling preserves held-out event
+dependence.
 
-Generated queries significantly closer to training than held-out real queries
-support a localized-copying conclusion. Significantly farther means only that
-generated queries are farther from training; it is not automatically a
-physical-admissibility failure. An exact training-copy control must trigger the
-test before model results are interpreted.
+The result is interpreted only after an exact-copy positive control succeeds.
+A copied-fraction curve at 1%, 5%, 10%, 25%, 50%, and 100% reports the smallest
+mixture resolved by this specific archive and representation. Failure to flag a
+model is therefore not described as proof that no training sample was copied.
 
-## 4. Real-reference engine
+### 3.4 Preprocessing saturation
 
-The real-reference envelope estimates how much discrepancy arises when two
-finite samples are both drawn from held-out reality under the declared
-dependence structure and estimand.
+For the TC adapter, the former “physical admissibility” row is specifically a
+**preprocessing saturation audit**: it measures excess contact with the
+declared clipping boundaries. It is not a general physical-validity test.
+Other applications may register genuinely physical constraints under their own
+explicit definitions.
 
-For each registered metric and stratum:
+## 4. Empirical real-reference calibration
 
-```text
-for k = 1,...,K:
-    split eligible real blocks into disjoint halves A_k and B_k
-    pseudo_k = draw N samples from A_k under the declared estimand
-    real_k   = draw N samples from B_k under the same estimand
-    gen_k    = draw N generated samples without replacement
-    reference_k = metric(pseudo_k, real_k)
-    model_k     = metric(gen_k, real_k)
-```
+For one metric and one condition, GAUGE repeatedly:
 
-Whole blocks are split and resampled; partial-block truncation is prohibited.
-Every draw records its seed, effective sample and block counts, deterministic
-partition digest, and preprocessing provenance. Functional cells and any
-registered simultaneous family use the primary resampling budget. Secondary
-diagnostics may use a smaller declared budget, which is recorded per cell.
-When the declared evaluation size equals the supplied generated-bank size, the
-bank is fixed across draws and uncertainty is explicitly conditional on that
-bank. GAUGE does not silently claim generator-population uncertainty from a
-single finite bank.
+1. splits eligible held-out real events into disjoint halves;
+2. draws \(N\) pseudo-generated real fields from one half under the declared
+   weighting policy;
+3. draws \(N\) reference real fields from the other half under the same policy;
+4. evaluates their discrepancy \(D_k^{RR}\);
+5. compares the fixed generated bank with the same reference draw, producing
+   \(D_k^{MR}\).
 
-The model statistic is compared with a one-sided real-reference boundary at the
-declared `N`. A pointwise result is:
+The stored \(\{D_k^{RR}\}\) values form the **real-reference distribution**.
+They describe finite-archive discrepancies under this exact sample size,
+conditioning, event partition, preprocessing, and weighting. They are not a
+noise floor, oracle, Bayes error, population-equality distribution, or exact
+level-\(\alpha\) null.
 
-- `DEPARTURE_DETECTED` when the statistic exceeds the boundary;
-- `NO_DEPARTURE_DETECTED` otherwise.
+For each result GAUGE reports:
 
-The latter is a failure to detect at this sample size, not proof of equality,
-equivalence, or physical realism. Joint claims require an explicit registered
-family and a valid simultaneous procedure; the default makes only cell-wise
-claims.
+- the median model-versus-real discrepancy and its central comparison range
+  across admissible reference subsets;
+- real-reference \(q_{50}\), \(q_{95}\), and supporting \(q_{2.5}\) and
+  \(q_{97.5}\);
+- conditional Monte Carlo intervals for \(q_{50}\) and \(q_{95}\);
+- the empirical percentile of the model discrepancy;
+- sample and event counts, estimand, warnings, and provenance.
 
-## 5. Reference-calibrated gap
+Summary Monte Carlo uncertainty is obtained by paired bootstrap resampling of
+the stored real-reference and model-reference repetitions. It quantifies the
+numerical stability of the finite archive calculation. It does not include
+uncertainty from a different real archive, retraining the generator, or a
+physical tolerance.
 
-The primary visual coordinate is:
+## 5. The descriptive real-reference gap
 
-```text
-gap = (model discrepancy - real-reference median) /
-      (pointwise reference boundary - real-reference median)
-```
+GAUGE uses the compact plotting coordinate
 
-Interpretation is intentionally simple:
+\[
+g=\frac{D_{\mathrm{model}}-q_{50}^{RR}}
+        {q_{95}^{RR}-q_{50}^{RR}}.
+\]
 
-- `gap = 0`: model discrepancy equals the median real-vs-real discrepancy;
-- `gap = 1`: model discrepancy reaches the pointwise detection boundary;
-- larger values: progressively farther beyond finite-real sampling variation.
+Here \(g=0\) marks the median event-disjoint real-versus-real discrepancy and
+\(g=1\) its empirical 95th percentile. This makes heterogeneous metrics
+visually comparable within the declared evaluation design. Degraded-data
+controls are placed on the same axis as recognizable signposts.
 
-The gap is a presentation and detectability coordinate. It does not express
-physical severity, cannot be compared across sample sizes, cannot establish
-equivalence, and must never be averaged into an aggregate model score. Every
-gap is linked to its raw estimate and interval in native units.
+The gap is descriptive. It is not physical severity, a p-value, a probability
+of realism, or a model score. It must not be averaged across metrics or compared
+across sample sizes. A high gap can identify an unusual finite-sample
+discrepancy but does not specify its application consequence; the native-unit
+value and diagnostic definition remain authoritative.
 
-Predeclared degenerate or corrupted-data controls share this coordinate. They
-provide recognizable severity anchors—such as copying, blur, phase shuffling,
-wrong-condition sampling, or low-order climatology—without pretending that the
-anchors define universal acceptability.
+## 6. Result and control statuses
 
-## 6. Sensitivity controls
+Each metric-by-condition result receives one empirical-reference label:
 
-Each metric declares the type of failure it should detect and a predeclared
-perturbation family. Examples include:
+- `WITHIN_REFERENCE_RANGE`: the model discrepancy is at or below the registered
+  real-reference quantile;
+- `ABOVE_REFERENCE_RANGE`: it is above that quantile;
+- `REFERENCE_UNRESOLVED`: the reference width or Monte Carlo stability is
+  inadequate;
+- `NOT_EVALUATED`: the metric is undefined, unsupported, or has invalid input.
 
-| Control | Intended diagnostic |
-|---|---|
-| exact training replay | localized memorization |
-| uniform physical-unit shift | amplitude functionals |
-| Gaussian blur sweep | gradients and small-scale spectrum |
-| phase shuffle | organization with Fourier-power preservation |
-| center jitter | radial structure |
-| wrong-condition samples | conditional fidelity |
+These are presentation labels, not hypothesis-test decisions. No familywise,
+Bonferroni, simultaneous, global pass/fail, or “number of failed cells” verdict
+is produced.
 
-For ordered severity sweeps, GAUGE reports response direction, monotonicity, and
-whether the frozen maximum severity crosses the reference boundary. Binary
-positive controls require their declared response. A metric failing its control
-is marked uninterpretable for the affected claim.
+Control interpretation is tracked separately:
 
-Controls answer “does this metric respond to a known failure at this `N`?” They
-do **not** define universal application acceptability. GAUGE reports that limit
-plainly instead of converting a control severity or sampling boundary into a
-fabricated equivalence threshold.
+- `CONTROL_VALIDATED`;
+- `RESPONSIVE_BELOW_REFERENCE_RANGE`;
+- `CONTROL_FAILED`;
+- `CONTROL_NOT_REGISTERED`.
 
-## 7. Conditional reporting without figure explosion
+Raw results remain visible after a control failure, but the report withholds an
+affirmative interpretation for that metric.
 
-The main figure must not let a frequent class hide failures in rare or important
-conditions.
+## 7. Metric-specific controls
 
-- For `K <= 8`, show every native condition and every predeclared priority
-  aggregate in one stratified gap profile.
-- For `K > 8`, show the native-condition median and range, label the largest
-  observed gap, and retain all predeclared priority conditions.
-- Always export the exact condition-by-metric matrix and native-unit table to the
-  appendix bundle.
+Controls are built from reserved training events and declared before the clean
+analysis run. Each control records its valid metrics, expected direction,
+severity curve, monotonicity, first boundary-crossing severity, and any
+invariance requirement.
 
-“Largest observed” is descriptive unless a worst-condition inferential claim
-was registered. Pooled strata never replace their component rows and may not be
-invented after results are inspected.
+The TC registry contains:
 
-## 8. Interpretation-first output
+- additive temperature shifts for core-minimum and lower-tail temperature;
+- warming near 220 K for cold-cloud fraction;
+- eye/eyewall perturbations for eye contrast;
+- displacement, blur, and radial deformation for radial diagnostics;
+- phase randomisation for spatial organisation while preserving the unwindowed
+  Fourier-power magnitude;
+- blur and a high-frequency artifact as positive PSD controls, plus a
+  quarter-turn rotation as a radial-PSD invariance control;
+- training-EOF excursions for MMD² and density;
+- mode removal for coverage;
+- contraction and expansion for diversity;
+- boundary spikes for preprocessing saturation;
+- increasing copied-training fractions for memorization resolution.
 
-The default output is a paper bundle generated from the same versioned report
-object as the machine-readable JSON:
+A control says whether a metric responds to a known change under the declared
+design. It does not define a universal acceptable error or replace scientific
+interpretation.
 
-1. one polished reference-gap profile with uncertainty and selected controls;
-2. one native-unit table with raw effects, intervals, sample/block counts, and
-   detection status;
-3. a small number of physical distribution or curve drill-downs;
-4. a complete conditional appendix matrix;
-5. a technical audit containing sensitivity, memorization, preprocessing,
-   warnings, software versions, seeds, and artifact checksums.
+## 8. Validation before application
 
-The main text can therefore remain visually simple without discarding the
-statistical machinery needed for review and reproduction. GAUGE produces no
-traffic-light certification and no aggregate score.
+The generic harness evaluates the behaviour of the entire calibration
+procedure, using the following neutral language:
 
-Each report cell contains:
+- **same-population boundary-crossing rate** for repeated samples from the same
+  synthetic population;
+- **perturbation crossing probability** for known changes.
 
-- metric and stratum;
-- raw estimate and uncertainty interval;
-- units and orientation;
-- real-reference median and boundary;
-- reference-calibrated gap and its uncertainty;
-- sample and block counts;
-- weighting estimand;
-- detection status;
-- sensitivity resolution and control results;
-- complete provenance.
+Validation covers:
 
-## 9. Public interface
+- Gaussian, heavy-tailed, multimodal, shifted, narrowed, widened, and
+  tail-contaminated scalar distributions;
+- curve MAE and log-PSD discrepancy under known spatial-scale changes;
+- MMD², density, coverage, and diversity under mode removal, duplication,
+  contraction, expansion, and off-manifold contamination;
+- balanced and severely unequal event sizes, 20- and 22-event thin conditions,
+  multiple bank sizes, and train/test shifts;
+- correct event identifiers versus intentionally wrong frame-IID identifiers;
+- conditional Monte Carlo stability and grouped delete-event archive
+  sensitivity;
+- degenerate widths and unstable quantiles that fail closed.
+
+Accepted behaviour requires same-population crossing not to exceed the nominal
+5% tail beyond Monte Carlo uncertainty, monotone response curves, increasing
+crossing for increasing perturbations, visible loss of resolution in thin-event
+settings, non-negative MMD² up to numerical precision, and unresolved outputs
+for degenerate or unstable references.
+
+## 9. Reporting hierarchy
+
+The main output is a polished six-condition gap profile containing:
+
+- model gaps with central comparison ranges across admissible held-out-real
+  subsets;
+- all native intensity conditions;
+- distinct grayscale-safe control signposts;
+- no global mixture row and no aggregate score.
+
+The accompanying native-unit table reports the full values, reference
+quantiles, percentiles, counts, statuses, and warnings. A small number of
+physical distributions and curves explain the most important pattern.
+
+The appendix contains:
+
+- the complete condition-by-metric gap matrix;
+- all control response and invariance curves;
+- all-class physical distributions and curve summaries;
+- real-reference and gap stability;
+- extended synthetic validation;
+- EOF fit-size/rank and multiscale robustness;
+- continuous-wind response;
+- copied-fraction resolution;
+- preprocessing, partition, sample-count, and provenance audits.
+
+Every number, table, and figure is generated from schema-v3 artifacts.
+
+## 10. TC demonstration
+
+The case study evaluates a **TC brightness-temperature diffusion model**
+(`baseline_ztsnr` only in reproducibility metadata). It generates
+storm-centred \(256\times256\) infrared brightness-temperature fields at
+continuous one-minute maximum-wind conditions.
+
+Primary fidelity results use the six native TS and Saffir–Simpson Category 1–5
+conditions. Category 5 remains separate and its 22-storm limitation is reported.
+There is no C4+ pooled evaluation family. The unmatched global result is retained
+only as a composition audit and excluded from the headline profile.
+
+Seven physical functionals cover core temperature, cold-cloud area, radial
+gradient location, azimuthal departure, deviation-angle variance, eye contrast,
+and the lower BT tail. Radial-profile, log-PSD, training-fitted feature,
+localized-copying, and preprocessing-saturation diagnostics provide
+complementary views.
+
+A secondary continuous-wind audit estimates within-class
+functional-versus-wind slopes. Real slopes use inverse storm-frequency weights
+and storm bootstrap intervals; generated slopes use equal sample weights and
+sample bootstrap intervals. This audit has no equivalence label and does not
+replace class-conditional fidelity.
+
+EOF fit sizes 256/512/1024, ranks 10/20/40, and training-fitted low-pass EOF
+representations at declared physical scales form a post-hoc robustness analysis.
+Its status is stated explicitly.
+
+## 11. Public interface and versioning
 
 ```python
 import gauge_climate
 
-train = gauge_climate.Dataset(fields, blocks=storms, labels=labels)
-real = gauge_climate.Dataset(test_fields, blocks=test_storms, labels=test_labels)
+train = gauge_climate.Dataset(fields, blocks=events, labels=labels)
+real = gauge_climate.Dataset(test_fields, blocks=test_events, labels=test_labels)
 generated = gauge_climate.Dataset(samples, labels=generated_labels)
 
 report = gauge_climate.evaluate(
@@ -304,98 +327,42 @@ report = gauge_climate.evaluate(
     real=real,
     generated=generated,
     functionals=functionals,
-    metrics=metrics,       # optional registry override
-    config=config,         # optional advanced configuration
+    metrics=metrics,
+    config=config,
 )
-
-report.write_json("gauge-report.json")
-report.write_paper_bundle("paper-results")
 ```
 
-Stable public types are `Dataset`, `FunctionalSpec`, `MetricSpec`,
-`EvaluationConfig`, and `EvaluationReport`. NumPy and memory-mapped arrays are
-core inputs; xarray is optional and Dask materialization is controlled and
-recorded. Validation rejects overlapping blocks, missing identifiers, label
-misalignment, unsupported NaNs, invalid units, insufficient strata, and test-fit
-artifacts.
+The distribution is `gauge-climate` v0.2.0, the import namespace is
+`gauge_climate`, and the report schema is
+`gauge_climate.evaluation.v3`. Schema-v2 reports can be read and migrated for
+inspection, but they do not acquire new Monte Carlo quantities that were not
+stored.
 
-## 10. Validation gates
+## 12. Analysis provenance and permitted claims
 
-No categorical detection result is released until simulation tests cover:
+The TC archive informed framework development. The repository therefore uses a
+versioned **analysis protocol and amendment log**, not a prospective
+preregistration claim. The revised method was frozen before the clean v0.2
+rerun, and all post-hoc robustness analyses are labelled as such.
 
-- perfect generators and pointwise false-positive behavior;
-- detectable shifts, variance changes, crossing CDFs, and tail contamination;
-- balanced and severely unequal block sizes;
-- thin strata, the 20-block validity boundary, and below-boundary failure paths;
-- localized copying, mode collapse, excessive diversity, and samples farther
-  from the training manifold;
-- monotone perturbation-severity response;
-- global condition-mixture mismatch;
-- xarray ordering, lazy arrays, NaNs, invalid units, and block overlap;
-- deterministic regeneration of reports and figures.
+GAUGE may be described as:
 
-## 11. Tropical-cyclone brightness-temperature case study
+- a portable empirical reference-calibration and reporting framework for
+  unpaired generated 2-D climate fields;
+- a way to combine native-unit physical evidence with finite-archive context
+  and recognizable degraded-model signposts;
+- an approach that exposes conditional, diversity, copying, preprocessing, and
+  resolution limitations without a universal score.
 
-The demonstration evaluates `baseline_ztsnr` storm-centered infrared brightness
-temperature fields using USA_WIND one-minute intensity labels and storm-disjoint
-train, validation, and test partitions. Native conditions are TS and Categories
-1–5. Category 5 remains visible despite its thin reference; a preregistered C4+
-extreme-tail aggregate is supplemental and never replaces C4 or C5.
+It must not be described as:
 
-The seven registered scalar functionals cover core temperature, cold-cloud
-fraction, radial gradient location, axisymmetry, deviation-angle variance, eye
-contrast, and the cold BT tail. Radial-profile and radial-PSD adapters add
-spatial-structure diagnostics. Training-fitted feature metrics, localized
-copying, dependence closure, and sensitivity controls complete the evaluation.
+- an exact hypothesis test or population-equivalence procedure;
+- a universal physical-realism certificate;
+- a replacement for paired forecast or spatial verification;
+- a framework with a universal tolerance or normalised 0–1 quality score;
+- evidence that a model is “best” merely because its gap lies within the
+  empirical reference range.
 
-The paper-facing evidence is:
-
-- the class-aware reference-gap profile with degenerate-model anchors;
-- a native-unit metric table;
-- tail-focused physical distribution and spatial-structure figures;
-- the complete class-by-metric appendix matrix;
-- sensitivity, memorization, provenance, and calibration audit material.
-
-## 12. Permitted claims and publication position
-
-GAUGE may claim that it:
-
-- supplies a portable, dependence-aware, reference-calibrated evaluation
-  protocol for generated climate fields;
-- makes heterogeneous metrics interpretable at a declared sample size while
-  retaining native-unit evidence;
-- integrates physical, conditional, diversity, memorization, admissibility, and
-  sensitivity evidence in an extensible report;
-- exposes failures hidden by global or unreferenced metric summaries;
-- makes a rigorous evaluation easy to run and easy to present.
-
-GAUGE must not claim that:
-
-- reference-envelope overlap proves equality or realism;
-- the reference gap is a universal physical severity scale;
-- any built-in functional suite is universal across Earth-system applications;
-- a single aggregate score can rank models safely;
-- corruption controls or reference boundaries define application acceptability.
-
-The strongest paper contribution is the protocol and reporting design, supported
-by statistical validation and a nontrivial case study—not the performance of any
-particular generator.
-
-## 13. Freeze state and external release gates
-
-The in-repository scientific implementation is frozen: statistical simulations,
-unit/integration tests, training-only controls, the clean TC evaluation, and all
-manuscript figures/tables are generated from checksummed artifacts.
-
-The remaining pre-archival actions require independent people or an external
-repository:
-
-1. independent statistical review of the reference engine, resampling
-   intervals, simultaneous inference, and simulation coverage;
-2. permission-cleared deposition of the real/generated TC artifacts and their
-   persistent identifiers;
-3. an independent clean-room reproduction of the frozen TC workflow.
-
-A broader usability study and a one-call application-specific paper renderer
-are post-paper product improvements, not conditions for the scientific
-submission.
+The technical release remains blocked on the user-owned literature-review
+reconstruction and permanent code/data deposition, plus independent review and
+clean-room reproduction.

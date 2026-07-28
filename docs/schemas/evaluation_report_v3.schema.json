@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gascenso/gauge-climate/docs/schemas/evaluation_report_v3.schema.json",
+  "title": "GAUGE Climate evaluation report v3",
+  "type": "object",
+  "required": [
+    "schema",
+    "metadata",
+    "cells",
+    "warnings",
+    "memorization",
+    "sensitivity",
+    "diagnostics",
+    "partitions"
+  ],
+  "properties": {
+    "schema": {"const": "gauge_climate.evaluation.v3"},
+    "metadata": {"type": "object"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "memorization": {"type": ["object", "null"]},
+    "sensitivity": {"type": "object"},
+    "diagnostics": {"type": "object"},
+    "partitions": {"type": "object"},
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "metric",
+          "stratum",
+          "kind",
+          "pillar",
+          "units",
+          "estimate",
+          "comparison_low",
+          "comparison_high",
+          "reference_q025",
+          "reference_q50",
+          "reference_q95",
+          "reference_q975",
+          "reference_q50_mc_low",
+          "reference_q50_mc_high",
+          "reference_q95_mc_low",
+          "reference_q95_mc_high",
+          "reference_upper_boundary",
+          "reference_upper_mc_low",
+          "reference_upper_mc_high",
+          "reference_percentile",
+          "reference_gap",
+          "comparison_gap_low",
+          "comparison_gap_high",
+          "reference_gap_mc_low",
+          "reference_gap_mc_high",
+          "reference_status",
+          "control_status",
+          "n_eval",
+          "n_real",
+          "n_generated",
+          "n_blocks",
+          "estimand",
+          "direction",
+          "warnings",
+          "provenance"
+        ],
+        "properties": {
+          "metric": {"type": "string"},
+          "stratum": {"type": "string"},
+          "kind": {
+            "enum": ["functional_w1", "set", "curve", "rate", "matrix"]
+          },
+          "pillar": {
+            "enum": [
+              "physical_fidelity",
+              "conditional_fidelity",
+              "diversity_and_coverage",
+              "memorization",
+              "admissibility"
+            ]
+          },
+          "units": {"type": "string"},
+          "estimate": {"type": ["number", "null"]},
+          "comparison_low": {"type": ["number", "null"]},
+          "comparison_high": {"type": ["number", "null"]},
+          "reference_q025": {"type": ["number", "null"]},
+          "reference_q50": {"type": ["number", "null"]},
+          "reference_q95": {"type": ["number", "null"]},
+          "reference_q975": {"type": ["number", "null"]},
+          "reference_q50_mc_low": {"type": ["number", "null"]},
+          "reference_q50_mc_high": {"type": ["number", "null"]},
+          "reference_q95_mc_low": {"type": ["number", "null"]},
+          "reference_q95_mc_high": {"type": ["number", "null"]},
+          "reference_upper_boundary": {"type": ["number", "null"]},
+          "reference_upper_mc_low": {"type": ["number", "null"]},
+          "reference_upper_mc_high": {"type": ["number", "null"]},
+          "reference_percentile": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reference_gap": {"type": ["number", "null"]},
+          "comparison_gap_low": {"type": ["number", "null"]},
+          "comparison_gap_high": {"type": ["number", "null"]},
+          "reference_gap_mc_low": {"type": ["number", "null"]},
+          "reference_gap_mc_high": {"type": ["number", "null"]},
+          "reference_status": {
+            "enum": [
+              "WITHIN_REFERENCE_RANGE",
+              "ABOVE_REFERENCE_RANGE",
+              "REFERENCE_UNRESOLVED",
+              "NOT_EVALUATED"
+            ]
+          },
+          "control_status": {
+            "enum": [
+              "CONTROL_VALIDATED",
+              "RESPONSIVE_BELOW_REFERENCE_RANGE",
+              "CONTROL_FAILED",
+              "CONTROL_NOT_REGISTERED"
+            ]
+          },
+          "n_eval": {"type": "integer", "minimum": 2},
+          "n_real": {"type": "integer", "minimum": 0},
+          "n_generated": {"type": "integer", "minimum": 0},
+          "n_blocks": {"type": "integer", "minimum": 0},
+          "estimand": {"enum": ["block_balanced", "frame_weighted"]},
+          "direction": {"type": ["string", "null"]},
+          "warnings": {"type": "array", "items": {"type": "string"}},
+          "provenance": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

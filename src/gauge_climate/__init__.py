@@ -5,18 +5,23 @@ from .evaluation import evaluate
 from . import adapters, features, lanes, memorization, metrics
 from .report import EvaluationReport
 from .presentation import PaperBundleSpec, ReferenceControl
+from .lanes import ControlRegistry, ControlRole, ControlSpec
 from .types import (
-    DetectionStatus,
+    ControlStatus,
     EvaluationConfig,
     FunctionalSpec,
     MetricKind,
     MetricSpec,
+    ReferenceStatus,
     SamplingEstimand,
 )
 
 __all__ = [
     "Dataset",
-    "DetectionStatus",
+    "ControlStatus",
+    "ControlRegistry",
+    "ControlRole",
+    "ControlSpec",
     "EvaluationConfig",
     "EvaluationReport",
     "FunctionalSpec",
@@ -24,6 +29,7 @@ __all__ = [
     "MetricSpec",
     "PaperBundleSpec",
     "ReferenceControl",
+    "ReferenceStatus",
     "SamplingEstimand",
     "evaluate",
     "adapters",
@@ -33,4 +39,4 @@ __all__ = [
     "metrics",
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

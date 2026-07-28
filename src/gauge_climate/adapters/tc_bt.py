@@ -310,9 +310,7 @@ def functionals(config: TCBTConfig = TCBTConfig()) -> tuple[FunctionalSpec, ...]
             direction_positive="gradient radius outward",
             provenance={
                 **shared,
-                "discrete_support_step_km": (
-                    config.max_profile_radius_km / config.profile_bins
-                ),
+                "discrete_support_step_km": (config.max_profile_radius_km / config.profile_bins),
             },
         ),
         FunctionalSpec(
@@ -396,8 +394,8 @@ def curve_metrics(config: TCBTConfig = TCBTConfig()) -> tuple[MetricSpec, Metric
             np.mean((np.mean(generated, axis=0) - np.mean(real, axis=0)) ** 2)
         ),
         kind=MetricKind.CURVE,
-        units="log10-PSD²",
-        description="MSE between mean Hann-windowed radial log10 power spectra.",
+        units="dex²",
+        description="Mean squared difference between mean radial log10 power spectra.",
         provenance={
             "bins": config.psd_bins,
             "binning": (
@@ -407,6 +405,7 @@ def curve_metrics(config: TCBTConfig = TCBTConfig()) -> tuple[MetricSpec, Metric
             "detrending": "per-image spatial mean removed",
             "window": "separable Hann",
             "normalization": "window-energy normalized",
+            "discrepancy_units": "squared base-10 log-power difference (dex²)",
             "coordinate_label": "wavenumber (cycles/km)",
             "coordinate_values": psd_centers,
             "coordinate_units": "cycles/km",

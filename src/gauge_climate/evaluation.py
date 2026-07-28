@@ -13,9 +13,9 @@ import scipy
 from .data import Dataset, normalized_blocks, validate_generated, validate_split
 from .inference import (
     Interval,
-    detection_status,
-    shift_resolution,
-    simultaneous_reference_boundaries,
+    empirical_reference_percentile,
+    reference_status,
+    reference_summary_uncertainty,
 )
 from .metrics import MetricNotEvaluable, functional_w1
 from .reference import (
@@ -27,11 +27,12 @@ from .reference import (
 from .report import EvaluationReport
 from .types import (
     CellReport,
-    DetectionStatus,
+    ControlStatus,
     EvaluationConfig,
     FunctionalSpec,
     MetricKind,
     MetricSpec,
+    ReferenceStatus,
     _jsonable,
 )
 
@@ -80,15 +81,11 @@ def _config_hash(
         "metrics": list(manifests),
         "analysis": dict(analysis),
     }
-    encoded = json.dumps(
-        _jsonable(payload), sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    encoded = json.dumps(_jsonable(payload), sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
 
 
-def _metric_values(
-    metric: MetricSpec, fields: Any, *, batch_size: int
-) -> np.ndarray:
+def _metric_values(metric: MetricSpec, fields: Any, *, batch_size: int) -> np.ndarray:
     shape = getattr(fields, "shape", None)
     if shape is None or len(shape) < 2:
         raise ValueError("Metric fields must expose shape (N, ...sample dimensions...).")
@@ -102,9 +99,7 @@ def _metric_values(
                 f"got {values.shape} for a batch of {stop - start}."
             )
         if not np.all(np.isfinite(values)):
-            raise ValueError(
-                f"Metric {metric.id!r} transform produced non-finite values."
-            )
+            raise ValueError(f"Metric {metric.id!r} transform produced non-finite values.")
         batches.append(values)
     return np.concatenate(batches, axis=0)
 
@@ -113,9 +108,7 @@ def _dataset_manifest(dataset: Dataset) -> dict[str, Any]:
     labels = None
     if dataset.labels is not None:
         unique, counts = np.unique(np.asarray(dataset.labels), return_counts=True)
-        labels = {
-            str(label): int(count) for label, count in zip(unique, counts, strict=True)
-        }
+        labels = {str(label): int(count) for label, count in zip(unique, counts, strict=True)}
     return {
         "name": dataset.name,
         "n_samples": dataset.n_samples,
@@ -130,8 +123,8 @@ def _dataset_manifest(dataset: Dataset) -> dict[str, Any]:
     }
 
 
-def _generic_interval(reference: ReferenceEvaluation, confidence: float) -> Interval:
-    tail = (1.0 - confidence) / 2.0
+def _generic_interval(reference: ReferenceEvaluation, interval: float) -> Interval:
+    tail = (1.0 - interval) / 2.0
     return Interval(
         estimate=float(np.median(reference.model_values)),
         low=float(np.quantile(reference.model_values, tail)),
@@ -139,9 +132,7 @@ def _generic_interval(reference: ReferenceEvaluation, confidence: float) -> Inte
     )
 
 
-def _estimand_mean(
-    values: np.ndarray, blocks: np.ndarray, estimand: Any
-) -> np.ndarray:
+def _estimand_mean(values: np.ndarray, blocks: np.ndarray, estimand: Any) -> np.ndarray:
     values = np.asarray(values, dtype=np.float64)
     blocks = np.asarray(blocks, dtype=object)
     if estimand.value == "frame_weighted":
@@ -154,10 +145,10 @@ def _estimand_mean(
     return np.mean(np.stack(block_means), axis=0)
 
 
-def _failed_sensitivity_lanes(
+def _metric_control_status(
     metric_id: str, results: Mapping[str, Any] | None
-) -> list[str]:
-    failures = []
+) -> tuple[ControlStatus, list[str]]:
+    registered: list[tuple[str, Mapping[str, Any]]] = []
     for lane_id, lane in (results or {}).items():
         if not isinstance(lane, Mapping):
             continue
@@ -166,10 +157,24 @@ def _failed_sensitivity_lanes(
             isinstance(metric_results, Mapping)
             and metric_id in metric_results
             and isinstance(metric_results[metric_id], Mapping)
-            and metric_results[metric_id].get("passed") is False
         ):
-            failures.append(str(lane_id))
-    return failures
+            registered.append((str(lane_id), metric_results[metric_id]))
+    if not registered:
+        return ControlStatus.CONTROL_NOT_REGISTERED, []
+    failed = [lane_id for lane_id, result in registered if result.get("passed") is False]
+    if failed:
+        return ControlStatus.CONTROL_FAILED, failed
+    if any(
+        result.get("reaches_reference_boundary") is True
+        or (
+            result.get("passed") is True
+            and result.get("reference_boundary") is not None
+            and result.get("reaches_reference_boundary") is None
+        )
+        for _, result in registered
+    ):
+        return ControlStatus.CONTROL_VALIDATED, []
+    return ControlStatus.RESPONSIVE_BELOW_REFERENCE_RANGE, []
 
 
 def _thin_cell(
@@ -190,18 +195,27 @@ def _thin_cell(
         pillar=metric.pillar,
         units=metric.units,
         estimate=None,
-        ci_low=None,
-        ci_high=None,
+        comparison_low=None,
+        comparison_high=None,
         reference_q025=None,
         reference_q50=None,
         reference_q95=None,
         reference_q975=None,
-        reference_detection_boundary=None,
-        reference_position=None,
-        reference_position_low=None,
-        reference_position_high=None,
-        shift_resolution=None,
-        detection_status=DetectionStatus.NOT_EVALUATED,
+        reference_q50_mc_low=None,
+        reference_q50_mc_high=None,
+        reference_q95_mc_low=None,
+        reference_q95_mc_high=None,
+        reference_upper_boundary=None,
+        reference_upper_mc_low=None,
+        reference_upper_mc_high=None,
+        reference_percentile=None,
+        reference_gap=None,
+        comparison_gap_low=None,
+        comparison_gap_high=None,
+        reference_gap_mc_low=None,
+        reference_gap_mc_high=None,
+        reference_status=ReferenceStatus.NOT_EVALUATED,
+        control_status=ControlStatus.CONTROL_NOT_REGISTERED,
         n_eval=n_eval,
         n_real=n_real,
         n_generated=n_generated,
@@ -269,8 +283,7 @@ def evaluate(
         )
     ]
     normalized_conditional_groups = {
-        str(name): tuple(values)
-        for name, values in (conditional_groups or {}).items()
+        str(name): tuple(values) for name, values in (conditional_groups or {}).items()
     }
     label_mixture_audit: dict[str, Any] | None = None
     label_mixture_warning: str | None = None
@@ -329,12 +342,8 @@ def evaluate(
             if not name or name in occupied_names:
                 raise ValueError(f"Conditional group name {name!r} is empty or duplicated.")
             if not members or len(members) != len(set(members)):
-                raise ValueError(
-                    f"Conditional group {name!r} needs unique supported labels."
-                )
-            unsupported = sorted(
-                str(value) for value in set(members) - real_labels
-            )
+                raise ValueError(f"Conditional group {name!r} needs unique supported labels.")
+            unsupported = sorted(str(value) for value in set(members) - real_labels)
             if unsupported:
                 raise ValueError(
                     f"Conditional group {name!r} has unsupported labels: {unsupported}."
@@ -352,8 +361,6 @@ def evaluate(
     if label_mixture_warning is not None:
         warnings.append(label_mixture_warning)
     cells: list[CellReport] = []
-    reference_arrays: list[np.ndarray] = []
-    reference_cell_indices: list[int] = []
     partitions: dict[str, Any] = {}
     diagnostics: dict[str, Any] = {}
     sensitivity_payload: dict[str, Any] = dict(sensitivity_results or {})
@@ -414,11 +421,7 @@ def evaluate(
                 ),
             }
         for metric in metric_list:
-            cell_key = f"{group_name}:{metric.id}"
-            primary_reference = (
-                metric.kind is MetricKind.FUNCTIONAL_W1
-                or cell_key in config.simultaneous_family
-            )
+            primary_reference = metric.kind is MetricKind.FUNCTIONAL_W1
             diagnostic_draw_count = config.diagnostic_resamples_by_metric.get(
                 metric.id,
                 config.diagnostic_resamples,
@@ -459,10 +462,7 @@ def evaluate(
                         f"Curve metric {metric.id!r} must transform to shape (N, bins)."
                     )
                 reference_curves = np.stack(
-                    [
-                        np.mean(real_values[draw.real_indices], axis=0)
-                        for draw in metric_plan.draws
-                    ]
+                    [np.mean(real_values[draw.real_indices], axis=0) for draw in metric_plan.draws]
                 )
                 generated_curves = np.stack(
                     [
@@ -475,40 +475,34 @@ def evaluate(
                     "metric": metric.id,
                     "stratum": group_name,
                     "units": metric.units,
-                    "coordinate_label": metric.provenance.get(
-                        "coordinate_label", "curve bin"
-                    ),
+                    "coordinate_label": metric.provenance.get("coordinate_label", "curve bin"),
                     "coordinate_values": metric.provenance.get("coordinate_values"),
                     "real_mean": _estimand_mean(
                         real_values[real_idx], real_blocks[real_idx], config.estimand
                     ).tolist(),
                     "generated_mean": np.median(generated_curves, axis=0).tolist(),
-                    "generated_q025": np.quantile(
-                        generated_curves, 0.025, axis=0
-                    ).tolist(),
-                    "generated_q975": np.quantile(
-                        generated_curves, 0.975, axis=0
-                    ).tolist(),
-                    "reference_q025": np.quantile(
-                        reference_curves, 0.025, axis=0
-                    ).tolist(),
-                    "reference_q975": np.quantile(
-                        reference_curves, 0.975, axis=0
-                    ).tolist(),
+                    "generated_q025": np.quantile(generated_curves, 0.025, axis=0).tolist(),
+                    "generated_q975": np.quantile(generated_curves, 0.975, axis=0).tolist(),
+                    "reference_q025": np.quantile(reference_curves, 0.025, axis=0).tolist(),
+                    "reference_q975": np.quantile(reference_curves, 0.975, axis=0).tolist(),
                     "provenance": dict(metric.provenance),
                 }
             model_reference_value = reference.model_median
-            reference_boundary = reference.quantile(1.0 - config.alpha)
+            reference_boundary = reference.quantile(config.reference_quantile)
             midpoint = len(reference.reference_values) // 2
             first_boundary = float(
-                np.quantile(reference.reference_values[:midpoint], 1.0 - config.alpha)
+                np.quantile(
+                    reference.reference_values[:midpoint],
+                    config.reference_quantile,
+                )
             )
             second_boundary = float(
-                np.quantile(reference.reference_values[midpoint:], 1.0 - config.alpha)
+                np.quantile(
+                    reference.reference_values[midpoint:],
+                    config.reference_quantile,
+                )
             )
-            reference_scale = max(
-                reference_boundary - reference.reference_q50, np.finfo(float).eps
-            )
+            reference_scale = max(reference_boundary - reference.reference_q50, np.finfo(float).eps)
             stability_ratio = abs(first_boundary - second_boundary) / reference_scale
             stability_warning = None
             if stability_ratio > config.reference_stability_threshold:
@@ -526,43 +520,31 @@ def evaluate(
                     f"exceeds {config.reference_stability_threshold:.3g}; increase "
                     f"{resample_parameter}."
                 )
-            inference_method = "reference_resampling_interval"
-            interval = _generic_interval(reference, config.confidence)
-            resolution = None
-            if metric.kind is MetricKind.FUNCTIONAL_W1:
-                resolution, shifts, powers = shift_resolution(
-                    real_values=real_values,
-                    plan=plan,
-                    reference_boundary=reference_boundary,
-                    target_power=config.shift_power,
-                    grid_size=config.shift_grid_size,
-                    max_draws=config.sensitivity_resamples,
-                )
-                sensitivity_payload[f"{group_name}:{metric.id}"] = {
-                    "perturbation": "uniform_functional_shift",
-                    "target_power": config.shift_power,
-                    "n_resamples": min(config.sensitivity_resamples, len(plan.draws)),
-                    "shift_resolution": resolution,
-                    "shifts": shifts.tolist(),
-                    "detection_probability": powers.tolist(),
-                }
-            cell_detection = detection_status(
-                model_reference_value, reference_boundary
+            inference_method = "empirical_reference_calibration"
+            interval = _generic_interval(reference, config.comparison_interval)
+            summary_uncertainty = reference_summary_uncertainty(
+                reference_values=reference.reference_values,
+                model_values=reference.model_values,
+                reference_quantile=config.reference_quantile,
+                interval=config.comparison_interval,
+                n_resamples=config.summary_bootstrap_resamples,
+                seed=_derive_seed(config.seed, "summary", group_name, metric.id),
             )
-            position = reference_position(
+            cell_reference_status = reference_status(model_reference_value, reference_boundary)
+            gap = reference_position(
                 model_reference_value, reference.reference_q50, reference_boundary
             )
-            position_tail = (1.0 - config.confidence) / 2.0
-            model_position_low = float(
-                np.quantile(reference.model_values, position_tail)
+            percentile = empirical_reference_percentile(
+                model_reference_value,
+                reference.reference_values,
             )
-            model_position_high = float(
-                np.quantile(reference.model_values, 1.0 - position_tail)
-            )
-            position_low = reference_position(
+            position_tail = (1.0 - config.comparison_interval) / 2.0
+            model_position_low = float(np.quantile(reference.model_values, position_tail))
+            model_position_high = float(np.quantile(reference.model_values, 1.0 - position_tail))
+            comparison_gap_low = reference_position(
                 model_position_low, reference.reference_q50, reference_boundary
             )
-            position_high = reference_position(
+            comparison_gap_high = reference_position(
                 model_position_high, reference.reference_q50, reference_boundary
             )
             direction = (
@@ -583,7 +565,14 @@ def evaluate(
                 "reference_stability_threshold": config.reference_stability_threshold,
                 "model_reference_q025": model_position_low,
                 "model_reference_q975": model_position_high,
-                "interval_bound_type": "central_resampling_1_minus_alpha",
+                "comparison_range": (
+                    "central range across admissible held-out-real comparisons; "
+                    "not generator-retraining or population uncertainty"
+                ),
+                "summary_mc_interval": (
+                    "paired bootstrap over stored reference repetitions, "
+                    "conditional on the fixed archive and generated bank"
+                ),
             }
             if group_name == "global" and label_mixture_audit is not None:
                 metric_provenance.update(
@@ -601,18 +590,29 @@ def evaluate(
                         "raw_real_rate": float(np.mean(real_values[real_idx])),
                     }
                 )
-            control_failures = _failed_sensitivity_lanes(metric.id, sensitivity_results)
+            control_status, control_failures = _metric_control_status(
+                metric.id,
+                sensitivity_results,
+            )
             cell_warnings = []
             if stability_warning is not None:
-                cell_detection = DetectionStatus.NOT_EVALUATED
+                cell_reference_status = ReferenceStatus.REFERENCE_UNRESOLVED
                 cell_warnings.append(stability_warning)
                 warnings.append(f"{group_name}:{metric.id}: {stability_warning}")
             if control_failures:
-                cell_detection = DetectionStatus.NOT_EVALUATED
                 cell_warnings.append(
-                    "Metric interpretation withheld because sensitivity lane(s) failed: "
+                    "Metric control interpretation failed for lane(s): "
                     + ", ".join(control_failures)
                 )
+            if gap is None:
+                cell_reference_status = ReferenceStatus.REFERENCE_UNRESOLVED
+                cell_warnings.append(
+                    "The q95-minus-q50 real-reference width is numerically degenerate."
+                )
+            q50_mc_low, q50_mc_high = summary_uncertainty["reference_q50"]
+            q95_mc_low, q95_mc_high = summary_uncertainty["reference_q95"]
+            upper_mc_low, upper_mc_high = summary_uncertainty["reference_upper"]
+            gap_mc_low, gap_mc_high = summary_uncertainty["reference_gap"]
             cell = CellReport(
                 metric=metric.id,
                 stratum=group_name,
@@ -624,18 +624,27 @@ def evaluate(
                 ),
                 units=metric.units,
                 estimate=interval.estimate,
-                ci_low=interval.low,
-                ci_high=interval.high,
+                comparison_low=interval.low,
+                comparison_high=interval.high,
                 reference_q025=reference.reference_q025,
                 reference_q50=reference.reference_q50,
                 reference_q95=reference.reference_q95,
                 reference_q975=reference.reference_q975,
-                reference_detection_boundary=reference_boundary,
-                reference_position=position,
-                reference_position_low=position_low,
-                reference_position_high=position_high,
-                shift_resolution=resolution,
-                detection_status=cell_detection,
+                reference_q50_mc_low=q50_mc_low,
+                reference_q50_mc_high=q50_mc_high,
+                reference_q95_mc_low=q95_mc_low,
+                reference_q95_mc_high=q95_mc_high,
+                reference_upper_boundary=reference_boundary,
+                reference_upper_mc_low=upper_mc_low,
+                reference_upper_mc_high=upper_mc_high,
+                reference_percentile=percentile,
+                reference_gap=gap,
+                comparison_gap_low=comparison_gap_low,
+                comparison_gap_high=comparison_gap_high,
+                reference_gap_mc_low=gap_mc_low,
+                reference_gap_mc_high=gap_mc_high,
+                reference_status=cell_reference_status,
+                control_status=control_status,
                 n_eval=plan.n_eval,
                 n_real=len(real_idx),
                 n_generated=len(generated_idx),
@@ -645,91 +654,20 @@ def evaluate(
                 warnings=tuple(cell_warnings),
                 provenance=metric_provenance,
             )
-            if cell_key in config.simultaneous_family:
-                reference_cell_indices.append(len(cells))
-                reference_arrays.append(reference.reference_values)
             cells.append(cell)
-
-    evaluated_family = {
-        f"{cells[index].stratum}:{cells[index].metric}" for index in reference_cell_indices
-    }
-    missing_family = sorted(set(config.simultaneous_family) - evaluated_family)
-    if missing_family:
-        warnings.append(
-            "Simultaneous family cells were not evaluable: " + ", ".join(missing_family)
-        )
-    simultaneous: dict[str, Any] | None = None
-    if reference_arrays:
-        simultaneous_boundaries = simultaneous_reference_boundaries(
-            np.vstack(reference_arrays), alpha=config.alpha
-        )
-        required_resamples = int(np.ceil(len(reference_arrays) / config.alpha - 1))
-        simultaneous = {
-            "method": "bonferroni_reference_boundaries",
-            "family_alpha": config.alpha,
-            "family_size": len(reference_arrays),
-            "required_resamples": required_resamples,
-            "monte_carlo_tail_resolved": config.n_resamples >= required_resamples,
-            "resolved": bool(np.all(np.isfinite(simultaneous_boundaries))),
-            "cell_reference_position_boundaries": [
-                None if not np.isfinite(value) else float(value)
-                for value in simultaneous_boundaries
-            ],
-        }
-        updated: list[CellReport] = []
-        reference_indices = set(reference_cell_indices)
-        family_index = 0
-        for index, cell in enumerate(cells):
-            if index not in reference_indices:
-                updated.append(cell)
-                continue
-            raw_boundary = simultaneous_boundaries[family_index]
-            family_index += 1
-            payload = cell.__dict__.copy()
-            if not np.isfinite(raw_boundary):
-                payload["simultaneous_boundary"] = None
-                payload["simultaneous_detection_status"] = DetectionStatus.NOT_EVALUATED
-                if not simultaneous["monte_carlo_tail_resolved"]:
-                    family_warning = (
-                        "Simultaneous conclusion withheld: increase n_resamples to at least "
-                        f"{simultaneous['required_resamples']} for this Bonferroni family."
-                    )
-                else:
-                    family_warning = (
-                        "Simultaneous conclusion withheld: the pointwise real-reference "
-                        "position scale is degenerate for this cell."
-                    )
-                payload["warnings"] = tuple([*cell.warnings, family_warning])
-                warnings.append(f"{cell.stratum}:{cell.metric}: {family_warning}")
-            else:
-                boundary = float(raw_boundary)
-                payload["simultaneous_boundary"] = boundary
-                payload["simultaneous_detection_status"] = (
-                    DetectionStatus.DEPARTURE_DETECTED
-                    if cell.reference_position is not None
-                    and cell.reference_position > boundary
-                    else (
-                        cell.detection_status
-                        if cell.reference_position is None
-                        else DetectionStatus.NO_DEPARTURE_DETECTED
-                    )
-                )
-            updated.append(CellReport(**payload))
-        cells = updated
 
     metric_manifests = [_metric_manifest(metric) for metric in metric_list]
     analysis_design = {
         "conditional_individual_labels": bool(conditional),
         "conditional_groups": {
-            name: list(values)
-            for name, values in normalized_conditional_groups.items()
+            name: list(values) for name, values in normalized_conditional_groups.items()
         },
         "global_label_mixture": label_mixture_audit,
     }
     hash_value = _config_hash(config, metric_manifests, analysis_design)
     metadata = {
-        "gauge_version": "0.1.0",
-        "method": "dependence-matched-real-reference-v2",
+        "package_version": "0.2.0",
+        "method": "event-disjoint-empirical-real-reference-v3",
         "config_hash": hash_value,
         "config": config.to_dict(),
         "analysis": analysis_design,
@@ -747,11 +685,19 @@ def evaluate(
             "numpy": np.__version__,
             "scipy": scipy.__version__,
         },
-        "simultaneous_reference": simultaneous,
         "interpretation": {
-            "detection": "Non-detection is not evidence of equality.",
-            "reference_position": "Detectability at this N; not physical severity.",
-            "controls": "Sensitivity controls contextualize metric response, not acceptability.",
+            "reference_status": (
+                "A reference-range crossing is descriptive, not a p-value, "
+                "level-alpha test, or claim of population inequality."
+            ),
+            "reference_gap": (
+                "Position relative to finite-archive real-reference variability "
+                "at this N; not physical severity or a model score."
+            ),
+            "controls": (
+                "Metric-specific controls establish response and invariance; "
+                "they are not application-acceptability tolerances."
+            ),
         },
     }
     return EvaluationReport(

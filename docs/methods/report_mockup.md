@@ -3,25 +3,27 @@
 This is the interpretation contract for the paper-facing bundle. Values below
 are fictional layout examples, not TC results.
 
-> “No departure detected” means that this evaluation did not exceed the
-> finite-`N` real-reference boundary. It is not proof of equality, physical
-> realism, or universal application acceptability.
+> `WITHIN_REFERENCE_RANGE` means only that the discrepancy did not exceed the
+> declared empirical real-reference quantile. It is not proof of equality,
+> physical realism, or application acceptability.
 
-| Question | Metric / stratum | Raw discrepancy (95% resampling interval) | Real-reference median → boundary | Gap | Detection |
-|---|---|---:|---:|---:|---|
-| Physical fidelity | W1 core temperature / global | 0.31 K [0.22, 0.40] | 0.18 → 0.29 K | 1.18 | DEPARTURE_DETECTED |
-| Physical fidelity | radial log-PSD / global | 0.84 [0.61, 1.11] log-PSD² | 0.09 → 0.15 | 12.5 | DEPARTURE_DETECTED |
-| Conditional fidelity | W1 cold area / Cat 5 | — | — | — | NOT_EVALUATED |
-| Diversity | coverage deficit / global | 0.07 [0.04, 0.10] | 0.05 → 0.08 | 0.67 | NO_DEPARTURE_DETECTED |
+| Question | Metric / condition | Raw discrepancy (central comparison range) | Real-reference q50 → q95 | Percentile | Gap | Reference status | Control status |
+|---|---|---:|---:|---:|---:|---|---|
+| Physical fidelity | W1 core temperature / C2 | 0.31 K [0.22, 0.40] | 0.18 → 0.29 K | 97.4% | 1.18 | ABOVE_REFERENCE_RANGE | CONTROL_VALIDATED |
+| Spatial structure | radial log-PSD / C2 | 0.84 [0.61, 1.11] dex² | 0.09 → 0.15 dex² | 100% | 12.5 | ABOVE_REFERENCE_RANGE | CONTROL_VALIDATED |
+| Conditional fidelity | W1 cold area / C5 | — | — | — | — | REFERENCE_UNRESOLVED | CONTROL_VALIDATED |
+| Diversity | coverage deficit / C2 | 0.07 [0.04, 0.10] | 0.05 → 0.08 | 81.0% | 0.67 | WITHIN_REFERENCE_RANGE | RESPONSIVE_BELOW_REFERENCE_RANGE |
 
 Every card also prints:
 
-- block unit, estimand, `N_eval`, block count, resample count, seed, and config hash;
+- block unit, estimand, evaluation sample count, block count, repetition count,
+  seed, and config hash;
 - exact functional definitions and valid domains;
-- warnings for thin, unstable, or control-failed results;
-- sensitivity perturbations and severity responses;
-- links to the versioned JSON report and frozen preregistration.
+- conditional Monte Carlo intervals for the reference quantiles and gap;
+- warnings for thin, unstable, invalid, or control-failed results;
+- registered sensitivity/invariance curves and boundary-crossing severity;
+- links to the schema-v3 report and versioned analysis protocol.
 
-The reference-calibrated gap profile is the primary summary. Its axis says
-“detectability, not physical severity,” every point links to a raw native-unit
-result, and no average score is produced.
+The empirical-reference gap profile is the primary summary. Its axis explicitly
+states that it is a descriptive finite-archive coordinate, every point links to
+a native-unit result, and no average score or global pass/fail count is produced.

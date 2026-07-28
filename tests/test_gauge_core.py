@@ -26,10 +26,9 @@ def _config(**overrides):
     values = dict(
         n_eval=100,
         n_resamples=40,
-        sensitivity_resamples=40,
+        summary_bootstrap_resamples=200,
         min_blocks_per_half=5,
         warn_blocks_per_half=10,
-        shift_grid_size=12,
         seed=12,
     )
     values.update(overrides)
@@ -118,7 +117,9 @@ def test_reference_plan_keeps_halves_disjoint_and_whole():
         assert set(draw.blocks_a).isdisjoint(draw.blocks_b)
         assert set(normalized[draw.pseudo_indices]).issubset(draw.blocks_a)
         assert set(normalized[draw.real_indices]).issubset(draw.blocks_b)
-        assert len(draw.pseudo_indices) == len(draw.real_indices) == len(draw.generated_indices) == 80
+        assert (
+            len(draw.pseudo_indices) == len(draw.real_indices) == len(draw.generated_indices) == 80
+        )
 
 
 def test_reference_plan_has_compact_reproducible_provenance():
@@ -135,13 +136,10 @@ def test_reference_plan_has_compact_reproducible_provenance():
     assert first.provenance_hash() == second.provenance_hash()
     assert first.provenance_hash() != changed.provenance_hash()
     assert len(first.partition_manifest(limit=3)) == 3
-    assert all(
-        draw.generated_indices is first.draws[0].generated_indices
-        for draw in first.draws
-    )
+    assert all(draw.generated_indices is first.draws[0].generated_indices for draw in first.draws)
 
 
-def test_perfect_generator_has_reference_aware_detection_and_raw_interval():
+def test_perfect_generator_has_empirical_reference_status_and_comparison_range():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(
         "value",
@@ -158,11 +156,17 @@ def test_perfect_generator_has_reference_aware_detection_and_raw_interval():
         config=_config(),
     )
     cell = report.cells[0]
-    assert cell.detection_status is gauge.DetectionStatus.NO_DEPARTURE_DETECTED
-    assert cell.provenance["inference_method"] == "reference_resampling_interval"
-    assert cell.provenance["interval_bound_type"] == "central_resampling_1_minus_alpha"
-    assert cell.ci_low <= cell.estimate <= cell.ci_high
-    assert cell.reference_position is not None
+    assert cell.reference_status is gauge.ReferenceStatus.WITHIN_REFERENCE_RANGE
+    assert cell.provenance["inference_method"] == "empirical_reference_calibration"
+    assert cell.comparison_low <= cell.estimate <= cell.comparison_high
+    assert cell.reference_gap is not None
+    assert cell.reference_percentile is not None
+    assert cell.reference_q50_mc_low <= cell.reference_q50 <= cell.reference_q50_mc_high
+    assert cell.reference_q95_mc_low <= cell.reference_q95 <= cell.reference_q95_mc_high
+    assert (
+        cell.reference_upper_mc_low <= cell.reference_upper_boundary <= cell.reference_upper_mc_high
+    )
+    assert cell.reference_gap_mc_low <= cell.reference_gap <= cell.reference_gap_mc_high
 
 
 def test_evaluation_transforms_lazy_fields_in_bounded_batches():
@@ -200,40 +204,18 @@ def test_evaluation_transforms_lazy_fields_in_bounded_batches():
     assert max(generated_fields.batch_sizes) <= 17
 
 
-def test_joint_detection_is_only_issued_for_a_preregistered_family():
-    train, real, generated = _datasets()
-    functional = gauge.FunctionalSpec(
-        "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
-    )
-    no_family = gauge.evaluate(
-        train=train,
-        real=real,
-        generated=generated,
-        functionals=[functional],
-        config=_config(),
-    )
-    assert (
-        no_family.cells[0].simultaneous_detection_status
-        is gauge.DetectionStatus.NOT_EVALUATED
-    )
-    registered = gauge.evaluate(
-        train=train,
-        real=real,
-        generated=generated,
-        functionals=[functional],
-        config=_config(simultaneous_family=("global:w1:value",)),
-    )
-    assert (
-        registered.cells[0].simultaneous_detection_status
-        is not gauge.DetectionStatus.NOT_EVALUATED
-    )
+def test_obsolete_simultaneous_family_is_not_a_v3_config_option():
+    try:
+        _config(simultaneous_family=("global:w1:value",))
+    except TypeError:
+        pass
+    else:  # pragma: no cover
+        raise AssertionError("Expected the retired joint-verdict option to be rejected.")
 
 
 def test_functional_support_is_not_required_for_reference_evaluation():
     train, real, generated = _datasets()
-    functional = gauge.FunctionalSpec(
-        "value", lambda fields: fields[:, 0], "unit", "unbounded toy"
-    )
+    functional = gauge.FunctionalSpec("value", lambda fields: fields[:, 0], "unit", "unbounded toy")
     report = gauge.evaluate(
         train=train,
         real=real,
@@ -243,7 +225,7 @@ def test_functional_support_is_not_required_for_reference_evaluation():
     )
     cell = report.cells[0]
     assert cell.estimate is not None
-    assert cell.detection_status is not gauge.DetectionStatus.NOT_EVALUATED
+    assert cell.reference_status is not gauge.ReferenceStatus.NOT_EVALUATED
 
 
 def test_thin_conditional_stratum_is_reported_without_a_verdict():
@@ -270,7 +252,7 @@ def test_thin_conditional_stratum_is_reported_without_a_verdict():
         conditional=True,
     )
     thin = next(cell for cell in report.cells if cell.stratum == "1")
-    assert thin.detection_status is gauge.DetectionStatus.NOT_EVALUATED
+    assert thin.reference_status is gauge.ReferenceStatus.NOT_EVALUATED
     assert "block" in thin.warnings[0].lower()
 
 
@@ -293,9 +275,7 @@ def test_predeclared_conditional_aggregate_is_an_explicit_report_stratum():
         conditional_groups={"all_labels": (0, 1)},
     )
     assert {cell.stratum for cell in report.cells} == {"global", "all_labels"}
-    assert report.metadata["analysis"]["conditional_groups"] == {
-        "all_labels": [0, 1]
-    }
+    assert report.metadata["analysis"]["conditional_groups"] == {"all_labels": [0, 1]}
 
 
 def test_global_conditional_mixture_mismatch_is_explicitly_audited():
@@ -347,12 +327,90 @@ def test_report_round_trip_and_render():
         assert loaded.to_dict() == report.to_dict()
         assert "<th>Tolerance</th>" not in html
         assert "<th>Practical relevance</th>" not in html
-        assert "not proof of equality or universal application acceptability" in html
+        assert "not a p-value, equality test" in html
         assert (root / "report.html").stat().st_size > 100
         assert (root / "profile.png").stat().st_size > 100
 
 
-def test_v1_report_migration_reuses_matched_reference_interval():
+def test_nondefault_reference_quantile_keeps_q95_and_boundary_uncertainty_distinct():
+    train, real, generated = _datasets()
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[
+            gauge.FunctionalSpec("value", lambda fields: fields[:, 0], "unit", "bounded toy")
+        ],
+        config=_config(reference_quantile=0.90),
+    )
+    cell = report.cells[0]
+    assert cell.reference_upper_boundary != cell.reference_q95
+    assert cell.reference_q95_mc_low <= cell.reference_q95 <= cell.reference_q95_mc_high
+    assert (
+        cell.reference_upper_mc_low <= cell.reference_upper_boundary <= cell.reference_upper_mc_high
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        output = Path(directory) / "report.html"
+        report.to_html(output)
+        assert "q90=" in output.read_text(encoding="utf-8")
+
+
+def test_degenerate_reference_width_is_unresolved_and_serializes_as_null():
+    train_blocks = np.repeat(np.arange(20), 2)
+    real_blocks = np.repeat(np.arange(100, 120), 2)
+    train = gauge.Dataset(np.zeros((40, 1)), blocks=train_blocks)
+    real = gauge.Dataset(np.zeros((40, 1)), blocks=real_blocks)
+    generated = gauge.Dataset(np.zeros((40, 1)))
+    functional = gauge.FunctionalSpec(
+        "constant", lambda fields: fields[:, 0], "unit", "constant toy value"
+    )
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[functional],
+        config=_config(n_eval=20),
+    )
+    cell = report.cells[0]
+    assert cell.reference_status is gauge.ReferenceStatus.REFERENCE_UNRESOLVED
+    assert cell.reference_gap is None
+    assert cell.comparison_gap_low is None
+    assert cell.comparison_gap_high is None
+    assert cell.reference_gap_mc_low is None
+    assert cell.reference_gap_mc_high is None
+    with tempfile.TemporaryDirectory() as directory:
+        output = Path(directory) / "report.json"
+        report.to_json(output)
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        assert payload["cells"][0]["reference_gap_mc_low"] is None
+        assert payload["cells"][0]["reference_gap_mc_high"] is None
+
+
+def test_report_serialization_failure_preserves_existing_file():
+    train, real, generated = _datasets()
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[
+            gauge.FunctionalSpec("value", lambda fields: fields[:, 0], "unit", "bounded toy")
+        ],
+        config=_config(),
+    )
+    report.metadata = {**report.metadata, "invalid_nonfinite": float("nan")}
+    with tempfile.TemporaryDirectory() as directory:
+        output = Path(directory) / "report.json"
+        output.write_text("preserve me\n", encoding="utf-8")
+        try:
+            report.to_json(output)
+        except ValueError as exc:
+            assert "compliant" in str(exc)
+        else:  # pragma: no cover
+            raise AssertionError("Expected strict JSON serialization failure.")
+        assert output.read_text(encoding="utf-8") == "preserve me\n"
+
+
+def test_v2_report_migration_reuses_matched_reference_comparison_range():
     train, real, generated = _datasets()
     functional = gauge.FunctionalSpec(
         "value", lambda fields: fields[:, 0], "unit", "bounded toy", support=(-1, 1)
@@ -365,16 +423,39 @@ def test_v1_report_migration_reuses_matched_reference_interval():
         config=_config(),
     )
     payload = report.to_dict()
-    payload["schema"] = "gauge_climate.evaluation.v1"
-    payload["metadata"]["config"]["bootstrap_resamples"] = 100
-    payload["metadata"]["interpretation"]["practical"] = "retired"
+    payload["schema"] = "gauge_climate.evaluation.v2"
+    config = payload["metadata"]["config"]
+    config["alpha"] = 0.05
+    config["confidence"] = 0.95
+    config["shift_power"] = 0.80
+    config["simultaneous_family"] = []
+    config.pop("reference_quantile")
+    config.pop("comparison_interval")
+    config.pop("summary_bootstrap_resamples")
     cell = payload["cells"][0]
-    cell["tolerance"] = 0.2
-    cell["practical_status"] = "WITHIN_TOLERANCE"
-    cell["provenance"]["reference_model_median"] = 0.31
-    cell["provenance"]["model_reference_q025"] = 0.21
-    cell["provenance"]["model_reference_q975"] = 0.44
-    cell["provenance"]["interval_standard_error"] = 99.0
+    cell["ci_low"] = cell.pop("comparison_low")
+    cell["ci_high"] = cell.pop("comparison_high")
+    cell["reference_detection_boundary"] = cell.pop("reference_upper_boundary")
+    cell["reference_position"] = cell.pop("reference_gap")
+    cell["reference_position_low"] = cell.pop("comparison_gap_low")
+    cell["reference_position_high"] = cell.pop("comparison_gap_high")
+    cell["shift_resolution"] = 1.0
+    cell["detection_status"] = "NO_DEPARTURE_DETECTED"
+    cell["simultaneous_detection_status"] = "NOT_EVALUATED"
+    for key in (
+        "control_status",
+        "reference_status",
+        "reference_percentile",
+        "reference_q50_mc_low",
+        "reference_q50_mc_high",
+        "reference_q95_mc_low",
+        "reference_q95_mc_high",
+        "reference_upper_mc_low",
+        "reference_upper_mc_high",
+        "reference_gap_mc_low",
+        "reference_gap_mc_high",
+    ):
+        cell.pop(key)
 
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory) / "legacy.json"
@@ -383,14 +464,31 @@ def test_v1_report_migration_reuses_matched_reference_interval():
         result = migrated.to_dict()
 
     migrated_cell = result["cells"][0]
-    assert result["schema"] == "gauge_climate.evaluation.v2"
-    assert migrated_cell["estimate"] == 0.31
-    assert migrated_cell["ci_low"] == 0.21
-    assert migrated_cell["ci_high"] == 0.44
-    assert migrated_cell["provenance"]["inference_method"] == "reference_resampling_interval"
-    assert "tolerance" not in migrated_cell
-    assert "practical_status" not in migrated_cell
-    assert "bootstrap_resamples" not in result["metadata"]["config"]
+    assert result["schema"] == "gauge_climate.evaluation.v3"
+    assert result["metadata"]["package_version"] == "0.2.0"
+    assert migrated_cell["comparison_low"] is not None
+    assert migrated_cell["comparison_high"] is not None
+    assert migrated_cell["reference_status"] == "WITHIN_REFERENCE_RANGE"
+    assert "alpha" not in result["metadata"]["config"]
+    assert "simultaneous_family" not in result["metadata"]["config"]
+    assert "shift_power" not in result["metadata"]["config"]
+    assert "shift_resolution" not in migrated_cell
+
+
+def test_schema_v3_records_the_distribution_version():
+    train, real, generated = _datasets()
+    report = gauge.evaluate(
+        train=train,
+        real=real,
+        generated=generated,
+        functionals=[
+            gauge.FunctionalSpec("value", lambda fields: fields[:, 0], "unit", "bounded toy")
+        ],
+        config=_config(),
+    )
+    metadata = report.to_dict()["metadata"]
+    assert metadata["package_version"] == gauge.__version__
+    assert "gauge_version" not in metadata
 
 
 def test_paper_bundle_preserves_native_strata_and_renders_controls():
@@ -423,9 +521,7 @@ def test_paper_bundle_preserves_native_strata_and_renders_controls():
         metric_labels={"w1:value": "Value distribution"},
         stratum_labels={"0": "low", "1": "high"},
     )
-    controls = (
-        gauge.ReferenceControl("w1:value", "shift control", 3.0),
-    )
+    controls = (gauge.ReferenceControl("w1:value", "shift control", 3.0),)
     with tempfile.TemporaryDirectory() as directory:
         artifacts = report.paper_bundle(directory, spec, controls=controls)
         assert set(artifacts) == {
@@ -460,9 +556,9 @@ def test_paper_bundle_compresses_large_k_only_in_main_profile():
         replace(
             base,
             stratum=str(index),
-            reference_position=0.2 * index,
-            reference_position_low=0.2 * index - 0.1,
-            reference_position_high=0.2 * index + 0.1,
+            reference_gap=0.2 * index,
+            comparison_gap_low=0.2 * index - 0.1,
+            comparison_gap_high=0.2 * index + 0.1,
         )
         for index in range(10)
     )
@@ -526,8 +622,8 @@ def test_failed_predeclared_control_withholds_metric_interpretation():
         },
     )
     cell = report.cells[0]
-    assert cell.detection_status is gauge.DetectionStatus.NOT_EVALUATED
-    assert "withheld" in cell.warnings[-1].lower()
+    assert cell.control_status is gauge.ControlStatus.CONTROL_FAILED
+    assert "failed" in cell.warnings[-1].lower()
 
 
 def test_curve_diagnostic_is_serialized_and_renderable():
@@ -536,12 +632,7 @@ def test_curve_diagnostic_is_serialized_and_renderable():
         id="toy_curve",
         transform=lambda fields: np.column_stack([fields[:, 0], fields[:, 0] ** 2]),
         estimator=lambda generated_values, real_values: float(
-            np.mean(
-                np.abs(
-                    np.mean(generated_values, axis=0)
-                    - np.mean(real_values, axis=0)
-                )
-            )
+            np.mean(np.abs(np.mean(generated_values, axis=0) - np.mean(real_values, axis=0)))
         ),
         kind=gauge.MetricKind.CURVE,
         units="toy units",
@@ -589,8 +680,7 @@ def test_secondary_metrics_use_declared_diagnostic_resample_budget():
     assert by_metric["w1:value"].provenance["reference_resamples_used"] == 40
     assert by_metric["mean_departure"].provenance["reference_resamples_used"] == 20
     assert (
-        by_metric["mean_departure"].provenance["reference_resample_role"]
-        == "secondary_diagnostic"
+        by_metric["mean_departure"].provenance["reference_resample_role"] == "secondary_diagnostic"
     )
     partition = report.partitions["global"]
     assert partition["draw_count"] == 40
@@ -657,5 +747,5 @@ def test_unstable_reference_boundary_withholds_categorical_detection():
         ),
     )
     cell = report.cells[0]
-    assert cell.detection_status is gauge.DetectionStatus.NOT_EVALUATED
+    assert cell.reference_status is gauge.ReferenceStatus.REFERENCE_UNRESOLVED
     assert any("instability" in warning for warning in cell.warnings)

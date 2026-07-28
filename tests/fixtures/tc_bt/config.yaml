@@ -40,25 +40,14 @@ feature_metrics:
     n_resamples: 100
     min_real_blocks: 3
 
-tc_admissibility: true
+tc_preprocessing_saturation_audit: true
 
 evaluation:
   n_eval: 24
   n_resamples: 200
-  sensitivity_resamples: 20
+  summary_bootstrap_resamples: 200
   min_blocks_per_half: 5
   warn_blocks_per_half: 10
-  shift_grid_size: 8
-  simultaneous_family:
-    - global:w1:min_core_bt
-    - global:w1:cold_frac_220
-    - global:w1:r_maxgrad
-    - global:w1:axisym
-    - global:w1:dav
-    - global:w1:eye_contrast
-    - global:w1:p01_bt
-    - global:radial_profile_mae
-    - global:radial_log_psd_mse
   seed: 1789
 
 conditional: false

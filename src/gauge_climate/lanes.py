@@ -1,16 +1,66 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
-from scipy.ndimage import gaussian_filter, shift as ndimage_shift
+from scipy.ndimage import gaussian_filter, map_coordinates, shift as ndimage_shift
 from scipy.stats import spearmanr
 
 from .types import MetricSpec
 
 
 Perturbation = Callable[[np.ndarray, float, int], np.ndarray]
+
+
+class ControlRole(str, Enum):
+    SENSITIVITY = "sensitivity"
+    INVARIANCE = "invariance"
+    COPYING = "copying"
+
+
+@dataclass(frozen=True)
+class ControlSpec:
+    """Typed registry entry linking metrics to an expected control response."""
+
+    id: str
+    role: ControlRole | str
+    metrics: tuple[str, ...]
+    expected_response: str
+    provenance: Mapping[str, Any] | None = None
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "role", ControlRole(self.role))
+        if not self.id or not self.metrics or len(self.metrics) != len(set(self.metrics)):
+            raise ValueError("A control needs an identifier and unique metric identifiers.")
+        if not self.expected_response:
+            raise ValueError("A control must declare its expected response.")
+
+
+class ControlRegistry:
+    """Validated collection of named metric-control contracts."""
+
+    def __init__(self, controls: Sequence[ControlSpec]):
+        self.controls = tuple(controls)
+        identifiers = [control.id for control in self.controls]
+        if len(identifiers) != len(set(identifiers)):
+            raise ValueError("Control identifiers must be unique.")
+
+    def for_metric(self, metric_id: str) -> tuple[ControlSpec, ...]:
+        return tuple(control for control in self.controls if metric_id in control.metrics)
+
+    def manifest(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": control.id,
+                "role": control.role.value,
+                "metrics": list(control.metrics),
+                "expected_response": control.expected_response,
+                "provenance": dict(control.provenance or {}),
+            }
+            for control in self.controls
+        ]
 
 
 @dataclass(frozen=True)
@@ -28,7 +78,9 @@ class PerturbationSpec:
 
     def __post_init__(self) -> None:
         if len(self.severities) < 3 or self.severities[0] != 0:
-            raise ValueError("A perturbation lane requires at least three severities starting at 0.")
+            raise ValueError(
+                "A perturbation lane requires at least three severities starting at 0."
+            )
         if any(right <= left for left, right in zip(self.severities, self.severities[1:])):
             raise ValueError("Perturbation severities must be strictly increasing.")
         if self.expected_response != "nondecreasing":
@@ -86,6 +138,11 @@ def run_perturbation_sweep(
         monotone = bool(np.all(np.diff(value_array) >= -1e-12))
         boundary = boundaries.get(metric_id)
         reaches_boundary = None if boundary is None else bool(value_array[-1] > boundary)
+        first_crossing_severity = None
+        if boundary is not None:
+            crossing_indices = np.flatnonzero(value_array > boundary)
+            if crossing_indices.size:
+                first_crossing_severity = float(spec.severities[int(crossing_indices[0])])
         trend_passed = bool(
             rank_correlation > spec.minimum_rank_correlation
             or np.isclose(
@@ -99,14 +156,13 @@ def run_perturbation_sweep(
             "NOT_EVALUATED"
             if reaches_boundary is None
             else (
-                "DETECTABLE_AT_MAX_SEVERITY"
+                "CROSSES_REFERENCE_AT_MAX_SEVERITY"
                 if reaches_boundary
-                else "BELOW_REFERENCE_AT_MAX_SEVERITY"
+                else "REMAINS_WITHIN_REFERENCE_AT_MAX_SEVERITY"
             )
         )
         passed = bool(
-            trend_passed
-            and (not spec.require_reference_boundary or reaches_boundary is True)
+            trend_passed and (not spec.require_reference_boundary or reaches_boundary is True)
         )
         results[metric_id] = {
             "values": value_array.tolist(),
@@ -116,6 +172,7 @@ def run_perturbation_sweep(
             "response_contract_passed": trend_passed,
             "reference_boundary": boundary,
             "reaches_reference_boundary": reaches_boundary,
+            "first_reference_crossing_severity": first_crossing_severity,
             "resolution_status": resolution_status,
             "reference_boundary_required_for_pass": spec.require_reference_boundary,
             "passed": passed,
@@ -210,11 +267,7 @@ def center_jitter_lane(
                 float(severity * np.sin(angle)),
                 float(severity * np.cos(angle)),
             )
-            shift_vector = (
-                spatial_shift
-                if values.ndim == 3
-                else (0.0, *spatial_shift)
-            )
+            shift_vector = spatial_shift if values.ndim == 3 else (0.0, *spatial_shift)
             output[index] = ndimage_shift(
                 values[index],
                 shift=shift_vector,
@@ -233,6 +286,149 @@ def center_jitter_lane(
             "operation": "paired random-direction spatial displacement",
             "interpolation": "bilinear",
             "boundary": "reflect",
+            "fit_source": "reserved_real",
+        },
+    )
+
+
+def threshold_band_warming_lane(
+    *,
+    severities: Sequence[float],
+    expected_metrics: Sequence[str],
+    threshold: float,
+    half_width: float,
+) -> PerturbationSpec:
+    """Warm pixels near a declared threshold while leaving other pixels fixed."""
+
+    def apply(fields: np.ndarray, severity: float, seed: int) -> np.ndarray:
+        del seed
+        values = np.asarray(fields)
+        output = values.copy()
+        mask = np.abs(values - threshold) <= half_width
+        output[mask] = output[mask] + severity
+        return output
+
+    return PerturbationSpec(
+        id="threshold_band_warming",
+        apply=apply,
+        severities=tuple(float(value) for value in severities),
+        expected_metrics=tuple(expected_metrics),
+        provenance={
+            "operation": "add severity to pixels within threshold band",
+            "threshold": float(threshold),
+            "half_width": float(half_width),
+            "fit_source": "reserved_real",
+        },
+    )
+
+
+def radial_contrast_lane(
+    *,
+    severities: Sequence[float],
+    expected_metrics: Sequence[str],
+    pixel_size_km: float,
+    eye_radius_km: float,
+    annulus_inner_km: float,
+    annulus_outer_km: float,
+) -> PerturbationSpec:
+    """Increase inner-eye minus annulus contrast by a known temperature amount."""
+
+    def apply(fields: np.ndarray, severity: float, seed: int) -> np.ndarray:
+        del seed
+        values = np.asarray(fields)
+        height, width = values.shape[-2:]
+        y, x = np.mgrid[0:height, 0:width]
+        radius = (
+            np.sqrt((y - (height - 1) / 2.0) ** 2 + (x - (width - 1) / 2.0) ** 2) * pixel_size_km
+        )
+        output = values.copy()
+        output[..., radius <= eye_radius_km] += severity
+        annulus = (radius > annulus_inner_km) & (radius <= annulus_outer_km)
+        output[..., annulus] -= 0.5 * severity
+        return output
+
+    return PerturbationSpec(
+        id="radial_eye_contrast",
+        apply=apply,
+        severities=tuple(float(value) for value in severities),
+        expected_metrics=tuple(expected_metrics),
+        provenance={
+            "operation": "warm eye and cool surrounding annulus",
+            "pixel_size_km": float(pixel_size_km),
+            "eye_radius_km": float(eye_radius_km),
+            "annulus_inner_km": float(annulus_inner_km),
+            "annulus_outer_km": float(annulus_outer_km),
+            "fit_source": "reserved_real",
+        },
+    )
+
+
+def radial_warp_lane(
+    *,
+    severities: Sequence[float],
+    expected_metrics: Sequence[str],
+) -> PerturbationSpec:
+    """Radially dilate fields by a fractional scale around the image centre."""
+
+    def apply(fields: np.ndarray, severity: float, seed: int) -> np.ndarray:
+        del seed
+        values = np.asarray(fields)
+        if values.ndim != 3:
+            raise ValueError("Radial warp currently supports fields shaped (N,H,W).")
+        height, width = values.shape[-2:]
+        y, x = np.mgrid[0:height, 0:width]
+        cy, cx = (height - 1) / 2.0, (width - 1) / 2.0
+        scale = 1.0 + float(severity)
+        source_y = cy + (y - cy) / scale
+        source_x = cx + (x - cx) / scale
+        output = np.empty_like(values)
+        for index, field in enumerate(values):
+            output[index] = map_coordinates(
+                field,
+                [source_y, source_x],
+                order=1,
+                mode="reflect",
+                prefilter=False,
+            )
+        return output
+
+    return PerturbationSpec(
+        id="radial_warp",
+        apply=apply,
+        severities=tuple(float(value) for value in severities),
+        expected_metrics=tuple(expected_metrics),
+        provenance={
+            "operation": "radial coordinate dilation about image centre",
+            "interpolation": "bilinear",
+            "fit_source": "reserved_real",
+        },
+    )
+
+
+def checkerboard_artifact_lane(
+    *,
+    severities: Sequence[float],
+    expected_metrics: Sequence[str],
+    wavelength_pixels: int = 4,
+) -> PerturbationSpec:
+    """Add a deterministic high-frequency off-manifold spatial artifact."""
+
+    def apply(fields: np.ndarray, severity: float, seed: int) -> np.ndarray:
+        del seed
+        values = np.asarray(fields)
+        height, width = values.shape[-2:]
+        y, x = np.mgrid[0:height, 0:width]
+        pattern = ((y // wavelength_pixels + x // wavelength_pixels) % 2) * 2.0 - 1.0
+        return values + severity * pattern
+
+    return PerturbationSpec(
+        id="checkerboard_artifact",
+        apply=apply,
+        severities=tuple(float(value) for value in severities),
+        expected_metrics=tuple(expected_metrics),
+        provenance={
+            "operation": "add deterministic checkerboard artifact",
+            "wavelength_pixels": int(wavelength_pixels),
             "fit_source": "reserved_real",
         },
     )

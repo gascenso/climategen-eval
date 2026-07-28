@@ -3,50 +3,55 @@
 All notable changes follow [Keep a Changelog](https://keepachangelog.com/) and
 semantic versioning once the public API is frozen.
 
-## [Unreleased]
-
-External archival gates still open: independent statistical review,
-permission-cleared TC data deposition, and clean-room reproduction. The
-literature survey remains a separate manuscript workstream.
+## [0.2.0] - 2026-07-28
 
 ### Added
 
-- Frozen, training-only TC warm-shift, blur, center-jitter, phase, and exact-copyist
-  controls with a versioned JSON artifact and figure.
-- Separate sensitivity response-contract and finite-sample resolution conclusions.
-- Versioned 300-trial Monte Carlo calibration and power artifact for the generic
-  dependence-matched real-reference detector, including C5-like and
-  minimum-block designs, crossing CDFs, train/test shift, and familywise behavior.
-- Clean current-engine TC report and a checksummed 56-artifact main/appendix
-  manuscript bundle generated from it.
-- Framework, statistical-validation, deterministic example, class-aware
-  reference-gap, thin-tail, all-class curve, sensitivity, memorization,
-  admissibility, partition, and Vmax-support paper evidence.
+- Report schema `gauge_climate.evaluation.v3`, including empirical reference
+  percentiles, reference-gap Monte Carlo intervals, reference-quantile Monte
+  Carlo intervals, a separately labelled interval for a configurable upper
+  reference boundary, and typed control statuses.
+- Read-only migration of schema-v1/v2 reports.
+- Expanded generic validation for scalar, spatial, curve, and feature metrics;
+  unequal and thin event structures; wrong frame-IID identifiers; Monte Carlo
+  stability across independent resampling seeds; and finite-archive
+  delete-event sensitivity.
+- Typed, training-only TC controls with complete severity and invariance curves;
+  feature controls reuse the exact registered training-fitted representation
+  and kernel bandwidth.
+- Continuous-wind response, EOF fit-size/rank, multiscale, and copied-fraction
+  robustness audits.
 
 ### Changed
 
-- TC radial PSD bins now use discrete-support-aware physical log targets, avoiding
-  undefined empty low-wavenumber shells on the registered 256×256 grid.
-- TC analysis now applies the generator-training 170--325 K clipping lazily to
-  every analysis input while preserving raw archive bytes and checksums.
-- Shift-resolution evaluation now limits both the reference draws and bootstrap
-  work, eliminating an unintended full-resample computation at every grid point.
-- Unstable reference boundaries now retain their raw discrepancy and gap but
-  receive `NOT_EVALUATED`; per-metric diagnostic budgets make headline
-  stability explicit without inflating every exploratory cell.
-- Memorization results distinguish `FARTHER_FROM_TRAINING` from copying or
-  physical inadmissibility.
+- Recast GAUGE as empirical reference calibration rather than formal
+  hypothesis testing.
+- Replaced testing decisions with `WITHIN_REFERENCE_RANGE`,
+  `ABOVE_REFERENCE_RANGE`, `REFERENCE_UNRESOLVED`, and `NOT_EVALUATED`.
+- Removed simultaneous/familywise and aggregate pass/fail verdicts.
+- Removed the legacy per-functional perturbation-resolution calculation; field-
+  level metric-specific severity controls now provide the response evidence.
+- Replaced unbiased MMD² with the non-negative biased/V-statistic estimator and
+  records the training-fitted bandwidth.
+- Defined radial PSD discrepancy in `dex²`.
+- Renamed the TC physical-admissibility result to a preprocessing saturation
+  audit.
+- Restricted documented scope to unpaired populations of independent 2-D
+  single- or multichannel fields.
+- Replaced the TC preregistration claim with a versioned analysis protocol and
+  amendment log; removed the C4+ pooled evaluation family.
+- Made report writes atomic after strict finite-value validation; degenerate
+  reference widths now serialize as unresolved `null` gap intervals rather
+  than non-standard JSON values.
 
 ## [0.1.0] - 2026-07-15
 
 ### Added
 
-- Portable `gauge_climate` evaluation API and `gauge-climate` CLI.
-- Matched, dependence-aware real-reference engine with explicit weighting estimands.
-- Calibrate detection against dependence-matched real-reference envelopes.
-- Matched model-versus-reference resampling intervals for raw discrepancies.
-- Explicitly preregistered Bonferroni simultaneous families with finite-Monte-Carlo
-  resolution checks.
-- Train-fit feature spaces, diversity/coverage/dependence metrics, localized
-  copying test, sensitivity lanes, versioned JSON/HTML reporting, and TC adapter.
-- Checksummed synthetic TC fixture and fail-closed survey/artifact/release audits.
+- Portable `gauge_climate` API and `gauge-climate` CLI.
+- Dependence-aware real-reference engine with explicit weighting estimands.
+- Training-fitted feature metrics, localized copying analysis, sensitivity
+  controls, JSON/HTML reports, and the TC adapter.
+
+The v0.1 testing vocabulary and simultaneous decision layer are retained only
+in release history and schema-migration fixtures.

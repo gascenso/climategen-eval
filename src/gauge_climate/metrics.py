@@ -46,7 +46,9 @@ def functional_w1(functional: FunctionalSpec) -> MetricSpec:
 
 
 def _squared_distances(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return cdist(np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64), metric="sqeuclidean")
+    return cdist(
+        np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64), metric="sqeuclidean"
+    )
 
 
 def median_bandwidth(features: np.ndarray, *, max_samples: int = 2000, seed: int = 0) -> float:
@@ -63,23 +65,24 @@ def median_bandwidth(features: np.ndarray, *, max_samples: int = 2000, seed: int
     return float(np.median(positive))
 
 
-def mmd2_unbiased(x: np.ndarray, y: np.ndarray, *, bandwidth: float) -> float:
+def mmd2_biased(x: np.ndarray, y: np.ndarray, *, bandwidth: float) -> float:
     x = np.asarray(x, dtype=np.float64)
     y = np.asarray(y, dtype=np.float64)
     if x.ndim != 2 or y.ndim != 2 or x.shape[1] != y.shape[1]:
         raise ValueError("MMD requires two 2-D arrays with the same feature dimension.")
     if x.shape[0] < 2 or y.shape[0] < 2:
-        raise ValueError("Unbiased MMD requires at least two samples per side.")
+        raise ValueError("MMD requires at least two samples per side.")
     if bandwidth <= 0:
         raise ValueError("bandwidth must be positive.")
     scale = 2.0 * bandwidth * bandwidth
     kxx = np.exp(-_squared_distances(x, x) / scale)
     kyy = np.exp(-_squared_distances(y, y) / scale)
     kxy = np.exp(-_squared_distances(x, y) / scale)
-    nx, ny = x.shape[0], y.shape[0]
-    xx = (float(kxx.sum()) - float(np.trace(kxx))) / (nx * (nx - 1))
-    yy = (float(kyy.sum()) - float(np.trace(kyy))) / (ny * (ny - 1))
-    return float(xx + yy - 2.0 * float(kxy.mean()))
+    value = float(kxx.mean() + kyy.mean() - 2.0 * kxy.mean())
+    # The V-statistic is non-negative in exact arithmetic for a
+    # positive-definite kernel. Clamp round-off at zero so the public quantity
+    # remains an interpretable discrepancy.
+    return max(value, 0.0)
 
 
 def mmd_metric(
@@ -101,7 +104,7 @@ def mmd_metric(
             x = x[rng.choice(x.shape[0], max_samples, replace=False)]
         if y.shape[0] > max_samples:
             y = y[rng.choice(y.shape[0], max_samples, replace=False)]
-        return mmd2_unbiased(x, y, bandwidth=bandwidth)
+        return mmd2_biased(x, y, bandwidth=bandwidth)
 
     return MetricSpec(
         id=id,
@@ -109,10 +112,11 @@ def mmd_metric(
         estimator=estimator,
         kind=MetricKind.SET,
         units="MMD²",
-        description="Unbiased Gaussian-kernel MMD² in a training-fitted feature space.",
+        description="Biased non-negative Gaussian-kernel MMD² in a training-fitted feature space.",
         pillar="diversity_and_coverage",
         provenance={
             "bandwidth": float(bandwidth),
+            "estimator": "biased_v_statistic",
             "max_samples_per_side": int(max_samples),
             "subsample_seed": int(seed),
         },
@@ -130,9 +134,7 @@ def density_metric(
     return MetricSpec(
         id=id,
         transform=transform,
-        estimator=lambda generated, real: abs(
-            1.0 - density_coverage(real, generated, k=k)[0]
-        ),
+        estimator=lambda generated, real: abs(1.0 - density_coverage(real, generated, k=k)[0]),
         kind=MetricKind.SET,
         units="absolute density departure",
         description="Absolute departure from Naeem-style feature-space density=1.",
@@ -152,8 +154,7 @@ def coverage_metric(
     return MetricSpec(
         id=id,
         transform=transform,
-        estimator=lambda generated, real: 1.0
-        - density_coverage(real, generated, k=k)[1],
+        estimator=lambda generated, real: 1.0 - density_coverage(real, generated, k=k)[1],
         kind=MetricKind.SET,
         units="fraction",
         description="Naeem-style real-manifold coverage deficit (1 - coverage).",
@@ -219,9 +220,7 @@ def spearman_pair_metrics(
             def correlation(values: np.ndarray, i=left_index, j=right_index) -> float:
                 values = np.asarray(values, dtype=np.float64)
                 if values.ndim != 2 or values.shape[1] != len(names):
-                    raise ValueError(
-                        f"Dependence transform must return shape (N, {len(names)})."
-                    )
+                    raise ValueError(f"Dependence transform must return shape (N, {len(names)}).")
                 if np.unique(values[:, i]).size < 2 or np.unique(values[:, j]).size < 2:
                     raise MetricNotEvaluable(
                         "Spearman correlation is undefined for a constant entry."
@@ -337,18 +336,11 @@ def spearman_matrix(values: np.ndarray) -> np.ndarray:
     matrix = np.eye(n_features, dtype=np.float64)
     for left in range(n_features):
         for right in range(left + 1, n_features):
-            if (
-                np.unique(values[:, left]).size < 2
-                or np.unique(values[:, right]).size < 2
-            ):
-                raise MetricNotEvaluable(
-                    "Spearman correlation is undefined for a constant entry."
-                )
+            if np.unique(values[:, left]).size < 2 or np.unique(values[:, right]).size < 2:
+                raise MetricNotEvaluable("Spearman correlation is undefined for a constant entry.")
             value = float(spearmanr(values[:, left], values[:, right]).statistic)
             if not np.isfinite(value):
-                raise MetricNotEvaluable(
-                    "Spearman correlation is undefined for a constant entry."
-                )
+                raise MetricNotEvaluable("Spearman correlation is undefined for a constant entry.")
             matrix[left, right] = matrix[right, left] = value
     return matrix
 

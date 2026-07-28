@@ -1,12 +1,12 @@
-schema: gauge_climate.preregistration.v1
+schema: gauge_climate.analysis_protocol.v2
 
 study:
   title: "REPLACE"
   authors: ["REPLACE"]
-  frozen_at_utc: "REPLACE"
+  versioned_at_utc: "REPLACE"
   commit: "REPLACE"
   primary_model: "REPLACE"
-  supported_scope: "independent 2-D gridded fields"
+  supported_scope: "unpaired populations of independent 2-D gridded fields"
 
 data:
   train_source: "REPLACE"
@@ -23,15 +23,14 @@ evaluation:
   estimand_justification: "REPLACE"
   n_eval: "REPLACE"
   n_eval_justification: "REPLACE: intended consumption size"
-  alpha: 0.05
+  reference_quantile: 0.95
+  comparison_interval: 0.95
+  summary_bootstrap_resamples: 1000
   n_reference_resamples: 200
   n_secondary_diagnostic_resamples: 200
   seed: 1789
   min_blocks_per_half: 10
-  joint_claim: false
-  multiplicity_method: bonferroni_reference_boundaries
-  simultaneous_family: []  # exact "stratum:metric" keys; empty means no joint claim
-  minimum_resamples_for_family: null  # ceil(family_size / alpha - 1)
+  joint_verdict: prohibited
 
   functionals:
     - id: "REPLACE"
@@ -56,8 +55,21 @@ evaluation:
 
   metrics:
     required: [functional_w1, feature_mmd2, density, coverage, diversity]
+    feature_mmd2:
+      estimator: nonnegative_biased_v_statistic
+      kernel: gaussian
+      bandwidth_fit_split: train
+    density:
+      reported_quantity: absolute_departure_from_density_equal_to_one
+      real_manifold_neighbours: 5
+    coverage:
+      reported_quantity: one_minus_coverage
+      real_manifold_neighbours: 5
+    diversity:
+      reported_quantity: absolute_relative_pairwise_distance_departure
+      signed_direction_retained: true
     curve_metrics: []
-    admissibility_constraints: []
+    preprocessing_audits: []
     dependence_entries: "all off-diagonal Spearman entries"
     memorization_regions: 8
     memorization_query_strata: "REPLACE labels, or none with justification"
@@ -77,8 +89,15 @@ evaluation:
     enabled: false
     strata: []
     global_condition_mixture: "skip | as_provided_composition_check | REPLACE common mixture"
-    predeclared_pooled_strata: []
-    thin_stratum_action: REPORT_NOT_EVALUATED_WITH_WARNING
+    registered_pooled_strata: []
+    thin_stratum_action: >-
+      warn when resolution is limited; report NOT_EVALUATED below the declared
+      minimum independent-block count
+
+secondary_audits:
+  continuous_condition_response: null
+  feature_representation_robustness: null
+  interpretation: "Descriptive only unless separately registered and validated."
 
 analysis_exclusions:
   sample_exclusions: []
@@ -86,7 +105,7 @@ analysis_exclusions:
   missing_data_policy: "REPLACE"
   outlier_policy: "No post-hoc removal unless listed above."
 
-freeze:
+approval:
   scientific_reviewer: "REPLACE"
   statistical_reviewer: "REPLACE"
   approved_at_utc: "REPLACE"

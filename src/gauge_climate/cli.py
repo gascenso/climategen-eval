@@ -198,15 +198,17 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
             batch_size=int(feature_node.get("batch_size", 128)),
             fit_source="train",
         )
-        train_features = feature_space.transform(train_fields)
+        # The bandwidth and standardization artifacts are fitted on the same
+        # declared training-only subset as the EOF basis.  Materializing all
+        # training frames would add substantial cost without changing the data
+        # provenance of the fitted representation.
+        fit_features = feature_space.transform(train_fields[feature_space.fit_indices])
         metrics.extend(
             feature_space.registered_metrics(
-                train_features=train_features,
+                train_features=fit_features,
                 density_k=int(feature_node.get("density_k", 5)),
                 bandwidth_seed=int(feature_node.get("bandwidth_seed", config.seed)),
-                max_samples_per_draw=int(
-                    feature_node.get("max_samples_per_draw", 256)
-                ),
+                max_samples_per_draw=int(feature_node.get("max_samples_per_draw", 256)),
             )
         )
         dependence_requested = bool(feature_node.get("dependence_pairs", len(functionals) >= 2))
@@ -234,24 +236,30 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
                     "set feature_metrics.memorization.match_labels=false only for a "
                     "scientifically unconditional query population."
                 )
+            # Copying is a different question from fitting the feature basis or
+            # kernel bandwidth: every field seen by the generator during
+            # training must be eligible as a nearest-neighbour reference.
+            memorization_train_features = feature_space.transform(train_fields)
             memorization_result = localized_copying_test(
-                train_features=train_features,
+                train_features=memorization_train_features,
                 real_features=feature_space.transform(real_fields),
                 generated_features=feature_space.transform(generated_fields),
                 real_blocks=np.asarray(real.blocks),
                 real_strata=None if not match_labels else np.asarray(real.labels),
-                generated_strata=(
-                    None if not match_labels else np.asarray(generated.labels)
-                ),
+                generated_strata=(None if not match_labels else np.asarray(generated.labels)),
                 n_regions=int(copying.get("n_regions", 8)),
                 n_resamples=int(copying.get("n_resamples", 1000)),
-                alpha=config.alpha,
+                comparison_interval=config.comparison_interval,
                 min_real_blocks=int(copying.get("min_real_blocks", 5)),
                 seed=int(copying.get("seed", config.seed)),
                 feature_provenance=feature_space.manifest,
                 estimand=config.estimand,
             )
-    if adapter_config is not None and bool(payload.get("tc_admissibility", True)):
+    saturation_requested = payload.get(
+        "tc_preprocessing_saturation_audit",
+        payload.get("tc_admissibility", True),
+    )
+    if adapter_config is not None and bool(saturation_requested):
         lower, upper = adapter_config.bt_min_k, adapter_config.bt_max_k
 
         def boundary_saturation(fields):
@@ -302,7 +310,7 @@ def _build(path: Path, payload: dict[str, Any], *, fit_artifacts: bool):
                 "status": "CONTROL_FAILED",
                 "uninterpreted_status": raw_status,
                 "reason": (
-                    "Memorization interpretation withheld because the preregistered "
+                    "Memorization interpretation withheld because the registered "
                     "copyist positive control failed."
                 ),
             }

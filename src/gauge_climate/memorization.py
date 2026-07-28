@@ -17,8 +17,8 @@ class RegionCopyingResult:
     n_real: int
     n_real_blocks: int
     effect: float
-    ci_low: float
-    ci_high: float
+    comparison_low: float
+    comparison_high: float
     status: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -60,7 +60,7 @@ def localized_copying_test(
     generated_strata: np.ndarray | None = None,
     n_regions: int = 8,
     n_resamples: int = 1000,
-    alpha: float = 0.05,
+    comparison_interval: float = 0.95,
     min_real_blocks: int = 5,
     seed: int = 1789,
     feature_provenance: Mapping[str, Any] | None = None,
@@ -69,11 +69,12 @@ def localized_copying_test(
     """Localized generated/real nearest-to-training comparison.
 
     The effect is median(generated distance) - median(real distance). Negative
-    values indicate generated queries lie closer to training data. Confidence
-    intervals resample generated queries and whole held-out blocks. When query
+    values indicate generated queries lie closer to training data. Central
+    comparison ranges resample generated queries and whole held-out blocks. When query
     strata are supplied, comparisons are made within joint stratum-by-region
     cells so a label-mixture mismatch cannot masquerade as copying or separation.
-    A Bonferroni simultaneous interval is used across all supported cells.
+    Every regional result is descriptive; no multiplicity or global testing
+    verdict is produced.
     """
 
     train = np.asarray(train_features, dtype=np.float64)
@@ -81,6 +82,8 @@ def localized_copying_test(
     generated = np.asarray(generated_features, dtype=np.float64)
     blocks = np.asarray([str(value) for value in np.asarray(real_blocks)], dtype=object)
     estimand = SamplingEstimand(estimand)
+    if not 0.5 < comparison_interval < 1.0:
+        raise ValueError("comparison_interval must lie between 0.5 and 1.")
     if train.ndim != 2 or real.ndim != 2 or generated.ndim != 2:
         raise ValueError("Copying test inputs must be 2-D feature matrices.")
     if len({train.shape[1], real.shape[1], generated.shape[1]}) != 1:
@@ -133,7 +136,7 @@ def localized_copying_test(
                 supported.append((region, stratum))
     if not supported:
         return {
-            "status": "UNDERPOWERED",
+            "status": "INSUFFICIENT_LOCAL_SUPPORT",
             "reason": "No feature-space region has enough real blocks and both query types.",
             "regions": [],
             "n_regions": int(centers.shape[0]),
@@ -142,7 +145,7 @@ def localized_copying_test(
             "feature_provenance": dict(feature_provenance or {}),
             "estimand": estimand.value,
         }
-    simultaneous_alpha = alpha / len(supported)
+    tail_probability = (1.0 - comparison_interval) / 2.0
     region_results: list[RegionCopyingResult] = []
     for region, stratum in supported:
         real_mask = real_regions == region
@@ -156,15 +159,10 @@ def localized_copying_test(
         g_dist = generated_dist[generated_mask]
         r_blocks = blocks[real_mask]
         unique_blocks = np.asarray(list(dict.fromkeys(r_blocks.tolist())), dtype=object)
-        frame_counts = {
-            str(block): int(np.sum(r_blocks == block)) for block in unique_blocks
-        }
+        frame_counts = {str(block): int(np.sum(r_blocks == block)) for block in unique_blocks}
         if estimand is SamplingEstimand.BLOCK_BALANCED:
             observed_weights = np.asarray(
-                [
-                    1.0 / (unique_blocks.size * frame_counts[str(block)])
-                    for block in r_blocks
-                ],
+                [1.0 / (unique_blocks.size * frame_counts[str(block)]) for block in r_blocks],
                 dtype=np.float64,
             )
         else:
@@ -175,37 +173,33 @@ def localized_copying_test(
             selected_blocks = rng.choice(unique_blocks, size=unique_blocks.size, replace=True)
             generated_indices = rng.choice(g_dist.size, size=g_dist.size, replace=True)
             multiplicity = {
-                str(block): int(np.sum(selected_blocks == block))
-                for block in unique_blocks
+                str(block): int(np.sum(selected_blocks == block)) for block in unique_blocks
             }
             if estimand is SamplingEstimand.BLOCK_BALANCED:
                 real_weights = np.asarray(
                     [
-                        multiplicity[str(block)]
-                        / (unique_blocks.size * frame_counts[str(block)])
+                        multiplicity[str(block)] / (unique_blocks.size * frame_counts[str(block)])
                         for block in r_blocks
                     ],
                     dtype=np.float64,
                 )
             else:
                 denominator = sum(
-                    multiplicity[str(block)] * frame_counts[str(block)]
-                    for block in unique_blocks
+                    multiplicity[str(block)] * frame_counts[str(block)] for block in unique_blocks
                 )
                 real_weights = np.asarray(
                     [multiplicity[str(block)] / denominator for block in r_blocks],
                     dtype=np.float64,
                 )
             bootstrap[index] = float(
-                np.median(g_dist[generated_indices])
-                - _weighted_median(r_dist, real_weights)
+                np.median(g_dist[generated_indices]) - _weighted_median(r_dist, real_weights)
             )
-        low = float(np.quantile(bootstrap, simultaneous_alpha / 2.0))
-        high = float(np.quantile(bootstrap, 1.0 - simultaneous_alpha / 2.0))
+        low = float(np.quantile(bootstrap, tail_probability))
+        high = float(np.quantile(bootstrap, 1.0 - tail_probability))
         status = (
-            "COPYING_DETECTED"
+            "CLOSER_TO_TRAINING"
             if high < 0
-            else ("FARTHER_FROM_TRAINING" if low > 0 else "INCONCLUSIVE")
+            else ("FARTHER_FROM_TRAINING" if low > 0 else "CENTRAL_RANGE_OVERLAPS_ZERO")
         )
         region_results.append(
             RegionCopyingResult(
@@ -215,41 +209,49 @@ def localized_copying_test(
                 n_real=int(r_dist.size),
                 n_real_blocks=int(unique_blocks.size),
                 effect=effect,
-                ci_low=low,
-                ci_high=high,
+                comparison_low=low,
+                comparison_high=high,
                 status=status,
             )
         )
     statuses = {result.status for result in region_results}
     overall = (
-        "COPYING_DETECTED"
-        if "COPYING_DETECTED" in statuses
+        "LOCALIZED_CLOSENESS_OBSERVED"
+        if "CLOSER_TO_TRAINING" in statuses
         else (
             "FARTHER_FROM_TRAINING"
             if "FARTHER_FROM_TRAINING" in statuses
-            else "NO_LOCAL_DEPARTURE_DETECTED"
+            else "ALL_CENTRAL_RANGES_OVERLAP_ZERO"
         )
     )
     return {
         "status": overall,
         "effect_definition": "median generated-to-train NN minus median real-to-train NN",
         "status_semantics": {
-            "COPYING_DETECTED": "generated queries are significantly closer to training",
+            "CLOSER_TO_TRAINING": (
+                "the regional central comparison range lies below zero; this "
+                "pattern is consistent with localized training replay"
+            ),
             "FARTHER_FROM_TRAINING": (
-                "generated queries are significantly farther from training; this does "
+                "the regional central comparison range lies above zero; this does "
                 "not establish physical inadmissibility or a global manifold failure"
             ),
-            "INCONCLUSIVE": "the simultaneous interval crosses zero",
+            "CENTRAL_RANGE_OVERLAPS_ZERO": (
+                "the descriptive regional comparison range overlaps zero"
+            ),
         },
-        "multiplicity": (
-            "Bonferroni simultaneous intervals across supported query-stratum-by-region cells"
+        "comparison_range": (
+            f"central {100.0 * comparison_interval:.1f}% paired resampling range; "
+            "conditional on the supplied training, held-out, and generated archives"
         ),
-        "alpha": alpha,
+        "multiplicity": "none; regional summaries are descriptive and not aggregated",
+        "comparison_interval": comparison_interval,
         "regions": [result.to_dict() for result in region_results],
         "n_regions": int(centers.shape[0]),
         "n_supported_cells": len(supported),
         "query_stratification": "none" if strata == [None] else "supplied_labels",
         "seed": int(seed),
+        "n_train_reference": int(train.shape[0]),
         "feature_provenance": dict(feature_provenance or {}),
         "estimand": estimand.value,
         "train_region_counts": np.bincount(train_regions, minlength=centers.shape[0]).tolist(),

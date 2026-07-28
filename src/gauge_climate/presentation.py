@@ -46,7 +46,7 @@ class PaperBundleSpec:
     """Declare the compact view of a complete GAUGE report.
 
     ``native_strata`` are the mutually exclusive conditions that must not be
-    hidden by a global mixture. ``priority_strata`` are preregistered aggregates
+    hidden by a global mixture. ``priority_strata`` are registered aggregates
     or conditions that deserve emphasis (for example, a physically important
     tail). When there are more than ``max_visible_native_strata`` native strata,
     the main profile shows their median/range and labels the worst observed
@@ -67,9 +67,7 @@ class PaperBundleSpec:
             raise ValueError("Paper bundle title and model label cannot be empty.")
         if not self.metrics or len(self.metrics) != len(set(self.metrics)):
             raise ValueError("Paper bundle metrics must be nonempty and unique.")
-        if not self.native_strata or len(self.native_strata) != len(
-            set(self.native_strata)
-        ):
+        if not self.native_strata or len(self.native_strata) != len(set(self.native_strata)):
             raise ValueError("Native strata must be nonempty and unique.")
         if len(self.priority_strata) != len(set(self.priority_strata)):
             raise ValueError("Priority strata must be unique.")
@@ -106,12 +104,11 @@ def _selected_cells(
         f"{stratum}:{metric}"
         for metric in spec.metrics
         for stratum in strata
-        if index[stratum, metric].reference_position is None
+        if index[stratum, metric].reference_gap is None
     ]
     if undefined:
         raise ValueError(
-            "Paper bundle cells lack reference-calibrated gaps: "
-            + ", ".join(undefined)
+            "Paper bundle cells lack reference-calibrated gaps: " + ", ".join(undefined)
         )
     return index, strata
 
@@ -130,8 +127,8 @@ def _save_figure(fig: plt.Figure, path: Path) -> tuple[Path, Path]:
 def _finite_position(cell: CellReport, attribute: str) -> float:
     value = getattr(cell, attribute)
     if value is None:
-        assert cell.reference_position is not None
-        return float(cell.reference_position)
+        assert cell.reference_gap is not None
+        return float(cell.reference_gap)
     return float(value)
 
 
@@ -146,8 +143,8 @@ def figure_stratified_profile(
 
     Native classes are never replaced by an unmatched global mixture. Small
     class systems show every condition; large systems show a class range and
-    median together with all preregistered priority strata. Positive controls
-    occupy the same detectability scale but are visually distinguished.
+    median together with all registered priority strata. Positive controls
+    occupy the same descriptive reference scale but are visually distinguished.
     """
 
     index, _ = _selected_cells(report, spec)
@@ -158,35 +155,25 @@ def figure_stratified_profile(
 
     metric_count = len(spec.metrics)
     y = np.arange(metric_count, dtype=float)
-    fig_height = max(5.8, 0.62 * metric_count + 2.6)
-    fig, ax = plt.subplots(figsize=(12.8, fig_height))
-    fig.subplots_adjust(left=0.19, right=0.98, top=0.86, bottom=0.24)
+    fig_height = max(6.2, 0.53 * metric_count + 2.4)
+    fig, ax = plt.subplots(figsize=(11.4, fig_height))
+    fig.subplots_adjust(left=0.21, right=0.98, top=0.98, bottom=0.21)
 
     for row in range(metric_count):
         if row % 2 == 0:
             ax.axhspan(row - 0.48, row + 0.48, color="#f3f7f8", zorder=0)
 
-    native_colors = plt.colormaps["viridis"](
-        np.linspace(0.12, 0.82, len(spec.native_strata))
-    )
+    native_colors = plt.colormaps["viridis"](np.linspace(0.12, 0.82, len(spec.native_strata)))
     all_x: list[float] = [-1.0, 1.0]
     show_native = len(spec.native_strata) <= spec.max_visible_native_strata
 
     if show_native:
         offsets = np.linspace(-0.20, 0.20, len(spec.native_strata))
-        for stratum, color, offset in zip(
-            spec.native_strata, native_colors, offsets, strict=True
-        ):
+        for stratum, color, offset in zip(spec.native_strata, native_colors, offsets, strict=True):
             cells = [index[stratum, metric] for metric in spec.metrics]
-            positions = np.asarray(
-                [float(cell.reference_position) for cell in cells], dtype=float
-            )
-            lows = np.asarray(
-                [_finite_position(cell, "reference_position_low") for cell in cells]
-            )
-            highs = np.asarray(
-                [_finite_position(cell, "reference_position_high") for cell in cells]
-            )
+            positions = np.asarray([float(cell.reference_gap) for cell in cells], dtype=float)
+            lows = np.asarray([_finite_position(cell, "comparison_gap_low") for cell in cells])
+            highs = np.asarray([_finite_position(cell, "comparison_gap_high") for cell in cells])
             errors = np.vstack(
                 [
                     np.maximum(positions - np.minimum(lows, positions), 0.0),
@@ -208,15 +195,28 @@ def figure_stratified_profile(
                 capsize=1.4,
                 zorder=3,
             )
+            unresolved = np.asarray(
+                [
+                    cell.reference_status.value in {"REFERENCE_UNRESOLVED", "NOT_EVALUATED"}
+                    for cell in cells
+                ]
+            )
+            if np.any(unresolved):
+                ax.scatter(
+                    positions[unresolved],
+                    (y + offset)[unresolved],
+                    marker="x",
+                    s=45,
+                    linewidths=1.2,
+                    color="#263238",
+                    zorder=5,
+                )
             all_x.extend(lows.tolist())
             all_x.extend(highs.tolist())
     else:
         for row, metric in enumerate(spec.metrics):
             positions = np.asarray(
-                [
-                    float(index[stratum, metric].reference_position)
-                    for stratum in spec.native_strata
-                ]
+                [float(index[stratum, metric].reference_gap) for stratum in spec.native_strata]
             )
             minimum = float(np.min(positions))
             maximum = float(np.max(positions))
@@ -240,15 +240,9 @@ def figure_stratified_profile(
     for priority_index, stratum in enumerate(spec.priority_strata):
         color = priority_colors[priority_index % len(priority_colors)]
         cells = [index[stratum, metric] for metric in spec.metrics]
-        positions = np.asarray(
-            [float(cell.reference_position) for cell in cells], dtype=float
-        )
-        lows = np.asarray(
-            [_finite_position(cell, "reference_position_low") for cell in cells]
-        )
-        highs = np.asarray(
-            [_finite_position(cell, "reference_position_high") for cell in cells]
-        )
+        positions = np.asarray([float(cell.reference_gap) for cell in cells], dtype=float)
+        lows = np.asarray([_finite_position(cell, "comparison_gap_low") for cell in cells])
+        highs = np.asarray([_finite_position(cell, "comparison_gap_high") for cell in cells])
         errors = np.vstack(
             [
                 np.maximum(positions - np.minimum(lows, positions), 0.0),
@@ -277,26 +271,40 @@ def figure_stratified_profile(
         all_x.extend(highs.tolist())
 
     control_labels = list(dict.fromkeys(control.label for control in controls))
-    control_colors = {
-        label: plt.colormaps["Greys"](0.48 + 0.42 * index_ / max(len(control_labels), 1))
+    control_marker_cycle = (
+        "D",
+        "s",
+        "^",
+        "X",
+        "v",
+        "P",
+        "h",
+        "<",
+        ">",
+        "*",
+        "d",
+        "p",
+    )
+    control_markers = {
+        label: control_marker_cycle[index_ % len(control_marker_cycle)]
         for index_, label in enumerate(control_labels)
     }
+    control_color = "#4f5b61"
     for row, metric in enumerate(spec.metrics):
         metric_controls = controls_by_metric.get(metric, [])
         if not metric_controls:
             continue
         control_offsets = np.linspace(-0.10, 0.10, len(metric_controls))
         for control, offset in zip(metric_controls, control_offsets, strict=True):
-            color = control_colors[control.label]
             ax.plot(
                 control.position,
                 row - 0.34 + offset,
-                marker="D",
+                marker=control_markers[control.label],
                 linestyle="none",
-                markersize=5.5,
+                markersize=6.1,
                 markerfacecolor="white",
-                markeredgecolor=color,
-                markeredgewidth=1.25,
+                markeredgecolor=control_color,
+                markeredgewidth=1.35,
                 zorder=5,
             )
             all_x.append(float(control.position))
@@ -306,7 +314,7 @@ def figure_stratified_profile(
     x_max = max(2.0, float(np.max(finite_x)))
     x_min -= 0.08 * max(abs(x_min), 1.0)
     x_max *= 1.18
-    ax.set_xscale("symlog", linthresh=1.0, linscale=0.8, base=10)
+    ax.set_xscale("symlog", linthresh=2.0, linscale=1.0, base=10)
     ax.set_xlim(x_min, x_max)
     ax.axvspan(x_min, 1.0, color="#dcece8", alpha=0.38, zorder=0)
     ax.axvline(0.0, color="#78909a", linewidth=0.85, zorder=1)
@@ -317,35 +325,20 @@ def figure_stratified_profile(
         linestyle=(0, (4, 3)),
         zorder=1,
     )
-    candidate_ticks = np.asarray(
-        [-1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0, 5000.0]
-    )
+    candidate_ticks = np.asarray([-1.0, -0.5, 0.0, 0.5, 1.0, 2.0, 5.0, 10.0, 100.0, 1000.0, 5000.0])
     ticks = candidate_ticks[(candidate_ticks >= x_min) & (candidate_ticks <= x_max)]
     ax.set_xticks(ticks)
-    ax.set_xticklabels([f"{value:g}" for value in ticks])
-    ax.set_yticks(
-        y, [_label(metric, spec.metric_labels) for metric in spec.metrics], fontsize=10
-    )
+    ax.set_xticklabels([f"{value:g}" for value in ticks], fontsize=11)
+    ax.set_yticks(y, [_label(metric, spec.metric_labels) for metric in spec.metrics], fontsize=12)
     ax.set_ylim(metric_count - 0.52, -0.52)
     ax.grid(axis="x", color="#d8e0e3", linewidth=0.65, zorder=0)
     ax.spines[["top", "right", "left"]].set_visible(False)
     ax.tick_params(axis="y", length=0)
     ax.set_xlabel(
         "Reference-calibrated gap   ·   0 = real–real median   ·   "
-        "1 = pointwise 95% boundary   ·   lower is closer",
+        "1 = empirical 95th percentile   ·   lower is closer",
         labelpad=10,
-    )
-
-    fig.suptitle(spec.title, fontsize=17, fontweight="semibold", y=0.965)
-    aggregation_phrase = (
-        " with preregistered tail aggregates" if spec.priority_strata else ""
-    )
-    ax.set_title(
-        f"{spec.model_label} · class-conditional fidelity{aggregation_phrase} and "
-        "training-only positive controls",
-        fontsize=10.5,
-        color="#4c5b61",
-        pad=13,
+        fontsize=11.5,
     )
 
     handles: list[Line2D] = []
@@ -390,36 +383,41 @@ def figure_stratified_profile(
         Line2D(
             [0],
             [0],
-            marker="D",
+            marker=control_markers[label],
             linestyle="none",
             markerfacecolor="white",
-            markeredgecolor=control_colors[label],
-            markeredgewidth=1.2,
-            markersize=6,
+            markeredgecolor=control_color,
+            markeredgewidth=1.3,
+            markersize=6.5,
             label=label,
         )
         for label in control_labels
     )
+    if any(
+        index[stratum, metric].reference_status.value in {"REFERENCE_UNRESOLVED", "NOT_EVALUATED"}
+        for stratum in spec.native_strata
+        for metric in spec.metrics
+    ):
+        handles.append(
+            Line2D(
+                [0],
+                [0],
+                marker="x",
+                linestyle="none",
+                color="#263238",
+                markersize=6.5,
+                label="reference unresolved",
+            )
+        )
     ax.legend(
         handles=handles,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.16),
+        bbox_to_anchor=(0.5, -0.12),
         ncol=min(6, max(1, len(handles))),
         frameon=False,
-        fontsize=8.5,
+        fontsize=11.5,
         columnspacing=1.3,
         handletextpad=0.4,
-    )
-    fig.text(
-        0.19,
-        0.035,
-        "Whiskers: model 95% intervals conditional on the frozen reference scale. "
-        "Open diamonds: positive controls calibrated only on reserved training data. "
-        "Gap units express detectability at the declared N, not physical severity.",
-        ha="left",
-        va="bottom",
-        fontsize=8,
-        color="#5e6b70",
     )
     return _save_figure(fig, Path(path))
 
@@ -434,7 +432,7 @@ def figure_conditional_matrix(
     index, strata = _selected_cells(report, spec)
     values = np.asarray(
         [
-            [float(index[stratum, metric].reference_position) for stratum in strata]
+            [float(index[stratum, metric].reference_gap) for stratum in strata]
             for metric in spec.metrics
         ],
         dtype=float,
@@ -449,15 +447,15 @@ def figure_conditional_matrix(
     width = max(8.5, 0.88 * len(strata) + 4.0)
     height = max(5.4, 0.58 * len(spec.metrics) + 2.2)
     fig, ax = plt.subplots(figsize=(width, height))
-    fig.subplots_adjust(left=0.22, right=0.88, top=0.86, bottom=0.19)
+    fig.subplots_adjust(left=0.22, right=0.88, top=0.98, bottom=0.10)
     image = ax.imshow(values, aspect="auto", cmap=cmap, norm=norm)
 
     for row, metric in enumerate(spec.metrics):
         for column, stratum in enumerate(strata):
             cell = index[stratum, metric]
-            value = float(cell.reference_position)
+            value = float(cell.reference_gap)
             marker = ""
-            if cell.detection_status.value == "DEPARTURE_DETECTED":
+            if cell.reference_status.value == "ABOVE_REFERENCE_RANGE":
                 marker += "●"
             if cell.warnings:
                 marker += "†"
@@ -473,7 +471,7 @@ def figure_conditional_matrix(
                 color="white" if luminance < 0.5 else "#263238",
                 fontweight="semibold" if marker else "normal",
             )
-            if cell.detection_status.value == "DEPARTURE_DETECTED":
+            if cell.reference_status.value == "ABOVE_REFERENCE_RANGE":
                 ax.add_patch(
                     Rectangle(
                         (column - 0.48, row - 0.48),
@@ -499,34 +497,8 @@ def figure_conditional_matrix(
     )
     ax.tick_params(length=0)
     ax.spines[:].set_visible(False)
-    fig.suptitle(
-        f"{spec.title} — complete conditional audit",
-        fontsize=16,
-        fontweight="semibold",
-        y=0.965,
-    )
-    audit_subtitle = (
-        "Every native class is retained; priority aggregates are separated at right"
-        if spec.priority_strata
-        else "Every native class is retained; no pooled stratum replaces it"
-    )
-    ax.set_title(
-        audit_subtitle,
-        fontsize=10,
-        color="#4c5b61",
-        pad=12,
-    )
     colorbar = fig.colorbar(image, ax=ax, fraction=0.035, pad=0.035)
     colorbar.set_label("Reference-calibrated gap")
-    fig.text(
-        0.22,
-        0.055,
-        "Gap 1 is the pointwise 95% real-reference boundary. ● departure detected; "
-        "† unstable diagnostic boundary. Absence of ● is not proof of equivalence.",
-        ha="left",
-        fontsize=8.2,
-        color="#5e6b70",
-    )
     return _save_figure(fig, Path(path))
 
 
@@ -536,14 +508,15 @@ _TABLE_FIELDS = (
     "stratum",
     "stratum_label",
     "estimate",
-    "ci_low",
-    "ci_high",
+    "comparison_low",
+    "comparison_high",
     "units",
     "reference_q50",
     "reference_boundary",
+    "reference_percentile",
     "reference_gap",
-    "detection",
-    "simultaneous_detection",
+    "reference_status",
+    "control_status",
     "n_eval",
     "n_real",
     "n_blocks",
@@ -564,14 +537,15 @@ def _table_row(
         "stratum": cell.stratum,
         "stratum_label": _label(cell.stratum, stratum_labels),
         "estimate": cell.estimate,
-        "ci_low": cell.ci_low,
-        "ci_high": cell.ci_high,
+        "comparison_low": cell.comparison_low,
+        "comparison_high": cell.comparison_high,
         "units": cell.units,
         "reference_q50": cell.reference_q50,
-        "reference_boundary": cell.reference_detection_boundary,
-        "reference_gap": cell.reference_position,
-        "detection": cell.detection_status.value,
-        "simultaneous_detection": cell.simultaneous_detection_status.value,
+        "reference_boundary": cell.reference_upper_boundary,
+        "reference_percentile": cell.reference_percentile,
+        "reference_gap": cell.reference_gap,
+        "reference_status": cell.reference_status.value,
+        "control_status": cell.control_status.value,
         "n_eval": cell.n_eval,
         "n_real": cell.n_real,
         "n_blocks": cell.n_blocks,
@@ -601,9 +575,7 @@ def write_native_table(
         writer = csv.DictWriter(handle, fieldnames=_TABLE_FIELDS, lineterminator="\n")
         writer.writeheader()
         for cell in cells:
-            writer.writerow(
-                _table_row(cell, spec.metric_labels, spec.stratum_labels)
-            )
+            writer.writerow(_table_row(cell, spec.metric_labels, spec.stratum_labels))
     return output
 
 
@@ -617,19 +589,19 @@ def _index_html(
     index, strata = _selected_cells(report, spec)
     for metric in spec.metrics:
         cells = [index[stratum, metric] for stratum in strata]
-        worst = max(cells, key=lambda cell: float(cell.reference_position))
+        worst = max(cells, key=lambda cell: float(cell.reference_gap))
         priority = cells[-1] if spec.priority_strata else None
         rows.append(
             "<tr>"
             f"<td>{html.escape(_label(metric, spec.metric_labels))}</td>"
             f"<td>{html.escape(_label(worst.stratum, spec.stratum_labels))}</td>"
-            f"<td>{float(worst.reference_position):.2f}</td>"
+            f"<td>{float(worst.reference_gap):.2f}</td>"
             + (
                 "<td>—</td><td>—</td>"
                 if priority is None
                 else (
                     f"<td>{priority.estimate:.3g} {html.escape(priority.units)}</td>"
-                    f"<td>{float(priority.reference_position):.2f}</td>"
+                    f"<td>{float(priority.reference_gap):.2f}</td>"
                 )
             )
             + "</tr>"
@@ -637,7 +609,7 @@ def _index_html(
     source_hash = html.escape(str(report.metadata.get("config_hash", "unknown")))
     profile_caption = (
         (
-            "Every native class is shown because K is small; the preregistered "
+            "Every native class is shown because K is small; the registered "
             "priority aggregate is emphasized."
             if spec.priority_strata
             else "Every native class is shown because K is small; no pooled stratum replaces it."
@@ -645,7 +617,7 @@ def _index_html(
         if len(spec.native_strata) <= spec.max_visible_native_strata
         else (
             "The main profile summarizes the native-class median and range, "
-            "labels the largest observed gap, and emphasizes every preregistered "
+            "labels the largest observed gap, and emphasizes every registered "
             "priority stratum."
         )
     )
@@ -662,18 +634,18 @@ a{{color:var(--accent)}}code{{background:var(--wash);padding:.1rem .25rem}}
 </style></head><body>
 <h1>{html.escape(spec.title)}</h1>
 <p class="lede">A paper-facing GAUGE report. The concise figures below are backed by the complete block-aware evaluation; native-unit tables and the full machine report remain linked for audit.</p>
-<div class="key"><strong>How to read the gap:</strong> 0 is the median real–real discrepancy; 1 is the pointwise 95% real-reference boundary. Lower is closer. Gap units describe detectability at this sample size, not physical severity. A result below 1 is not automatically equivalent.</div>
+<div class="key"><strong>How to read the gap:</strong> 0 is the median discrepancy between event-disjoint real subsets; 1 is their 95th-percentile marker. Lower is closer. The gap describes a finite-archive reference position, not physical severity, a p-value, equivalence, or an aggregate model score.</div>
 <h2>Main-text figure</h2>
-<figure><img src="{artifacts['profile_png'].relative_to(output.parent)}" alt="Stratified reference-gap profile"><figcaption>{html.escape(profile_caption)} Open diamonds are training-only positive controls.</figcaption></figure>
+<figure><img src="{artifacts["profile_png"].relative_to(output.parent)}" alt="Stratified reference-gap profile"><figcaption>{html.escape(profile_caption)} Distinct open symbols are training-only positive controls.</figcaption></figure>
 <h2>Conditional audit</h2>
-<figure><img src="{artifacts['matrix_png'].relative_to(output.parent)}" alt="Conditional gap matrix"><figcaption>The matrix gives exact class-level lookup without requiring one figure per class.</figcaption></figure>
+<figure><img src="{artifacts["matrix_png"].relative_to(output.parent)}" alt="Conditional gap matrix"><figcaption>The matrix gives exact class-level lookup without requiring one figure per class.</figcaption></figure>
 <h2>Compact numerical reading</h2>
-<table><thead><tr><th>Metric</th><th>Largest displayed gap</th><th>Gap</th><th>Priority estimate</th><th>Priority gap</th></tr></thead><tbody>{''.join(rows)}</tbody></table>
+<table><thead><tr><th>Metric</th><th>Largest displayed gap</th><th>Gap</th><th>Priority estimate</th><th>Priority gap</th></tr></thead><tbody>{"".join(rows)}</tbody></table>
 <h2>Downloadable evidence</h2>
-<ul><li><a href="{artifacts['selected_table'].relative_to(output.parent)}">Selected native-unit table (CSV)</a></li>
-<li><a href="{artifacts['all_table'].relative_to(output.parent)}">Complete report table (CSV)</a></li>
-<li><a href="{artifacts['profile_pdf'].relative_to(output.parent)}">Main profile (vector PDF)</a></li>
-<li><a href="{artifacts['matrix_pdf'].relative_to(output.parent)}">Conditional matrix (vector PDF)</a></li></ul>
+<ul><li><a href="{artifacts["selected_table"].relative_to(output.parent)}">Selected native-unit table (CSV)</a></li>
+<li><a href="{artifacts["all_table"].relative_to(output.parent)}">Complete report table (CSV)</a></li>
+<li><a href="{artifacts["profile_pdf"].relative_to(output.parent)}">Main profile (vector PDF)</a></li>
+<li><a href="{artifacts["matrix_pdf"].relative_to(output.parent)}">Conditional matrix (vector PDF)</a></li></ul>
 <p>Frozen configuration hash: <code>{source_hash}</code>.</p>
 </body></html>"""
     output.write_text(document, encoding="utf-8")
@@ -703,9 +675,7 @@ def render_paper_bundle(
         spec,
         appendix / "figure_A1_conditional_gap_matrix",
     )
-    selected_table = write_native_table(
-        report, spec, main / "table_1_native_metric_values.csv"
-    )
+    selected_table = write_native_table(report, spec, main / "table_1_native_metric_values.csv")
     all_table = write_native_table(
         report,
         spec,

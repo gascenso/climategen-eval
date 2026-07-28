@@ -41,10 +41,18 @@ class MetricKind(str, Enum):
     MATRIX = "matrix"
 
 
-class DetectionStatus(str, Enum):
-    NO_DEPARTURE_DETECTED = "NO_DEPARTURE_DETECTED"
-    DEPARTURE_DETECTED = "DEPARTURE_DETECTED"
+class ReferenceStatus(str, Enum):
+    WITHIN_REFERENCE_RANGE = "WITHIN_REFERENCE_RANGE"
+    ABOVE_REFERENCE_RANGE = "ABOVE_REFERENCE_RANGE"
+    REFERENCE_UNRESOLVED = "REFERENCE_UNRESOLVED"
     NOT_EVALUATED = "NOT_EVALUATED"
+
+
+class ControlStatus(str, Enum):
+    CONTROL_VALIDATED = "CONTROL_VALIDATED"
+    RESPONSIVE_BELOW_REFERENCE_RANGE = "RESPONSIVE_BELOW_REFERENCE_RANGE"
+    CONTROL_FAILED = "CONTROL_FAILED"
+    CONTROL_NOT_REGISTERED = "CONTROL_NOT_REGISTERED"
 
 
 ArrayTransform = Callable[[np.ndarray], np.ndarray]
@@ -80,9 +88,7 @@ class FunctionalSpec:
     def transform(self, fields: np.ndarray) -> np.ndarray:
         values = np.asarray(self.function(fields), dtype=np.float64)
         if values.ndim != 1 or values.shape[0] != fields.shape[0]:
-            raise ValueError(
-                f"Functional {self.id!r} must return shape (N,), got {values.shape}."
-            )
+            raise ValueError(f"Functional {self.id!r} must return shape (N,), got {values.shape}.")
         if not np.all(np.isfinite(values)):
             raise ValueError(f"Functional {self.id!r} returned non-finite values.")
         if self.support is not None:
@@ -129,9 +135,7 @@ class MetricSpec:
             "admissibility",
         }
         if self.pillar not in allowed_pillars:
-            raise ValueError(
-                f"Metric {self.id!r} has unknown report pillar {self.pillar!r}."
-            )
+            raise ValueError(f"Metric {self.id!r} has unknown report pillar {self.pillar!r}.")
         if self.kind is MetricKind.FUNCTIONAL_W1 and self.functional is None:
             raise ValueError("functional_w1 metrics must retain their FunctionalSpec.")
 
@@ -144,17 +148,14 @@ class EvaluationConfig:
     n_resamples: int = 200
     diagnostic_resamples: int | None = None
     diagnostic_resamples_by_metric: Mapping[str, int] = field(default_factory=dict)
-    sensitivity_resamples: int = 100
-    alpha: float = 0.05
-    confidence: float = 0.95
+    reference_quantile: float = 0.95
+    comparison_interval: float = 0.95
+    summary_bootstrap_resamples: int = 1000
     estimand: SamplingEstimand | str = SamplingEstimand.BLOCK_BALANCED
     seed: int = 1789
     min_blocks_per_half: int = 10
     warn_blocks_per_half: int = 30
-    shift_power: float = 0.80
-    shift_grid_size: int = 33
     reference_stability_threshold: float = 0.25
-    simultaneous_family: tuple[str, ...] = ()
     max_materialize_bytes: int | None = None
     transform_batch_size: int = 128
     include_partitions: bool = True
@@ -176,52 +177,32 @@ class EvaluationConfig:
             str(metric_id): int(value)
             for metric_id, value in self.diagnostic_resamples_by_metric.items()
         }
-        if any(not metric_id or any(char.isspace() for char in metric_id) for metric_id in diagnostic_overrides):
-            raise ValueError(
-                "diagnostic_resamples_by_metric keys must be metric identifiers."
-            )
         if any(
-            value < 20 or value > self.n_resamples
-            for value in diagnostic_overrides.values()
+            not metric_id or any(char.isspace() for char in metric_id)
+            for metric_id in diagnostic_overrides
         ):
-            raise ValueError(
-                "Per-metric diagnostic resamples must be between 20 and n_resamples."
-            )
+            raise ValueError("diagnostic_resamples_by_metric keys must be metric identifiers.")
+        if any(value < 20 or value > self.n_resamples for value in diagnostic_overrides.values()):
+            raise ValueError("Per-metric diagnostic resamples must be between 20 and n_resamples.")
         object.__setattr__(
             self,
             "diagnostic_resamples_by_metric",
             diagnostic_overrides,
         )
-        if self.sensitivity_resamples < 20:
-            raise ValueError("sensitivity_resamples must be at least 20.")
-        if not 0 < self.alpha < 0.5:
-            raise ValueError("alpha must be between 0 and 0.5.")
-        if not 0.5 < self.confidence < 1:
-            raise ValueError("confidence must be between 0.5 and 1.")
-        if not np.isclose(self.confidence, 1.0 - self.alpha):
-            raise ValueError("confidence must equal 1 - alpha for one coherent report level.")
+        if not 0.5 < self.reference_quantile < 1:
+            raise ValueError("reference_quantile must be between 0.5 and 1.")
+        if not 0.5 < self.comparison_interval < 1:
+            raise ValueError("comparison_interval must be between 0.5 and 1.")
+        if self.summary_bootstrap_resamples < 200:
+            raise ValueError("summary_bootstrap_resamples must be at least 200.")
         if self.min_blocks_per_half < 2:
             raise ValueError("min_blocks_per_half must be at least two.")
         if self.warn_blocks_per_half < self.min_blocks_per_half:
             raise ValueError("warn_blocks_per_half cannot be below the hard minimum.")
-        if not 0.5 < self.shift_power < 1:
-            raise ValueError("shift_power must be between 0.5 and 1.")
-        if self.shift_grid_size < 8:
-            raise ValueError("shift_grid_size must be at least eight.")
         if not 0 < self.reference_stability_threshold <= 1:
             raise ValueError("reference_stability_threshold must be in (0, 1].")
         if self.transform_batch_size < 1:
             raise ValueError("transform_batch_size must be positive.")
-        if isinstance(self.simultaneous_family, str):
-            raise ValueError(
-                "simultaneous_family must be a list/tuple of exact 'stratum:metric' keys."
-            )
-        family = tuple(str(value) for value in self.simultaneous_family)
-        if len(family) != len(set(family)) or any(":" not in value for value in family):
-            raise ValueError(
-                "simultaneous_family must contain unique exact 'stratum:metric' keys."
-            )
-        object.__setattr__(self, "simultaneous_family", family)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -237,33 +218,40 @@ class CellReport:
     pillar: str
     units: str
     estimate: float | None
-    ci_low: float | None
-    ci_high: float | None
+    comparison_low: float | None
+    comparison_high: float | None
     reference_q025: float | None
     reference_q50: float | None
     reference_q95: float | None
     reference_q975: float | None
-    reference_detection_boundary: float | None
-    reference_position: float | None
-    reference_position_low: float | None
-    reference_position_high: float | None
-    shift_resolution: float | None
-    detection_status: DetectionStatus
+    reference_q50_mc_low: float | None
+    reference_q50_mc_high: float | None
+    reference_q95_mc_low: float | None
+    reference_q95_mc_high: float | None
+    reference_upper_boundary: float | None
+    reference_upper_mc_low: float | None
+    reference_upper_mc_high: float | None
+    reference_percentile: float | None
+    reference_gap: float | None
+    comparison_gap_low: float | None
+    comparison_gap_high: float | None
+    reference_gap_mc_low: float | None
+    reference_gap_mc_high: float | None
+    reference_status: ReferenceStatus
+    control_status: ControlStatus
     n_eval: int
     n_real: int
     n_generated: int
     n_blocks: int
     estimand: SamplingEstimand
     direction: str | None = None
-    simultaneous_boundary: float | None = None
-    simultaneous_detection_status: DetectionStatus = DetectionStatus.NOT_EVALUATED
     warnings: tuple[str, ...] = ()
     provenance: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
-        payload["detection_status"] = self.detection_status.value
-        payload["simultaneous_detection_status"] = self.simultaneous_detection_status.value
+        payload["reference_status"] = self.reference_status.value
+        payload["control_status"] = self.control_status.value
         payload["estimand"] = self.estimand.value
         payload["warnings"] = list(self.warnings)
         return _jsonable(payload)

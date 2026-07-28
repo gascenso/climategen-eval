@@ -1,22 +1,20 @@
-# GAUGE implementation and release status
+# GAUGE v0.2 implementation and release status
 
-This file distinguishes implemented infrastructure from scientific work that
-cannot be completed honestly by code alone.
+This file separates work implemented in the repository from gates that require
+independent people or external deposition.
 
-| Milestone | Implemented now | Remaining release gate |
+| Workstream | Implemented | Remaining gate |
 |---|---|---|
-| 1. Scientific specification | explicit estimands, reference-aware conclusions, extensible scope, preregistration templates, card mockup, and frozen TC methods | independent scientific/statistical review; record any amendments before final outcomes |
-| 2. Statistical validation | whole-block matched reference, block/frame estimands, matched model/reference resampling intervals, Bonferroni simultaneous reference boundaries, and a passed 300-trial calibration/power artifact covering balanced, unequal, 22-block C5-like, and 20-block designs, crossing CDFs, tails, variance changes, train/test shift, familywise behavior, and fail-closed thin strata | independent statistical review before archival v1.0 |
-| 3. Package foundation | `gauge-climate` wheel, `gauge_climate` API, NumPy/memmap, optional xarray/Dask, strict split/sample-id/metadata/materialization checks, validate/run/report CLI, clean-wheel synthetic run in CI | clean-room installation by an independent user |
-| 4. Metrics/features/controls | scalar W1, MMD², density, coverage, diversity, entry-wise dependence, admissibility, train-fit EOF features, localized copying, perturbation sweeps, TC radial adapters, frozen TC control runner, passed versioned response/copyist artifact | independent review of the TC control artifact and its reported resolution limits |
-| 5. Reporting | versioned JSON schemas, grouped HTML card, native-unit/reference fields, reusable paper-bundle API, all-class/large-K conditional profile policy, positive-control overlay, appendix matrix, lossless CSV, browser landing page, and complete TC manuscript bundle | optional post-paper usability study and one-call paper-bundle CLI integration |
-| 6. TC case study | six-class USA_WIND/1-minute contract, corrected train/validation/test archives, selected baseline_ztsnr bank, frozen analysis choices, passed training-only controls and generic statistical gate, clean final report, explicit global-mixture interpretation, label-matched memorization, stable native-class headline profile, explicit thin-C5 drill-down, and regenerated main/appendix evidence | independent audit and permission-cleared external data/sample-bank archive |
-| 7. Survey | source-XLSX export, canonical CSV/codebook, generated counts, checksums, blinded deterministic 20% sample, agreement tool, provisional plots | freeze searches; reconcile corpus/four candidate rows; independent recode; full load-bearing verification; baseline-strength coding; flow diagram |
-| 8. Release | BSD-3, CI matrix, wheel test, changelog, citation/contribution files, statistical artifact, fail-closed release audit, checksummed final report, and 56-artifact manuscript bundle | archive DOI/PIDs, independent review, and independent clean-room TC reproduction |
+| Scientific contract | empirical event-disjoint real reference, descriptive gap, schema-v3 statuses, narrow unpaired-field scope, analysis-protocol template | independent statistical review |
+| Statistical validation | scalar, curve, PSD, and feature-metric simulations; balanced/unequal/thin blocks; correct versus frame-IID blocks; Monte Carlo and finite-archive stability checks | independent review of designs and acceptance criteria |
+| Package | `gauge-climate` v0.2.0, NumPy/memmap core, optional xarray, validate/run/report commands, v2 read migration | independent clean-environment user reproduction |
+| Controls | typed registry, metric-specific field and feature perturbations, invariance controls, preprocessing-saturation audit, localized copying and copied-fraction curve | independent scientific review of TC controls |
+| TC demonstration | USA_WIND one-minute labels, storm-disjoint partitions, six native conditions, schema-v3 evaluation, continuous-wind and feature-space robustness audits | permission-cleared archive and external reproduction |
+| Paper bundle | generated main figures, appendix diagnostics, machine-readable tables, provenance manifest | final manuscript synchronization |
+| Literature review | integration points retained | user-owned search/coding/reliability reconstruction |
+| Archival release | local checksums and manifests | permanent code/data identifiers |
 
-The local scientific/software gates are complete:
-`python scripts/audit_release_gates.py --local-only` passes. At the current
-freeze, the full audit fails only because the large TC artifacts have not yet
-received permission-cleared archive locations and persistent identifiers. Do
-not flip status flags or replace `PENDING` values merely to make the audit
-green.
+GAUGE v0.2 remains a method-development release. The TC archive has already
+informed framework development, so the case study is described transparently
+as a clean rerun under a versioned analysis protocol, not as an untouched
+confirmatory evaluation.

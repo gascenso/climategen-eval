@@ -1,23 +1,31 @@
 # Troubleshooting
 
-- **Train/test block leakage:** all frames from a physical event must remain on
-  one side of the split. For TC data, the block is the storm, not the frame or
-  intensity label.
-- **Functional outside support:** correct or justify the physical support before
-  running. GAUGE refuses to clip values silently.
-- **No detection result for a thin stratum:** report the block and sample counts,
-  retain the native class in the appendix, and use only a scientifically
-  predeclared aggregate—never merge after inspecting model outcomes.
-- **Lazy archive exceeds memory:** lower `transform_batch_size`; for train-fit
-  EOF features, also lower the preregistered `max_fit_samples` or feature-space
-  batch size. `max_materialize_bytes` guards explicit `Dataset.as_numpy()` calls;
-  the evaluation engine and TC sample-bank adapter process fields in batches.
-- **Secondary metrics are slow:** freeze a smaller `diagnostic_resamples` budget
-  and, for quadratic feature-set metrics, a matched `max_samples_per_draw` cap.
-  Do not reduce `n_resamples` for functional W1 or a registered simultaneous
-  family after seeing outcomes; all effective counts must remain in provenance.
-- **Positive control fails:** do not interpret that metric. Revisit preprocessing,
-  severity, feature fitting, and valid input domain.
-- **Different labels in real/generated data:** conditional support must match.
-  Missing classes are a substantive coverage failure that should be handled by a
-  predeclared unconditional or explicit missing-class analysis, not silently.
+- **Train/test event leakage:** all fields from one physical event must remain on
+  one side of the split. For the TC adapter, the event block is the storm, not a
+  frame or intensity category.
+- **Missing or wrong block identifiers:** GAUGE cannot infer the scientifically
+  independent unit. Supply storm, day, ensemble-member, or other event IDs that
+  match the sampling process. The validation examples show how frame-IID IDs
+  produce misleadingly narrow references.
+- **Functional outside its declared support:** correct the implementation or
+  justify the support. GAUGE does not silently clip generic inputs.
+- **`NOT_EVALUATED` for a thin condition:** report the field and event counts.
+  Do not merge conditions after inspecting outcomes.
+- **`REFERENCE_UNRESOLVED`:** increase the real-reference repetition budget if
+  feasible. If few independent events are the limiting factor, retain the
+  warning; more resampling cannot create information absent from the archive.
+- **Lazy archive exceeds memory:** lower `transform_batch_size`. For
+  training-fitted EOF features, lower the declared fit sample count or feature
+  batch size if scientifically acceptable and record the change.
+- **Secondary metrics are slow:** use a declared matched sample cap for
+  quadratic feature-set metrics. Do not change it after viewing model results
+  without recording an analysis amendment.
+- **Control fails:** keep the raw metric visible but do not make an affirmative
+  interpretation from it. Revisit preprocessing, control construction, and the
+  metric's valid input domain.
+- **Control responds but remains below the reference range:** report
+  `RESPONSIVE_BELOW_REFERENCE_RANGE`. The metric has the expected ordering but
+  lacks resolution for the registered severity range at this design.
+- **Real and generated labels differ:** native conditional support must match.
+  The as-provided global row is a composition audit when label proportions
+  differ.

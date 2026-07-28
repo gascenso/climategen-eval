@@ -1,79 +1,101 @@
 # Statistical contract and assumptions
 
-GAUGE makes one inferential claim: whether a registered discrepancy exceeds
-the finite-sample variability observed between dependence-matched real samples
-at the declared evaluation size. It does not infer a universal application
-equivalence threshold.
+GAUGE v0.2 provides empirical reference calibration for unpaired generated
+fields. It does not provide a hypothesis test, p-value, population-equivalence
+claim, physical tolerance, or aggregate model score.
 
-## Pointwise detection
+## Real-reference distribution
 
-For each metric and stratum, repeated whole-block splits create a
-pseudo-generated sample and a reference-real sample under the same estimand and
-`N_eval` used for the model comparison. The model statistic is the median across
-matched model/reference draws. Detection uses the one-sided `(1 - alpha)`
-real-reference boundary.
+For each registered metric and condition, GAUGE repeatedly divides the eligible
+held-out real dependence blocks into event-disjoint halves. One half supplies a
+pseudo-generated real sample and the other supplies the comparison sample.
+Both use the declared evaluation size and weighting estimand. The default
+block-balanced estimand samples a block uniformly and then a frame within that
+block; the optional frame-weighted estimand samples frames directly.
 
-- `DEPARTURE_DETECTED`: the model statistic exceeds the boundary.
-- `NO_DEPARTURE_DETECTED`: it does not.
-- `NOT_EVALUATED`: the design is invalid, too thin, unstable, or failed a
-  registered sensitivity control.
+The same comparison half is used for the corresponding fixed-bank
+generated-versus-real discrepancy. When the requested evaluation size equals
+the generated-bank size, every repetition uses the complete generated bank.
+When it is smaller, generated samples are drawn without replacement.
 
-The procedure is conservative in the shipped Monte Carlo regimes; it is not
-claimed to attain `alpha` exactly. Non-detection is not evidence of equality,
-physical realism, or application acceptability.
+The resulting real-reference distribution describes finite-archive variation
+under this exact design. It is not a noise floor, oracle, Bayes error, or sample
+from a formal exchangeable null distribution.
 
-## Raw discrepancy intervals
+## Reference gap and range labels
 
-The printed raw interval is the central `(1 - alpha)` interval of the matched
-model-versus-reference resampling distribution. It quantifies variation induced
-by whole-block real resampling, generated subsampling when `N_eval` is smaller
-than the supplied bank, and the declared finite evaluation design. When
-`N_eval` equals the bank size, the generated bank is intentionally fixed across
-draws: the interval is conditional on that bank and does not estimate
-generator-population uncertainty. It is not presented as a regular
-population-W1 equivalence interval.
+Let \(D_M\) be the median generated-versus-real discrepancy over admissible
+reference repetitions, and let \(q_{50}^{RR}\) and \(q_{p}^{RR}\) be the median
+and selected upper percentile of the real-reference discrepancies. The default
+is \(p=0.95\), for which GAUGE reports
 
-For scalar functionals, W1 and its interval remain in the functional’s native
-units. Curve, feature, rate, and dependence metrics retain their registered
-scales. The same resampling plan backs the raw interval, reference envelope,
-and gap uncertainty.
+\[
+g = \frac{D_M-q_{50}^{RR}}{q_{95}^{RR}-q_{50}^{RR}}.
+\]
 
-## Simultaneous claims
+Thus, gap zero marks the typical real-reference discrepancy and gap one marks
+its selected upper percentile (the 95th percentile by default). This common
+visual coordinate is conditional on the
+archive, sample size, block definition, condition, metric, and weighting rule.
+It cannot be averaged across metrics or interpreted as physical severity.
 
-Joint reference claims use Bonferroni-adjusted cell-wise order-statistic
-boundaries. This controls a registered family without assuming that conditional
-strata share a common block-resampling coupling. A family of `M` cells requires
-at least `M / alpha - 1` reference resamples to resolve the adjusted empirical
-tail; otherwise GAUGE withholds the simultaneous conclusion.
+- `WITHIN_REFERENCE_RANGE`: \(D_M \le q_{p}^{RR}\).
+- `ABOVE_REFERENCE_RANGE`: \(D_M > q_{p}^{RR}\).
+- `REFERENCE_UNRESOLVED`: the reference width or numerical stability is
+  inadequate.
+- `NOT_EVALUATED`: the metric or design is invalid for the supplied data.
 
-The exact `stratum:metric` keys must be preregistered in
-`simultaneous_family`; the empty default makes no joint claim. A less
-conservative max-statistic method is valid only when every cell genuinely shares
-resampling units and draws.
+These labels are descriptive. GAUGE makes no joint verdict across a collection
+of metric-by-condition results and prohibits counting range labels as though
+they were independent significance tests.
 
-## Resampling and conditioning contract
+## Two distinct uncertainty summaries
 
-Functional W1 cells and all cells in a simultaneous family use `n_resamples`.
-Secondary diagnostics may use the smaller `diagnostic_resamples` budget.
-Predeclared headline diagnostics may receive a larger
-`diagnostic_resamples_by_metric` budget without being added to a simultaneous
-inferential family. The effective count is reported per cell. A cell whose
-reference boundary fails the declared split-half stability check retains its raw
-estimate and gap for audit but receives `NOT_EVALUATED`, not a categorical
-detection conclusion. Quadratic feature metrics may use a declared matched
-sample cap. Complete reference plans are deterministic from the inputs,
-configuration, and seed; reports retain a SHA-256 digest and preview.
+The native-unit comparison range is the central configured interval of the
+generated-versus-real discrepancies obtained across admissible real subsets.
+It includes variation from real-block partitioning and event/frame sampling,
+plus generated subsampling when the supplied bank is larger than the declared
+evaluation size. It does not include generator retraining, a newly generated
+bank, or an unobserved population of storms.
 
-For a conditional generator, the condition distribution is part of the target.
-An as-provided global comparison with unequal label proportions is a composition
-test, not a conditional-fidelity test. A global fidelity claim requires a
-predeclared common mixture; otherwise the matched conditional rows carry the
-claim.
+Separately, GAUGE uses paired bootstrap resampling of the stored
+real-reference/model-reference repetitions to report conditional Monte Carlo
+intervals for \(q_{50}^{RR}\), \(q_{95}^{RR}\), and the central gap. These
+intervals quantify numerical precision conditional on the fixed archive and
+generated bank. Archive sensitivity requires a delete-block or comparable
+case-specific analysis and is not hidden inside the Monte Carlo interval.
+When a non-default reference quantile is selected, the report retains the fixed
+\(q_{95}^{RR}\) interval for comparability and separately records the interval
+for \(q_{p}^{RR}\), which is the boundary used in the gap.
 
-## Sensitivity resolution
+## Metric controls
 
-For scalar functionals, GAUGE reports the smallest evaluated uniform
-native-unit shift detected with the registered target probability. Other
-metrics use predeclared corruption families. These are design-sensitivity
-diagnostics: they establish what failures a metric can detect at this `N`, not
-which discrepancies are universally acceptable.
+Every built-in paper-facing metric declares sensitivity or invariance controls.
+Controls are derived from training data or explicitly reserved real blocks and
+never from held-out model outcomes.
+Feature-space controls reuse the exact training-fitted representation,
+standardisation, and kernel parameters used by the reported feature metric.
+
+- `CONTROL_VALIDATED`: expected sensitivity and invariance contracts hold, and
+  a registered positive control reaches the real-reference range.
+- `RESPONSIVE_BELOW_REFERENCE_RANGE`: the metric responds monotonically, but
+  the registered severity range does not reach the reference marker.
+- `CONTROL_FAILED`: an expected response or invariance fails.
+- `CONTROL_NOT_REGISTERED`: no applicable control was supplied.
+
+Raw discrepancies and gaps remain visible after a control failure, but GAUGE
+withholds affirmative interpretation. Controls describe what the evaluation can
+resolve; their severities are not universal acceptability thresholds.
+
+## Scope and responsibility
+
+Version 0.2 targets unpaired sample-to-population evaluation of independent
+single- or multichannel two-dimensional gridded fields. Paired forecasts,
+downscaling, trajectories, temporal coherence, and coupled-variable constraints
+require complementary registered verification.
+
+Dependence blocks must represent the scientific sampling unit. GAUGE checks
+overlap, missing identifiers, and minimum counts, but cannot infer whether a
+syntactically valid identifier is scientifically appropriate. Validation
+therefore demonstrates how incorrectly treating dependent frames as independent
+changes the reference distribution.

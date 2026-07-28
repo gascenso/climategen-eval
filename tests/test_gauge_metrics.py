@@ -19,7 +19,7 @@ from gauge_climate.metrics import (
     density_metric,
     diversity_metric,
     functional_w1,
-    mmd2_unbiased,
+    mmd2_biased,
     spearman_pair_metrics,
     spearman_matrix_mae,
 )
@@ -29,9 +29,9 @@ from gauge_climate.types import FunctionalSpec
 def test_mmd_identical_and_shifted():
     rng = np.random.default_rng(8)
     x = rng.normal(size=(100, 3))
-    same = mmd2_unbiased(x, x.copy(), bandwidth=1.0)
-    shifted = mmd2_unbiased(x + 2.0, x, bandwidth=1.0)
-    assert same < 0.01
+    same = mmd2_biased(x, x.copy(), bandwidth=1.0)
+    shifted = mmd2_biased(x + 2.0, x, bandwidth=1.0)
+    assert same == 0.0
     assert shifted > same
 
 
@@ -82,8 +82,7 @@ def test_train_fitted_features_are_deterministic():
     }
     assert all(metric.provenance["fit_source"] == "train" for metric in registered)
     assert all(
-        metric.provenance["reference_draw_max_samples_per_side"] == 256
-        for metric in registered
+        metric.provenance["reference_draw_max_samples_per_side"] == 256 for metric in registered
     )
 
 
@@ -102,8 +101,7 @@ def test_registered_feature_metrics_accept_cached_training_features_and_cap_draw
     real = train_features[20:70]
     assert all(np.isfinite(metric.estimator(generated, real)) for metric in registered)
     assert all(
-        metric.provenance["reference_draw_max_samples_per_side"] == 16
-        for metric in registered
+        metric.provenance["reference_draw_max_samples_per_side"] == 16 for metric in registered
     )
 
 
@@ -171,7 +169,7 @@ def test_copyist_positive_control_triggers_localized_test():
         min_real_blocks=3,
         seed=7,
     )
-    assert result["status"] == "COPYING_DETECTED"
+    assert result["status"] == "LOCALIZED_CLOSENESS_OBSERVED"
 
 
 def test_copying_test_matches_queries_within_supplied_strata():
@@ -199,7 +197,7 @@ def test_copying_test_matches_queries_within_supplied_strata():
     assert result["n_supported_cells"] == 2
     assert {item["stratum"] for item in result["regions"]} == {"common", "rare"}
     common = next(item for item in result["regions"] if item["stratum"] == "common")
-    assert common["status"] == "COPYING_DETECTED"
+    assert common["status"] == "CLOSER_TO_TRAINING"
 
 
 def test_localized_test_reports_clear_farther_from_training_generation():
@@ -221,6 +219,26 @@ def test_localized_test_reports_clear_farther_from_training_generation():
     assert result["status"] == "FARTHER_FROM_TRAINING"
 
 
+def test_localized_test_reports_insufficient_support_without_power_language():
+    rng = np.random.default_rng(34)
+    train = rng.normal(size=(40, 3))
+    real = rng.normal(size=(8, 3))
+    generated = rng.normal(size=(8, 3))
+    blocks = np.repeat(np.arange(4), 2)
+    result = localized_copying_test(
+        train_features=train,
+        real_features=real,
+        generated_features=generated,
+        real_blocks=blocks,
+        n_regions=2,
+        n_resamples=20,
+        min_real_blocks=5,
+        seed=4,
+    )
+    assert result["status"] == "INSUFFICIENT_LOCAL_SUPPORT"
+    assert result["n_supported_cells"] == 0
+
+
 def test_predeclared_sensitivity_lane_has_monotone_response():
     source = np.zeros((20, 2, 2))
     reference = np.zeros((20, 2, 2))
@@ -228,9 +246,7 @@ def test_predeclared_sensitivity_lane_has_monotone_response():
         "mean", lambda fields: fields.mean(axis=(1, 2)), "K", "mean field value"
     )
     metric = functional_w1(functional)
-    lane = additive_shift_lane(
-        severities=(0.0, 0.5, 1.0), expected_metrics=(metric.id,)
-    )
+    lane = additive_shift_lane(severities=(0.0, 0.5, 1.0), expected_metrics=(metric.id,))
     result = run_perturbation_sweep(
         lane,
         source_fields=source,
@@ -240,6 +256,7 @@ def test_predeclared_sensitivity_lane_has_monotone_response():
     )
     assert result["passed"] is True
     assert result["metrics"][metric.id]["values"] == [0.0, 0.5, 1.0]
+    assert result["metrics"][metric.id]["first_reference_crossing_severity"] == 0.5
 
 
 def test_sweep_separates_response_validity_from_detection_resolution():
@@ -248,9 +265,7 @@ def test_sweep_separates_response_validity_from_detection_resolution():
         "mean", lambda fields: fields.mean(axis=(1, 2)), "K", "mean field value"
     )
     metric = functional_w1(functional)
-    lane = additive_shift_lane(
-        severities=(0.0, 0.1, 0.2), expected_metrics=(metric.id,)
-    )
+    lane = additive_shift_lane(severities=(0.0, 0.1, 0.2), expected_metrics=(metric.id,))
     result = run_perturbation_sweep(
         lane,
         source_fields=source,
@@ -261,7 +276,8 @@ def test_sweep_separates_response_validity_from_detection_resolution():
     cell = result["metrics"][metric.id]
     assert result["passed"] is True
     assert cell["response_contract_passed"] is True
-    assert cell["resolution_status"] == "BELOW_REFERENCE_AT_MAX_SEVERITY"
+    assert cell["first_reference_crossing_severity"] is None
+    assert cell["resolution_status"] == "REMAINS_WITHIN_REFERENCE_AT_MAX_SEVERITY"
 
 
 def test_phase_shuffle_preserves_each_discrete_power_spectrum():
@@ -288,12 +304,8 @@ def test_phase_shuffle_fields_preserves_order_and_power():
 def test_spatial_lanes_are_identity_at_zero_and_paired_across_severity():
     fields = np.zeros((3, 10, 10), dtype=np.float32)
     fields[:, 3:7, 4:6] = 1.0
-    blur = gaussian_blur_lane(
-        severities=(0.0, 0.5, 1.0), expected_metrics=("metric",)
-    )
-    jitter = center_jitter_lane(
-        severities=(0.0, 1.0, 2.0), expected_metrics=("metric",)
-    )
+    blur = gaussian_blur_lane(severities=(0.0, 0.5, 1.0), expected_metrics=("metric",))
+    jitter = center_jitter_lane(severities=(0.0, 1.0, 2.0), expected_metrics=("metric",))
     assert np.array_equal(blur.apply(fields, 0.0, 7), fields)
     assert np.array_equal(jitter.apply(fields, 0.0, 7), fields)
     assert not np.array_equal(blur.apply(fields, 1.0, 7), fields)
