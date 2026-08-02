@@ -111,10 +111,8 @@ The tropical-cyclone case study is tracked separately under
 [`case_studies/tropical_cyclone_bt`](case_studies/tropical_cyclone_bt).
 Its versioned training-only controls run with
 `python case_studies/tropical_cyclone_bt/run_track1_controls.py`. The frozen
-machine report is in
-[`final_results`](case_studies/tropical_cyclone_bt/final_results); the concise
-results-section and appendix bundle an ordinary GAUGE user would report is in
-[`paper_results`](case_studies/tropical_cyclone_bt/paper_results).
+machine report and complete HTML evaluation card are in
+[`final_results`](case_studies/tropical_cyclone_bt/final_results).
 
 For conditional generators, GAUGE treats the condition distribution as part of
 the estimand. If real and generated label proportions differ, global rows are
@@ -126,8 +124,7 @@ claims must come from matched, registered strata or a declared mixture rule.
 This repository is pre-1.0. The empirical-calibration engine and TC evidence
 have been regenerated and frozen for v0.2. Independent
 statistical review, permission-cleared data deposition, and clean-room TC
-reproduction remain archival release gates; the survey is a separate
-workstream. See [CHANGELOG.md](CHANGELOG.md).
+reproduction remain archival release gates. See [CHANGELOG.md](CHANGELOG.md).
 The exact implemented-versus-pending matrix is in
 [docs/development_status.md](docs/development_status.md).
 

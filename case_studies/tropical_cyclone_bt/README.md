@@ -86,26 +86,16 @@ The continuous-wind audit estimates within-class functional slopes without an
 equivalence verdict. The feature audit is explicitly post hoc and spans EOF fit
 sizes 256/512/1024, ranks 10/20/40, and low-pass EOF scales of 16/32/64 km.
 
-## Paper-facing bundle
+## Frozen example report
 
-After the schema-v3 report and both secondary audits exist:
+After the schema-v3 report exists, freeze its machine-readable and HTML forms
+with:
 
 ```bash
 python scripts/freeze_tc_v02_results.py
-
-PYTHONPATH=src python scripts/render_tc_track1_paper.py \
-  case_studies/tropical_cyclone_bt/final_results/evaluation.json \
-  --config case_studies/tropical_cyclone_bt/track1_config.template.yaml \
-  --controls case_studies/tropical_cyclone_bt/control_results/sensitivity_lanes.json \
-  --output-dir case_studies/tropical_cyclone_bt/paper_results
-
-python scripts/build_submission_inventory.py
 ```
 
-The bundle contains the six-class reference-gap profile, native-unit table,
-Category 5 distributions and curves, every class-by-metric result, all control
-curves, reference stability, continuous-wind response, feature robustness,
-copy-fraction resolution, preprocessing, partition, and provenance audits.
-
-The literature-review reconstruction and permission-cleared permanent
-real/generated data deposition are separate user-owned submission gates.
+The checked-in [`final_results`](final_results) directory contains the frozen
+evaluation report, complete browser-readable card, and checksum manifest. The
+continuous-wind and feature-space audit commands above produce their own JSON,
+CSV, and figure outputs from the same declared partitions.

@@ -1,8 +1,7 @@
 # Frozen TC GAUGE v0.2 report
 
 This directory contains the canonical schema-v3 TC evaluation and its complete
-human-readable card. Paper-facing figures, tables, robustness analyses, and
-checksums are in [`../paper_results/`](../paper_results/).
+human-readable card, together with checksums sufficient to verify both files.
 
 The report follows the empirical reference-calibration contract. Every result
 records:

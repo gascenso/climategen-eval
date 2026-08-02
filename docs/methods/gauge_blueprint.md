@@ -363,6 +363,5 @@ It must not be described as:
 - evidence that a model is “best” merely because its gap lies within the
   empirical reference range.
 
-The technical release remains blocked on the user-owned literature-review
-reconstruction and permanent code/data deposition, plus independent review and
-clean-room reproduction.
+An archival release still requires permanent code/data deposition, independent
+review, and clean-room reproduction.
