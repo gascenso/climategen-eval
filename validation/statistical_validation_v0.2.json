@@ -26,6 +26,18 @@
           0.012642971224546034
         ]
       },
+      "same_population_gap_distribution": {
+        "q05": -0.32835766363007296,
+        "q50": -0.10813313564114302,
+        "q95": 0.35458964106620605,
+        "minimum": -0.48765813198143493,
+        "maximum": 0.8253852067142021
+      },
+      "same_population_reference_percentile_distribution": {
+        "q05": 0.18975,
+        "q50": 0.3975,
+        "q95": 0.7512500000000003
+      },
       "location_shift": [
         {
           "effect_sd": 0.0,
@@ -140,6 +152,18 @@
           8.673617379884035e-19,
           0.012642971224546034
         ]
+      },
+      "same_population_gap_distribution": {
+        "q05": -0.40562346848876585,
+        "q50": -0.22043751461999525,
+        "q95": 0.18595776041028933,
+        "minimum": -0.5103983623266668,
+        "maximum": 0.557621875870682
+      },
+      "same_population_reference_percentile_distribution": {
+        "q05": 0.12,
+        "q50": 0.27,
+        "q95": 0.6307500000000001
       },
       "location_shift": [
         {
@@ -256,6 +280,18 @@
           0.012642971224546034
         ]
       },
+      "same_population_gap_distribution": {
+        "q05": -0.4647706993168702,
+        "q50": -0.2972182293752457,
+        "q95": 0.0861869148937671,
+        "minimum": -0.6116978817457952,
+        "maximum": 0.8384150328822432
+      },
+      "same_population_reference_percentile_distribution": {
+        "q05": 0.065,
+        "q50": 0.19,
+        "q95": 0.5605000000000001
+      },
       "location_shift": [
         {
           "effect_sd": 0.0,
@@ -370,6 +406,18 @@
           8.673617379884035e-19,
           0.012642971224546034
         ]
+      },
+      "same_population_gap_distribution": {
+        "q05": -0.40193614078409895,
+        "q50": -0.2160629595833428,
+        "q95": 0.18840320013619774,
+        "minimum": -0.5777974846530499,
+        "maximum": 0.8668048825623441
+      },
+      "same_population_reference_percentile_distribution": {
+        "q05": 0.115,
+        "q50": 0.28,
+        "q95": 0.6602500000000001
       },
       "location_shift": [
         {
@@ -486,6 +534,18 @@
           0.012642971224546034
         ]
       },
+      "same_population_gap_distribution": {
+        "q05": -0.5967352344618201,
+        "q50": -0.3388789591240735,
+        "q95": 0.17234261769534606,
+        "minimum": -0.7405877693519786,
+        "maximum": 0.7601238650833759
+      },
+      "same_population_reference_percentile_distribution": {
+        "q05": 0.04,
+        "q50": 0.16,
+        "q95": 0.6305000000000002
+      },
       "location_shift": [
         {
           "effect_sd": 0.0,
@@ -600,6 +660,18 @@
           8.673617379884035e-19,
           0.012642971224546034
         ]
+      },
+      "same_population_gap_distribution": {
+        "q05": -0.6335788145245261,
+        "q50": -0.3599610370801628,
+        "q95": 0.11319523831038882,
+        "minimum": -0.9744209499430496,
+        "maximum": 0.45213686396093955
+      },
+      "same_population_reference_percentile_distribution": {
+        "q05": 0.024750000000000008,
+        "q50": 0.15,
+        "q95": 0.61
       },
       "location_shift": [
         {
@@ -1645,6 +1717,7 @@
     "reference_plan_invariants": true,
     "vectorized_engine_parity": true,
     "same_population_crossing_upper_at_most_reference_tail": true,
+    "same_population_gap_q95_within_reference_range": true,
     "heavy_tail_and_multimodal_crossing_upper_at_most_reference_tail": true,
     "standard_shift_0.55_crossing_probability_lower_at_least_0.80": true,
     "thin_strata_have_lower_standard_shift_crossing_probability": true,

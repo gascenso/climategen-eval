@@ -17,6 +17,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
+from matplotlib.patches import Patch  # noqa: E402
 import numpy as np  # noqa: E402
 from scipy.ndimage import gaussian_filter  # noqa: E402
 from scipy.stats import spearmanr  # noqa: E402
@@ -254,8 +256,23 @@ def _trial(
 
         equal = regime_rng.normal(scale=marginal_sd, size=regime.n_eval)
         reference, model = _vectorized_w1(real, equal, plan)
+        reference_q50 = float(np.quantile(reference, 0.50))
+        reference_q95 = float(np.quantile(reference, 0.95))
+        model_median = float(np.median(model))
+        same_population_gap = reference_position(
+            model_median,
+            reference_q50,
+            reference_q95,
+        )
         node: dict[str, Any] = {
             "same_population": _crosses(reference, model),
+            "same_population_summary": {
+                "reference_q50": reference_q50,
+                "reference_q95": reference_q95,
+                "model_median": model_median,
+                "reference_percentile": float(np.mean(reference <= model_median)),
+                "reference_gap": same_population_gap,
+            },
             "shift": {},
             "alternatives": {},
         }
@@ -931,6 +948,25 @@ def _aggregate(
     for regime in REGIMES:
         nodes = [trial["regimes"][regime.id] for trial in trials]
         same_population_count = sum(bool(node["same_population"]) for node in nodes)
+        same_population_gaps = np.asarray(
+            [
+                float(node["same_population_summary"]["reference_gap"])
+                for node in nodes
+                if node["same_population_summary"]["reference_gap"] is not None
+            ],
+            dtype=float,
+        )
+        same_population_percentiles = np.asarray(
+            [
+                float(node["same_population_summary"]["reference_percentile"])
+                for node in nodes
+            ],
+            dtype=float,
+        )
+        if same_population_gaps.size != total:
+            raise RuntimeError(
+                f"Degenerate same-population reference gap in regime {regime.id!r}."
+            )
         shifts = []
         for effect in SHIFT_EFFECTS_SD:
             count = sum(bool(node["shift"][str(effect)]) for node in nodes)
@@ -955,6 +991,18 @@ def _aggregate(
                 total,
                 name="boundary_crossing_rate",
             ),
+            "same_population_gap_distribution": {
+                "q05": float(np.quantile(same_population_gaps, 0.05)),
+                "q50": float(np.quantile(same_population_gaps, 0.50)),
+                "q95": float(np.quantile(same_population_gaps, 0.95)),
+                "minimum": float(np.min(same_population_gaps)),
+                "maximum": float(np.max(same_population_gaps)),
+            },
+            "same_population_reference_percentile_distribution": {
+                "q05": float(np.quantile(same_population_percentiles, 0.05)),
+                "q50": float(np.quantile(same_population_percentiles, 0.50)),
+                "q95": float(np.quantile(same_population_percentiles, 0.95)),
+            },
             "location_shift": shifts,
             "alternatives": alternatives,
         }
@@ -964,6 +1012,10 @@ def _aggregate(
             regimes[regime.id]["same_population"]["boundary_crossing_rate"] <= 0.05
             and regimes[regime.id]["same_population"]["wilson_95"][1] <= 0.05
         )
+        for regime in REGIMES
+    }
+    same_population_gap_gates = {
+        regime.id: regimes[regime.id]["same_population_gap_distribution"]["q95"] <= 1.0
         for regime in REGIMES
     }
     shape_same_population = {
@@ -1023,6 +1075,9 @@ def _aggregate(
         <= 1e-12,
         "same_population_crossing_upper_at_most_reference_tail": all(
             same_population_gates.values()
+        ),
+        "same_population_gap_q95_within_reference_range": all(
+            same_population_gap_gates.values()
         ),
         "heavy_tail_and_multimodal_crossing_upper_at_most_reference_tail": all(
             shape_same_population_gates.values()
@@ -1090,67 +1145,108 @@ def _aggregate(
 
 def _validation_figure(result: dict[str, Any], path: Path) -> tuple[Path, Path]:
     regimes = result["regimes"]
-    colors = (
-        "#246a73",
-        "#3f7f83",
-        "#638b8f",
-        "#8da5a5",
-        "#d2764c",
-        "#a33b20",
-    )
-    markers = ("o", "s", "D", "^", "v", "P")
-    linestyles = ("-", "--", "-.", ":", "-", "--")
-    hatches = ("", "//", "\\\\", "xx", "..", "++")
     display_labels = {
-        "balanced_80_n80": "80 balanced events, N=80",
-        "balanced_80": "80 balanced independent events",
-        "balanced_80_n1000": "80 balanced events, N=1,000",
-        "unequal_80": "80 unequal independent events",
-        "c5_like_22": "22 independent events, N=1,000",
-        "minimum_20": "20 independent events",
+        "balanced_80_n80": "80 events, N=80",
+        "balanced_80": "80 events, N=240",
+        "balanced_80_n1000": "80 events, N=1,000",
+        "unequal_80": "80 unequal events, N=240",
+        "c5_like_22": "22 events, N=1,000",
+        "minimum_20": "20 events, N=1,000",
     }
-    fig, axes = plt.subplots(2, 2, figsize=(10.2, 7.8))
+    colors = ("#246a73", "#d2764c", "#a33b20")
+    markers = ("o", "s", "D")
+    fig, axes = plt.subplots(2, 2, figsize=(10.8, 7.6))
     fig.subplots_adjust(
-        left=0.08,
+        left=0.145,
         right=0.98,
-        top=0.98,
-        bottom=0.16,
-        wspace=0.34,
-        hspace=0.38,
+        top=0.95,
+        bottom=0.10,
+        wspace=0.42,
+        hspace=0.42,
     )
 
+    # Panel a: all six designs, expressed directly on the GAUGE reference scale.
     ax = axes[0, 0]
     labels = [display_labels[regime.id] for regime in REGIMES]
-    rates = [regimes[regime.id]["same_population"]["boundary_crossing_rate"] for regime in REGIMES]
-    lows = [regimes[regime.id]["same_population"]["wilson_95"][0] for regime in REGIMES]
-    highs = [regimes[regime.id]["same_population"]["wilson_95"][1] for regime in REGIMES]
+    medians = [
+        regimes[regime.id]["same_population_gap_distribution"]["q50"]
+        for regime in REGIMES
+    ]
+    lows = [
+        regimes[regime.id]["same_population_gap_distribution"]["q05"]
+        for regime in REGIMES
+    ]
+    highs = [
+        regimes[regime.id]["same_population_gap_distribution"]["q95"]
+        for regime in REGIMES
+    ]
     y = np.arange(len(REGIMES))
-    for index, (color, marker) in enumerate(zip(colors, markers, strict=True)):
+    ax.axvspan(0.0, 1.0, color="#eaf3f2", zorder=0)
+    ax.axvline(0.0, color="#638b8f", linestyle=":", linewidth=1.0)
+    ax.axvline(1.0, color="#a33b20", linestyle="--", linewidth=1.2)
+    design_colors = ("#246a73", "#3f7f83", "#638b8f", "#8da5a5", "#d2764c", "#a33b20")
+    design_markers = ("o", "s", "D", "^", "v", "P")
+    for index, (color, marker) in enumerate(
+        zip(design_colors, design_markers, strict=True)
+    ):
         ax.errorbar(
-            rates[index],
+            medians[index],
             y[index],
-            xerr=np.maximum(
-                np.asarray([[rates[index] - lows[index]], [highs[index] - rates[index]]]),
-                0.0,
+            xerr=np.asarray(
+                [
+                    [medians[index] - lows[index]],
+                    [highs[index] - medians[index]],
+                ]
             ),
             fmt=marker,
             color=color,
             ecolor=color,
             capsize=3,
         )
-    ax.axvline(0.05, color="#a33b20", linestyle="--", linewidth=1.2)
     ax.set_yticks(y, labels)
     ax.invert_yaxis()
-    ax.set_xlim(0, max(0.065, max(highs) * 1.18))
-    ax.set_xlabel("Same-population boundary-crossing rate")
-    ax.set_title("a  Empirical reference calibration", loc="left", fontweight="semibold")
+    span = max(highs) - min(lows)
+    padding = max(0.10, 0.08 * span)
+    ax.set_xlim(min(lows) - padding, max(1.0, max(highs)) + padding)
+    ax.set_xlabel("Gap for a matching generator\n(median and 5–95% across datasets)")
+    ax.set_title("(a) Matching generator", loc="left", fontweight="semibold")
+    ax.legend(
+        handles=(
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                color="#246a73",
+                linewidth=1.4,
+                label="Median and 5–95% range",
+            ),
+            Patch(facecolor="#eaf3f2", edgecolor="none", label="Reference interval"),
+            Line2D(
+                [0],
+                [0],
+                color="#a33b20",
+                linestyle="--",
+                linewidth=1.2,
+                label="Upper marker (g=1)",
+            ),
+        ),
+        frameon=False,
+        fontsize=7.6,
+        loc="lower right",
+    )
 
+    # Panel b: use equal-N designs so that the effect of independent-event
+    # support is visible without mixing it with field-sample size.
     ax = axes[0, 1]
-    for regime, color, marker, linestyle in zip(
-        REGIMES,
+    shift_regimes = (
+        next(regime for regime in REGIMES if regime.id == "balanced_80_n1000"),
+        next(regime for regime in REGIMES if regime.id == "c5_like_22"),
+        next(regime for regime in REGIMES if regime.id == "minimum_20"),
+    )
+    for regime, color, marker in zip(
+        shift_regimes,
         colors,
         markers,
-        linestyles,
         strict=True,
     ):
         rows = regimes[regime.id]["location_shift"]
@@ -1160,87 +1256,126 @@ def _validation_figure(result: dict[str, Any], path: Path) -> tuple[Path, Path]:
             x,
             probability,
             marker=marker,
-            linestyle=linestyle,
+            linestyle="-",
             color=color,
-            label=display_labels[regime.id],
+            label=f"{regime.n_blocks} events",
         )
-    ax.axhline(0.80, color="#a33b20", linestyle="--", linewidth=1.1)
     ax.set_ylim(-0.02, 1.03)
     ax.set_xlabel("Known location shift (marginal SD)")
-    ax.set_ylabel("Boundary-crossing probability")
-    ax.set_title("b  Response to a known shift", loc="left", fontweight="semibold")
+    ax.set_ylabel("Fraction above reference range")
+    ax.set_title("(b) Known mean shift", loc="left", fontweight="semibold")
+    ax.legend(
+        frameon=False,
+        fontsize=8.0,
+        title="All N=1,000",
+        title_fontsize=8.0,
+        loc="upper left",
+    )
 
+    # Panel c: a conventional paired dot plot replaces the dense heat map.
+    # Equal N on both series isolates the loss of resolution from fewer events.
     ax = axes[1, 0]
-    names = list(ALTERNATIVE_LABELS)
-    x = np.arange(len(names))
-    width = 0.13
-    for index, (regime, color, hatch) in enumerate(zip(REGIMES, colors, hatches, strict=True)):
-        values = [
-            regimes[regime.id]["alternatives"][name]["boundary_crossing_probability"]
-            for name in names
-        ]
-        ax.bar(
-            x + (index - (len(REGIMES) - 1) / 2.0) * width,
-            values,
-            width,
-            color=color,
-            edgecolor="white",
-            linewidth=0.35,
-            hatch=hatch,
-            label=display_labels[regime.id],
-        )
-    ax.axhline(0.80, color="#a33b20", linestyle="--", linewidth=1.1)
-    ax.set_xticks(x, [ALTERNATIVE_LABELS[name] for name in names], rotation=16, ha="right")
-    ax.set_ylim(0, 1.03)
-    ax.set_ylabel("Boundary-crossing probability")
-    ax.set_title("c  Known distribution changes", loc="left", fontweight="semibold")
-
-    ax = axes[1, 1]
-    families = result["metric_family_validation"]["results"]
-    names = [
-        "mmd2_off_manifold",
-        "density_off_manifold",
-        "coverage_mode_removal",
-        "diversity_duplication",
-        "curve_mae",
-        "log_psd",
-    ]
-    same = [families[name]["same_population_gap"] for name in names]
-    changed = [families[name]["changed_gap"] for name in names]
-    xx = np.arange(len(names))
-    ax.plot(same, xx, "o", color="#246a73", label="same population")
-    ax.plot(changed, xx, "D", color="#d2764c", label="known change")
-    ax.axvline(1.0, color="#a33b20", linestyle="--", linewidth=1.2)
-    family_labels = {
-        "mmd2_off_manifold": "MMD²",
-        "density_off_manifold": "Density",
-        "coverage_mode_removal": "Coverage",
-        "diversity_duplication": "Diversity",
-        "curve_mae": "Curve MAE",
-        "log_psd": "Log PSD",
+    alternative_names = (
+        "variance_narrow",
+        "variance_wide",
+        "crossing_cdf",
+        "tail_contamination",
+        "train_test_shift",
+    )
+    alternative_labels = {
+        "variance_narrow": "SD × 0.45",
+        "variance_wide": "SD × 1.65",
+        "crossing_cdf": "Shape change (matched mean, SD)",
+        "tail_contamination": "15% shifted by +3 SD",
+        "train_test_shift": "Train–test shift: 0.55 SD",
     }
-    ax.set_yticks(xx, [family_labels[name] for name in names])
-    ax.set_xscale("symlog", linthresh=2.0)
-    ax.set_xlabel("Real-reference gap")
-    ax.set_title("d  Curve and feature metric controls", loc="left", fontweight="semibold")
-    ax.legend(frameon=False, fontsize=9, loc="upper left")
+    y = np.arange(len(alternative_names))
+    full_values = np.asarray(
+        [
+            regimes["balanced_80_n1000"]["alternatives"][name][
+                "boundary_crossing_probability"
+            ]
+            for name in alternative_names
+        ]
+    )
+    thin_values = np.asarray(
+        [
+            regimes["c5_like_22"]["alternatives"][name][
+                "boundary_crossing_probability"
+            ]
+            for name in alternative_names
+        ]
+    )
+    for row, (full, thin) in enumerate(zip(full_values, thin_values, strict=True)):
+        ax.plot((thin, full), (row, row), color="#c8d1d3", linewidth=1.6, zorder=1)
+    ax.scatter(
+        full_values,
+        y,
+        marker="o",
+        s=44,
+        color="#246a73",
+        label="80 events",
+        zorder=2,
+    )
+    ax.scatter(
+        thin_values,
+        y,
+        marker="D",
+        s=38,
+        color="#d2764c",
+        label="22 events",
+        zorder=2,
+    )
+    ax.set_yticks(y, [alternative_labels[name] for name in alternative_names])
+    ax.invert_yaxis()
+    ax.set_xlim(-0.03, 1.03)
+    ax.set_xlabel("Fraction above reference range")
+    ax.set_title("(c) Other known changes", loc="left", fontweight="semibold")
+    ax.legend(
+        frameon=False,
+        fontsize=8.0,
+        title="Both N=1,000",
+        title_fontsize=8.0,
+        loc="lower left",
+    )
+
+    # Panel d: show directly how treating correlated fields as independent
+    # contracts the empirical reference width.
+    ax = axes[1, 1]
+    stability = result["reference_stability"]
+    widths = (
+        float(stability["correct_block_reference_width"]),
+        float(stability["frame_iid_reference_width"]),
+    )
+    block_labels = ("Correct event groups", "Each field treated\nas independent")
+    bars = ax.barh(
+        np.arange(2),
+        widths,
+        color=("#246a73", "#d2764c"),
+        height=0.58,
+    )
+    ax.set_yticks(np.arange(2), block_labels)
+    ax.invert_yaxis()
+    ax.set_xlim(0.0, max(widths) * 1.28)
+    ax.set_xlabel(r"Reference width ($q_{0.95}^{RR}-q_{0.50}^{RR}$)")
+    ax.set_title("(d) Ignoring event dependence", loc="left", fontweight="semibold")
+    for bar, value in zip(bars, widths, strict=True):
+        ax.text(
+            value + max(widths) * 0.025,
+            bar.get_y() + bar.get_height() / 2,
+            f"{value:.3f}",
+            va="center",
+            ha="left",
+            fontsize=9.0,
+        )
+
     for ax in axes.flat:
         ax.grid(color="#e1e7e9", linewidth=0.6, zorder=0)
         ax.spines[["top", "right"]].set_visible(False)
-        ax.title.set_fontsize(13.5)
-        ax.xaxis.label.set_size(12.0)
-        ax.yaxis.label.set_size(12.0)
-        ax.tick_params(axis="both", labelsize=10.5)
-    handles, legend_labels = axes[0, 1].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        legend_labels,
-        loc="lower center",
-        bbox_to_anchor=(0.5, -0.035),
-        ncol=3,
-        frameon=False,
-        fontsize=11.5,
-    )
+        ax.title.set_fontsize(12.5)
+        ax.xaxis.label.set_size(10.5)
+        ax.yaxis.label.set_size(10.5)
+        ax.tick_params(axis="both", labelsize=9.0)
     pdf = Path(f"{path}.pdf")
     png = Path(f"{path}.png")
     pdf.parent.mkdir(parents=True, exist_ok=True)
