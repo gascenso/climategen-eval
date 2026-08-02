@@ -841,7 +841,7 @@
             "rel_paths.txt": "ddba9271056af62dd352185d4f2e3180b14739e78eb0b8dae878df68440e6c5b"
           },
           "target": "category",
-          "manifest_path": "/home/guidoascenso/CMCC/projects/climategen-eval/case_studies/tropical_cyclone_bt/../../data/tropical_cyclone_bt/real_train/manifest.json",
+          "manifest_path": "data/tropical_cyclone_bt/real_train/manifest.json",
           "analysis_preprocessing": {
             "operation": "clip",
             "lower_k": 170.0,
@@ -909,7 +909,7 @@
             "rel_paths.txt": "e8b1b5742d935b34073d9c33166c29fc1350d66043ac9eb8f2acdd9e247e69c6"
           },
           "target": "category",
-          "manifest_path": "/home/guidoascenso/CMCC/projects/climategen-eval/case_studies/tropical_cyclone_bt/../../data/tropical_cyclone_bt/real_test/manifest.json",
+          "manifest_path": "data/tropical_cyclone_bt/real_test/manifest.json",
           "analysis_preprocessing": {
             "operation": "clip",
             "lower_k": 170.0,
@@ -1102,7 +1102,7 @@
           "suggested_next_seed": 124,
           "suggested_next_real_seed": 124,
           "target": "category",
-          "manifest_path": "/home/guidoascenso/CMCC/projects/climategen-eval/case_studies/tropical_cyclone_bt/../../data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000/manifest.json",
+          "manifest_path": "data/tropical_cyclone_bt/generated/baseline_ztsnr/test/test_baseline_n1000/manifest.json",
           "analysis_preprocessing": {
             "operation": "clip",
             "lower_k": 170.0,
