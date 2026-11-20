@@ -1,5 +1,5 @@
 {
-  "schema": "gauge_climate.statistical_validation.v4",
+  "schema": "gauge_climate.statistical_validation.v5",
   "status": "PASSED",
   "configuration": {
     "seed": 1789,
@@ -8,7 +8,15 @@
     "jobs": 4,
     "reference_quantile": 0.95,
     "minimum_blocks_per_half": 10,
-    "shift_effect_units": "marginal standard deviations"
+    "shift_effect_units": "marginal standard deviations",
+    "dependence_event_effect_sds": [
+      0.0,
+      0.3,
+      0.6,
+      1.0,
+      1.6
+    ],
+    "dependence_residual_sd": 1.0
   },
   "regimes": {
     "balanced_80_n80": {
@@ -794,6 +802,183 @@
       ]
     }
   },
+  "dependence_strength_sensitivity": [
+    {
+      "event_effect_sd": 0.0,
+      "residual_sd": 1.0,
+      "intraclass_correlation": 0.0,
+      "matching": {
+        "boundary_crossing_rate": 0.0033333333333333335,
+        "successes": 1,
+        "trials": 300,
+        "wilson_95": [
+          0.0005886577218511581,
+          0.018636693694531237
+        ]
+      },
+      "matching_gap_distribution": {
+        "q05": -0.43547095580707623,
+        "q50": -0.2199631404712819,
+        "q95": 0.2796105883223966
+      },
+      "known_shift": {
+        "effect_sd": 0.55,
+        "boundary_crossing_probability": 0.9933333333333333,
+        "successes": 298,
+        "trials": 300,
+        "wilson_95": [
+          0.9760224167496929,
+          0.998169851642088
+        ]
+      },
+      "normalized_reference_width": {
+        "q05": 0.10987361158663446,
+        "q50": 0.13341835291698678,
+        "q95": 0.1680365528282536,
+        "normalization": "marginal standard deviation"
+      }
+    },
+    {
+      "event_effect_sd": 0.3,
+      "residual_sd": 1.0,
+      "intraclass_correlation": 0.08256880733944953,
+      "matching": {
+        "boundary_crossing_rate": 0.006666666666666667,
+        "successes": 2,
+        "trials": 300,
+        "wilson_95": [
+          0.0018301483579117855,
+          0.023977583250306973
+        ]
+      },
+      "matching_gap_distribution": {
+        "q05": -0.4278715557552301,
+        "q50": -0.20533472946131287,
+        "q95": 0.27775348183109094
+      },
+      "known_shift": {
+        "effect_sd": 0.55,
+        "boundary_crossing_probability": 0.9933333333333333,
+        "successes": 298,
+        "trials": 300,
+        "wilson_95": [
+          0.9760224167496929,
+          0.998169851642088
+        ]
+      },
+      "normalized_reference_width": {
+        "q05": 0.1146624899193754,
+        "q50": 0.1448905320777918,
+        "q95": 0.17750181450861546,
+        "normalization": "marginal standard deviation"
+      }
+    },
+    {
+      "event_effect_sd": 0.6,
+      "residual_sd": 1.0,
+      "intraclass_correlation": 0.2647058823529412,
+      "matching": {
+        "boundary_crossing_rate": 0.0033333333333333335,
+        "successes": 1,
+        "trials": 300,
+        "wilson_95": [
+          0.0005886577218511581,
+          0.018636693694531237
+        ]
+      },
+      "matching_gap_distribution": {
+        "q05": -0.3824956748458732,
+        "q50": -0.19604678866759478,
+        "q95": 0.28069414959389694
+      },
+      "known_shift": {
+        "effect_sd": 0.55,
+        "boundary_crossing_probability": 0.9733333333333334,
+        "successes": 292,
+        "trials": 300,
+        "wilson_95": [
+          0.9482710570494102,
+          0.9864269301913529
+        ]
+      },
+      "normalized_reference_width": {
+        "q05": 0.1358676236798822,
+        "q50": 0.16942062361543797,
+        "q95": 0.2093295321219656,
+        "normalization": "marginal standard deviation"
+      }
+    },
+    {
+      "event_effect_sd": 1.0,
+      "residual_sd": 1.0,
+      "intraclass_correlation": 0.5,
+      "matching": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
+        "trials": 300,
+        "wilson_95": [
+          8.673617379884035e-19,
+          0.012642971224546034
+        ]
+      },
+      "matching_gap_distribution": {
+        "q05": -0.38549850292741705,
+        "q50": -0.21154339070757414,
+        "q95": 0.1984457151487921
+      },
+      "known_shift": {
+        "effect_sd": 0.55,
+        "boundary_crossing_probability": 0.9266666666666666,
+        "successes": 278,
+        "trials": 300,
+        "wilson_95": [
+          0.8914686583942826,
+          0.9510760061607713
+        ]
+      },
+      "normalized_reference_width": {
+        "q05": 0.16119967419082437,
+        "q50": 0.20343428557970072,
+        "q95": 0.25505606941519415,
+        "normalization": "marginal standard deviation"
+      }
+    },
+    {
+      "event_effect_sd": 1.6,
+      "residual_sd": 1.0,
+      "intraclass_correlation": 0.7191011235955057,
+      "matching": {
+        "boundary_crossing_rate": 0.0,
+        "successes": 0,
+        "trials": 300,
+        "wilson_95": [
+          8.673617379884035e-19,
+          0.012642971224546034
+        ]
+      },
+      "matching_gap_distribution": {
+        "q05": -0.41136110074909893,
+        "q50": -0.2472930251376445,
+        "q95": 0.11484511084432272
+      },
+      "known_shift": {
+        "effect_sd": 0.55,
+        "boundary_crossing_probability": 0.8033333333333333,
+        "successes": 241,
+        "trials": 300,
+        "wilson_95": [
+          0.7546412316550143,
+          0.8443553658020945
+        ]
+      },
+      "normalized_reference_width": {
+        "q05": 0.1726800552041427,
+        "q50": 0.21915787324151115,
+        "q95": 0.27656997284499224,
+        "normalization": "marginal standard deviation"
+      }
+    }
+  ],
   "metric_family_validation": {
     "results": {
       "mmd2_off_manifold": {
@@ -1719,6 +1904,8 @@
     "same_population_crossing_upper_at_most_reference_tail": true,
     "same_population_gap_q95_within_reference_range": true,
     "heavy_tail_and_multimodal_crossing_upper_at_most_reference_tail": true,
+    "dependence_sweep_matching_generator_within_reference": true,
+    "stronger_event_dependence_expands_normalized_reference_width": true,
     "standard_shift_0.55_crossing_probability_lower_at_least_0.80": true,
     "thin_strata_have_lower_standard_shift_crossing_probability": true,
     "larger_location_shifts_cross_at_least_as_often": true,

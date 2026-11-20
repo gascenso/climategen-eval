@@ -28,6 +28,8 @@ It covers:
   degenerations;
 - balanced, severely unequal, 22-event, and minimum-valid 20-event designs;
 - correct event identifiers versus intentionally wrong frame-IID identifiers;
+- event-effect strengths from zero dependence to strong within-event
+  dependence, reported on an intraclass-correlation scale;
 - multiple bank sizes and train/test population shifts;
 - reference-quantile and gap Monte Carlo stability;
 - grouped delete-event finite-archive sensitivity;
@@ -38,6 +40,12 @@ reference tail beyond Monte Carlo uncertainty, increasing crossing for
 increasing perturbations, expected monotonic control responses, visibly lower
 resolution with few events, and non-negative biased/V-statistic MMD² up to
 numerical tolerance.
+
+The dependence-strength sweep treats the 95th percentile as a descriptive
+upper marker. It checks that a matching comparison bank remains near the centre
+of the reference scale across the examined correlations and shows how stronger
+event dependence widens the empirical reference and reduces resolution for a
+fixed marginal shift.
 
 These simulations validate the behaviour of the empirical reference
 calculation. They do not turn the reference quantile into an exact

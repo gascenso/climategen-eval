@@ -50,8 +50,10 @@ from gauge_climate.types import (  # noqa: E402
 )
 
 
-SCHEMA = "gauge_climate.statistical_validation.v4"
+SCHEMA = "gauge_climate.statistical_validation.v5"
 SHIFT_EFFECTS_SD = (0.0, 0.15, 0.30, 0.45, 0.55)
+DEPENDENCE_EVENT_SDS = (0.0, 0.3, 0.6, 1.0, 1.6)
+DEPENDENCE_SHIFT_SD = 0.55
 ALTERNATIVE_LABELS = {
     "variance_narrow": "narrow variance",
     "variance_wide": "excess variance",
@@ -127,9 +129,14 @@ def _clustered_values(
     sizes: np.ndarray,
     *,
     location: float = 0.0,
+    event_sd: float = 0.3,
+    residual_sd: float = 1.0,
 ) -> np.ndarray:
-    effects = rng.normal(loc=location, scale=0.3, size=sizes.size)
-    return effects.repeat(sizes) + rng.normal(size=int(np.sum(sizes)))
+    effects = rng.normal(loc=location, scale=event_sd, size=sizes.size)
+    return effects.repeat(sizes) + rng.normal(
+        scale=residual_sd,
+        size=int(np.sum(sizes)),
+    )
 
 
 def _reference_plan(
@@ -238,6 +245,7 @@ def _trial(
         "trial": trial,
         "regimes": {},
         "shape_same_population": {},
+        "dependence_strength": {},
         "invariants": True,
         "engine_parity_max_abs": 0.0,
     }
@@ -339,6 +347,68 @@ def _trial(
                 float(np.max(np.abs(reference - engine.reference_values))),
                 float(np.max(np.abs(model - engine.model_values))),
             )
+
+    # The main scalar designs use an event-effect SD of 0.3 and a residual SD
+    # of 1.0.  Sweep a broad range of intraclass correlations so that the
+    # validation conclusions do not depend on that single illustrative value.
+    dependence_rng = np.random.default_rng(rng.integers(0, np.iinfo(np.int64).max))
+    dependence_regime = Regime(
+        "dependence_strength",
+        "dependence-strength sensitivity",
+        80,
+        240,
+        "balanced",
+    )
+    dependence_sizes = np.full(dependence_regime.n_blocks, 4, dtype=int)
+    dependence_blocks = np.repeat(
+        np.arange(dependence_regime.n_blocks),
+        dependence_sizes,
+    )
+    dependence_plan = _reference_plan(
+        dependence_blocks,
+        dependence_regime,
+        resamples=resamples,
+        seed=seed + trial * 10_000 + 9_000,
+    )
+    result["invariants"] &= _check_invariants(dependence_plan)
+    for event_sd in DEPENDENCE_EVENT_SDS:
+        marginal_sd = math.sqrt(1.0 + event_sd**2)
+        real = _clustered_values(
+            dependence_rng,
+            dependence_sizes,
+            event_sd=event_sd,
+        )
+        matching = dependence_rng.normal(
+            scale=marginal_sd,
+            size=dependence_regime.n_eval,
+        )
+        reference, matching_model = _vectorized_w1(
+            real,
+            matching,
+            dependence_plan,
+        )
+        shifted = dependence_rng.normal(
+            loc=DEPENDENCE_SHIFT_SD * marginal_sd,
+            scale=marginal_sd,
+            size=dependence_regime.n_eval,
+        )
+        _, shifted_model = _vectorized_w1(
+            real,
+            shifted,
+            dependence_plan,
+        )
+        q50 = float(np.quantile(reference, 0.50))
+        q95 = float(np.quantile(reference, 0.95))
+        matching_median = float(np.median(matching_model))
+        result["dependence_strength"][str(event_sd)] = {
+            "event_effect_sd": event_sd,
+            "residual_sd": 1.0,
+            "intraclass_correlation": event_sd**2 / (event_sd**2 + 1.0),
+            "matching_crosses": bool(matching_median > q95),
+            "matching_gap": reference_position(matching_median, q50, q95),
+            "shift_crosses": _crosses(reference, shifted_model),
+            "reference_width_marginal_sd": (q95 - q50) / marginal_sd,
+        }
 
     return result
 
@@ -1030,6 +1100,66 @@ def _aggregate(
         name: (node["boundary_crossing_rate"] <= 0.05 and node["wilson_95"][1] <= 0.05)
         for name, node in shape_same_population.items()
     }
+    dependence_strength = []
+    for event_sd in DEPENDENCE_EVENT_SDS:
+        nodes = [trial["dependence_strength"][str(event_sd)] for trial in trials]
+        matching_gaps = np.asarray(
+            [
+                float(node["matching_gap"])
+                for node in nodes
+                if node["matching_gap"] is not None
+            ],
+            dtype=float,
+        )
+        normalized_widths = np.asarray(
+            [float(node["reference_width_marginal_sd"]) for node in nodes],
+            dtype=float,
+        )
+        if matching_gaps.size != total:
+            raise RuntimeError(
+                "Degenerate matching-generator gap in dependence-strength sensitivity."
+            )
+        dependence_strength.append(
+            {
+                "event_effect_sd": event_sd,
+                "residual_sd": 1.0,
+                "intraclass_correlation": event_sd**2 / (event_sd**2 + 1.0),
+                "matching": _rate(
+                    sum(bool(node["matching_crosses"]) for node in nodes),
+                    total,
+                    name="boundary_crossing_rate",
+                ),
+                "matching_gap_distribution": {
+                    "q05": float(np.quantile(matching_gaps, 0.05)),
+                    "q50": float(np.quantile(matching_gaps, 0.50)),
+                    "q95": float(np.quantile(matching_gaps, 0.95)),
+                },
+                "known_shift": {
+                    "effect_sd": DEPENDENCE_SHIFT_SD,
+                    **_rate(
+                        sum(bool(node["shift_crosses"]) for node in nodes),
+                        total,
+                        name="boundary_crossing_probability",
+                    ),
+                },
+                "normalized_reference_width": {
+                    "q05": float(np.quantile(normalized_widths, 0.05)),
+                    "q50": float(np.quantile(normalized_widths, 0.50)),
+                    "q95": float(np.quantile(normalized_widths, 0.95)),
+                    "normalization": "marginal standard deviation",
+                },
+            }
+        )
+    dependence_same_population_gate = all(
+        row["matching"]["boundary_crossing_rate"] <= 0.05
+        and row["matching"]["wilson_95"][1] <= 0.05
+        and row["matching_gap_distribution"]["q95"] <= 1.0
+        for row in dependence_strength
+    )
+    dependence_width_gate = (
+        dependence_strength[-1]["normalized_reference_width"]["q50"]
+        > dependence_strength[0]["normalized_reference_width"]["q50"]
+    )
     shift_response_gates = {
         regime.id: all(
             right["boundary_crossing_probability"] >= left["boundary_crossing_probability"]
@@ -1082,6 +1212,12 @@ def _aggregate(
         "heavy_tail_and_multimodal_crossing_upper_at_most_reference_tail": all(
             shape_same_population_gates.values()
         ),
+        "dependence_sweep_matching_generator_within_reference": (
+            dependence_same_population_gate
+        ),
+        "stronger_event_dependence_expands_normalized_reference_width": (
+            dependence_width_gate
+        ),
         "standard_shift_0.55_crossing_probability_lower_at_least_0.80": (
             standard_shift["wilson_95"][0] >= 0.80
         ),
@@ -1126,9 +1262,12 @@ def _aggregate(
             "reference_quantile": 0.95,
             "minimum_blocks_per_half": 10,
             "shift_effect_units": "marginal standard deviations",
+            "dependence_event_effect_sds": list(DEPENDENCE_EVENT_SDS),
+            "dependence_residual_sd": 1.0,
         },
         "regimes": regimes,
         "shape_same_population": shape_same_population,
+        "dependence_strength_sensitivity": dependence_strength,
         "metric_family_validation": metric_families,
         "reference_stability": stability,
         "independent_seed_interval_validation": independent_seed_intervals,
@@ -1394,13 +1533,13 @@ def _validation_appendix_figure(
     stability = result["reference_stability"]
     point = stability["point"]
     intervals = stability["conditional_mc_intervals"]
-    fig, axes = plt.subplots(2, 2, figsize=(10.2, 7.6))
+    fig, axes = plt.subplots(2, 3, figsize=(14.8, 7.6))
     fig.subplots_adjust(
-        left=0.09,
+        left=0.065,
         right=0.98,
         top=0.97,
         bottom=0.10,
-        wspace=0.30,
+        wspace=0.36,
         hspace=0.38,
     )
 
@@ -1457,7 +1596,7 @@ def _validation_appendix_figure(
     ax.set_title("b  Finite-archive sensitivity", loc="left", fontweight="semibold")
     ax.legend(frameon=False, fontsize=8.5)
 
-    ax = axes[1, 0]
+    ax = axes[0, 2]
     widths = (
         float(stability["correct_block_reference_width"]),
         float(stability["frame_iid_reference_width"]),
@@ -1477,7 +1616,7 @@ def _validation_appendix_figure(
     ax.set_ylabel(r"$q_{0.95}^{RR}-q_{0.50}^{RR}$")
     ax.set_title("c  Consequence of block misspecification", loc="left", fontweight="semibold")
 
-    ax = axes[1, 1]
+    ax = axes[1, 0]
     families = result["metric_family_validation"]["results"]
     colors = plt.get_cmap("tab10")
     severity_labels = {
@@ -1513,6 +1652,83 @@ def _validation_appendix_figure(
     ax.set_ylabel("Real-reference gap")
     ax.set_title("d  Metric-family severity responses", loc="left", fontweight="semibold")
     ax.legend(frameon=False, fontsize=7.2, ncol=2)
+
+    dependence = result["dependence_strength_sensitivity"]
+    icc = np.asarray([row["intraclass_correlation"] for row in dependence], dtype=float)
+
+    ax = axes[1, 1]
+    width_median = np.asarray(
+        [row["normalized_reference_width"]["q50"] for row in dependence],
+        dtype=float,
+    )
+    width_low = np.asarray(
+        [row["normalized_reference_width"]["q05"] for row in dependence],
+        dtype=float,
+    )
+    width_high = np.asarray(
+        [row["normalized_reference_width"]["q95"] for row in dependence],
+        dtype=float,
+    )
+    ax.fill_between(icc, width_low, width_high, color="#d7e8e7", alpha=0.9)
+    ax.plot(icc, width_median, marker="o", color="#246a73", linewidth=1.5)
+    ax.set_xlabel("Within-event correlation")
+    ax.set_ylabel("Reference width / marginal SD")
+    ax.set_title("e  Dependence-strength sensitivity", loc="left", fontweight="semibold")
+
+    ax = axes[1, 2]
+    matching_rate = np.asarray(
+        [row["matching"]["boundary_crossing_rate"] for row in dependence],
+        dtype=float,
+    )
+    matching_low = np.asarray(
+        [row["matching"]["wilson_95"][0] for row in dependence],
+        dtype=float,
+    )
+    matching_high = np.asarray(
+        [row["matching"]["wilson_95"][1] for row in dependence],
+        dtype=float,
+    )
+    shifted_rate = np.asarray(
+        [row["known_shift"]["boundary_crossing_probability"] for row in dependence],
+        dtype=float,
+    )
+    shifted_low = np.asarray(
+        [row["known_shift"]["wilson_95"][0] for row in dependence],
+        dtype=float,
+    )
+    shifted_high = np.asarray(
+        [row["known_shift"]["wilson_95"][1] for row in dependence],
+        dtype=float,
+    )
+    ax.errorbar(
+        icc,
+        matching_rate,
+        yerr=np.maximum(
+            0.0,
+            np.vstack((matching_rate - matching_low, matching_high - matching_rate)),
+        ),
+        marker="o",
+        color="#246a73",
+        capsize=3,
+        label="Matching bank",
+    )
+    ax.errorbar(
+        icc,
+        shifted_rate,
+        yerr=np.maximum(
+            0.0,
+            np.vstack((shifted_rate - shifted_low, shifted_high - shifted_rate)),
+        ),
+        marker="D",
+        color="#d2764c",
+        capsize=3,
+        label=f"Known shift ({DEPENDENCE_SHIFT_SD:.2f} SD)",
+    )
+    ax.set_ylim(-0.03, 1.03)
+    ax.set_xlabel("Within-event correlation")
+    ax.set_ylabel("Fraction above upper marker")
+    ax.set_title("f  Consequence for resolution", loc="left", fontweight="semibold")
+    ax.legend(frameon=False, fontsize=8.2)
 
     for ax in axes.flat:
         ax.grid(color="#e1e7e9", linewidth=0.6, zorder=0)
