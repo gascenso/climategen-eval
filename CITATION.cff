@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use GAUGE Climate, cite this software and the accompanying paper when available."
 title: "GAUGE Climate: empirical reference calibration for generated climate fields"
 type: software
-version: 0.2.0
-date-released: 2026-07-28
+version: 0.2.1
+date-released: 2026-11-20
 license: BSD-3-Clause
 repository-code: "https://github.com/gascenso/climategen-eval"
 abstract: >-

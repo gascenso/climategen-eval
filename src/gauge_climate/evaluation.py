@@ -666,7 +666,7 @@ def evaluate(
     }
     hash_value = _config_hash(config, metric_manifests, analysis_design)
     metadata = {
-        "package_version": "0.2.0",
+        "package_version": "0.2.1",
         "method": "event-disjoint-empirical-real-reference-v3",
         "config_hash": hash_value,
         "config": config.to_dict(),

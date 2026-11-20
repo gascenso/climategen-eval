@@ -134,7 +134,7 @@ def _migrate_v2_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
     config.pop("shift_power", None)
     config.pop("simultaneous_family", None)
     metadata["config"] = config
-    metadata["package_version"] = "0.2.0"
+    metadata["package_version"] = "0.2.1"
     metadata.pop("gauge_version", None)
     metadata["method"] = "migrated-event-disjoint-empirical-real-reference-v3"
     metadata.pop("simultaneous_reference", None)

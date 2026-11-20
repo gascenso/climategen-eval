@@ -465,7 +465,7 @@ def test_v2_report_migration_reuses_matched_reference_comparison_range():
 
     migrated_cell = result["cells"][0]
     assert result["schema"] == "gauge_climate.evaluation.v3"
-    assert result["metadata"]["package_version"] == "0.2.0"
+    assert result["metadata"]["package_version"] == gauge.__version__
     assert migrated_cell["comparison_low"] is not None
     assert migrated_cell["comparison_high"] is not None
     assert migrated_cell["reference_status"] == "WITHIN_REFERENCE_RANGE"
